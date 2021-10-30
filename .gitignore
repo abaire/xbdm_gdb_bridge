@@ -1,0 +1,15 @@
+*.cpp.d
+*.obj
+*.iso
+*.lib
+*.exe
+*.xbe
+*.pdb
+
+.DS_Store
+.vscode/
+.idea/
+bin/
+__pycache__/
+build/
+cmake-build-debug/
