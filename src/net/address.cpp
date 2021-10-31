@@ -1,4 +1,4 @@
-#include "Address.h"
+#include "address.h"
 
 #include <arpa/inet.h>
 #include <ostream>
@@ -33,8 +33,21 @@ Address::Address(const std::string &addr, uint16_t default_port)
   }
 }
 
+Address::Address(const sockaddr_in &addr) : hostname_(), addr_(addr) {}
+
 std::ostream &operator<<(std::ostream &os, Address const &addr) {
   char buf[64];
   inet_ntop(addr.addr_.sin_family, &addr.addr_.sin_addr, buf, 64);
   return os << buf << ":" << ntohs(addr.addr_.sin_port);
+}
+
+bool Address::operator<(const Address &other) const {
+  const struct sockaddr_in &oaddr = other.addr_;
+  if (addr_.sin_addr.s_addr < oaddr.sin_addr.s_addr) {
+    return true;
+  }
+  if (addr_.sin_addr.s_addr > oaddr.sin_addr.s_addr) {
+    return true;
+  }
+  return addr_.sin_port < oaddr.sin_port;
 }

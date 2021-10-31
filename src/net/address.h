@@ -6,16 +6,24 @@
 
 class Address {
 public:
-  Address(const std::string &addr);
+  Address() = default;
+  explicit Address(const std::string &addr);
   Address(const std::string &addr, uint16_t default_port);
+  explicit Address(const struct sockaddr_in &addr);
 
   [[nodiscard]] const std::string &hostname() const { return hostname_; }
+  [[nodiscard]] const struct sockaddr_in &address() const { return addr_; }
   [[nodiscard]] struct in_addr ip() const { return addr_.sin_addr; }
   [[nodiscard]] uint16_t port() const { return addr_.sin_port; }
 
+  explicit operator struct sockaddr const *() const {
+    return reinterpret_cast<struct sockaddr const *>(&addr_);
+  }
+  bool operator<(const Address &other) const;
+
 private:
   std::string hostname_;
-  struct sockaddr_in addr_;
+  struct sockaddr_in addr_ {};
 
   friend std::ostream &operator<<(std::ostream &os, Address const &m);
 };

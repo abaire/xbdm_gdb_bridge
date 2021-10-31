@@ -1,5 +1,5 @@
-#ifndef XBDM_GDB_BRIDGE_SRC_NET_IPTRANSPORT_H_
-#define XBDM_GDB_BRIDGE_SRC_NET_IPTRANSPORT_H_
+#ifndef XBDM_GDB_BRIDGE_SRC_NET_IP_TRANSPORT_H_
+#define XBDM_GDB_BRIDGE_SRC_NET_IP_TRANSPORT_H_
 
 #include <cctype>
 #include <list>
@@ -8,10 +8,10 @@
 
 class IPTransport {
 private:
-  std::string name;
-  int socket;
-  uint32_t address;
-  uint16_t port;
+  std::string name_;
+  int socket_;
+  uint32_t address_;
+  uint16_t port_;
 
   //    std::list<std::filebuf
   //  self.addr: Optional[Tuple[str, int]] = None
@@ -22,4 +22,4 @@ private:
   //  process_callback
 };
 
-#endif // XBDM_GDB_BRIDGE_SRC_NET_IPTRANSPORT_H_
+#endif // XBDM_GDB_BRIDGE_SRC_NET_IP_TRANSPORT_H_
