@@ -12,7 +12,7 @@ struct ShellCommandQuit : Command {
 
 struct ShellCommandReconnect : Command {
   ShellCommandReconnect() : Command("Attempt to disconnect and reconnect from XBDM.") {}
-  virtual Result operator()(XBOXInterface &interface, const std::vector<std::string> &) {
+  Result operator()(XBOXInterface &interface, const std::vector<std::string> &) override {
     if (interface.ReconnectXBDM()) {
       std::cout << "Connected." << std::endl;
     } else {
@@ -30,7 +30,7 @@ struct ShellCommandGDB : Command {
                           "\n"
                           "[ip][:port] - The IP and port at which GDB can connect.\n"
                           "              Both components are optional. Default IP is to bind to all local interfaces at an arbitrary port.\n") {}
-  virtual Result operator()(XBOXInterface &interface, const std::vector<std::string> &args) {
+  Result operator()(XBOXInterface &interface, const std::vector<std::string> &args) override {
     std::vector<std::string> components;
     IPAddress address;
 

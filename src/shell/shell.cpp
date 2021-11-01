@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 
+#include "debugger_commands.h"
 #include "shell_commands.h"
 
 Shell::Shell(std::shared_ptr<XBOXInterface>& interface) : interface_(interface), prompt_("> ") {
@@ -13,6 +14,28 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface) : interface_(interface),
   commands_["help"] = nullptr;
   commands_["reconnect"] = std::make_shared<ShellCommandReconnect>();
   commands_["quit"] = quit;
+
+  commands_["/launch"] = std::make_shared<DebuggerCommandLaunch>();
+  commands_["/launchwait"] = std::make_shared<DebuggerCommandLaunchWait>();
+  commands_["/attach"] = std::make_shared<DebuggerCommandAttach>();
+  commands_["/detach"] = std::make_shared<DebuggerCommandDetach>();
+  commands_["/restart"] = std::make_shared<DebuggerCommandRestart>();
+  commands_[      "/switch"] = std::make_shared<DebuggerCommandSetActiveThread>();
+  commands_["/threads"] = std::make_shared<DebuggerCommandGetThreads>();
+  commands_["/info"] = std::make_shared<DebuggerCommandGetThreadInfo>();
+  commands_["/stepi"] = std::make_shared<DebuggerCommandStepInstruction>();
+  auto step_function = std::make_shared<DebuggerCommandStepFunction>();
+  commands_["/stepf"] = step_function;
+  commands_["/stepfun"] = step_function;
+  commands_["/info"] = std::make_shared<DebuggerCommandGetThreadInfo>();
+  commands_["/context"] = std::make_shared<DebuggerCommandGetContext>();
+  commands_["/fullcontext"] = std::make_shared<DebuggerCommandGetFullContext>();
+  commands_["/haltall"] = std::make_shared<DebuggerCommandHaltAll>();
+  commands_["/halt"] = std::make_shared<DebuggerCommandHalt>();
+  commands_["/continueall"] = std::make_shared<DebuggerCommandContinueAll>();
+  commands_["/continue"] = std::make_shared<DebuggerCommandContinue>();
+  commands_["/suspend"] = std::make_shared<DebuggerCommandSuspend>();
+  commands_["/resume"] = std::make_shared<DebuggerCommandResume>();
 }
 
 void Shell::Run() {

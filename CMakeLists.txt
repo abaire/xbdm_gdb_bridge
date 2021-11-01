@@ -44,6 +44,7 @@ add_executable(
         src/rdcp/xbdm_transport.h
         src/shell/command.cpp
         src/shell/command.h
+        src/shell/debugger_commands.h
         src/shell/shell.cpp
         src/shell/shell.h
         src/shell/shell_commands.h
