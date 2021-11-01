@@ -1,19 +1,20 @@
 #ifndef XBDM_GDB_BRIDGE_SRC_NET_IP_TRANSPORT_H_
 #define XBDM_GDB_BRIDGE_SRC_NET_IP_TRANSPORT_H_
 
+#include <sys/socket.h>
+
 #include <cctype>
 #include <deque>
 #include <list>
 #include <mutex>
 #include <string>
-#include <sys/socket.h>
 #include <utility>
 #include <vector>
 
 #include "address.h"
 
 class IPTransport {
-public:
+ public:
   explicit IPTransport(std::string name, int sock = -1)
       : name_(std::move(name)), socket_(sock) {}
   IPTransport(std::string name, int sock, Address address)
@@ -37,13 +38,13 @@ public:
   void Process(const fd_set &read_fds, const fd_set &write_fds,
                const fd_set &except_fds);
 
-protected:
+ protected:
   virtual void OnBytesRead() {}
 
   virtual void DoReceive();
   virtual void DoSend();
 
-private:
+ private:
   std::string name_;
 
   std::mutex socket_lock_;
@@ -56,4 +57,4 @@ private:
   std::deque<std::vector<uint8_t>> write_buffer_;
 };
 
-#endif // XBDM_GDB_BRIDGE_SRC_NET_IP_TRANSPORT_H_
+#endif  // XBDM_GDB_BRIDGE_SRC_NET_IP_TRANSPORT_H_

@@ -1,8 +1,9 @@
 #include "ip_transport.h"
 
-#include <boost/log/trivial.hpp>
 #include <sys/select.h>
 #include <unistd.h>
+
+#include <boost/log/trivial.hpp>
 
 void IPTransport::SetConnection(int sock, const Address &address) {
   const std::lock_guard<std::mutex> lock(socket_lock_);

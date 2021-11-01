@@ -2,10 +2,11 @@
 #define XBDM_GDB_BRIDGE_SRC_NET_ADDRESS_H_
 
 #include <netinet/in.h>
+
 #include <string>
 
 class Address {
-public:
+ public:
   Address() = default;
   explicit Address(const std::string &addr);
   Address(const std::string &addr, uint16_t default_port);
@@ -21,12 +22,12 @@ public:
   }
   bool operator<(const Address &other) const;
 
-private:
+ private:
   friend std::ostream &operator<<(std::ostream &, Address const &);
 
-private:
+ private:
   std::string hostname_;
   struct sockaddr_in addr_ {};
 };
 
-#endif // XBDM_GDB_BRIDGE_SRC_NET_ADDRESS_H_
+#endif  // XBDM_GDB_BRIDGE_SRC_NET_ADDRESS_H_

@@ -6,7 +6,7 @@
 #include <vector>
 
 class RDCPResponse {
-public:
+ public:
   enum StatusCode : uint32_t {
     INVALID = 0,
     OK = 200,
@@ -39,18 +39,18 @@ public:
     ERR_DEDICATED_CONNECTION_REQUIRED = 422,
   };
 
-public:
+ public:
   [[nodiscard]] StatusCode status() const { return status_; }
   [[nodiscard]] const std::string &message() const { return response_message_; }
   [[nodiscard]] const std::vector<uint8_t> &data() const { return data_; }
 
-private:
+ private:
   friend std::ostream &operator<<(std::ostream &, RDCPResponse const &);
 
-private:
+ private:
   StatusCode status_;
   std::string response_message_;
   std::vector<uint8_t> data_;
 };
 
-#endif // XBDM_GDB_BRIDGE_SRC_RDCP_RDCP_RESPONSE_H_
+#endif  // XBDM_GDB_BRIDGE_SRC_RDCP_RDCP_RESPONSE_H_

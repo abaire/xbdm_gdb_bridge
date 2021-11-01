@@ -7,7 +7,7 @@
 #include "net/address.h"
 
 class Discoverer {
-public:
+ public:
   struct XBDMServer {
     std::string name;
     Address address;
@@ -15,20 +15,20 @@ public:
     bool operator<(const XBDMServer &other) const;
   };
 
-public:
+ public:
   explicit Discoverer(Address bind_address);
 
   //! Sends a discovery packet and waits `wait_milliseconds` for replies.
   std::set<XBDMServer> Run(int wait_milliseconds = 50);
 
-private:
+ private:
   bool BindSocket();
   [[nodiscard]] bool SendDiscoveryPacket() const;
   [[nodiscard]] bool ReceiveResponse(XBDMServer &result) const;
 
-private:
+ private:
   Address bind_address_;
   int socket_;
 };
 
-#endif // XBDM_GDB_BRIDGE_SRC_DISCOVERY_DISCOVERER_H_
+#endif  // XBDM_GDB_BRIDGE_SRC_DISCOVERY_DISCOVERER_H_

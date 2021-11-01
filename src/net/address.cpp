@@ -1,8 +1,9 @@
 #include "address.h"
 
 #include <arpa/inet.h>
-#include <ostream>
 #include <sys/socket.h>
+
+#include <ostream>
 
 Address::Address(const std::string &addr) {
   auto split = addr.find(':');
