@@ -1,6 +1,7 @@
 #ifndef XBDM_GDB_BRIDGE_SRC_RDCP_XBDM_TRANSPORT_H_
 #define XBDM_GDB_BRIDGE_SRC_RDCP_XBDM_TRANSPORT_H_
 
+#include <deque>
 #include <mutex>
 
 #include "net/ip_transport.h"

@@ -39,18 +39,29 @@ class RDCPResponse {
     ERR_DEDICATED_CONNECTION_REQUIRED = 422,
   };
 
+  //! Indicates that a binary response is expected and that the size of the
+  //! binary will be provided as the first 4 bytes in the response.
+  static constexpr size_t kBinaryInt32SizePrefix = -1;
+  //! Indicates that a response cannot contain binary data.
+  static constexpr size_t kBinaryNotAllowed = 0;
+
  public:
   [[nodiscard]] StatusCode status() const { return status_; }
   [[nodiscard]] const std::string &message() const { return response_message_; }
-  [[nodiscard]] const std::vector<uint8_t> &data() const { return data_; }
+  [[nodiscard]] const std::vector<char> &data() const { return data_; }
+
+  long Parse(const char *buffer, size_t buffer_length, long binary_response_size=kBinaryNotAllowed);
 
  private:
   friend std::ostream &operator<<(std::ostream &, RDCPResponse const &);
 
+  const char *ParseMultilineResponse(const char *body_start, const char* buffer_end);
+  const char *ParseBinaryResponse(const char *buffer, const char *buffer_end, long binary_response_size);
+
  private:
   StatusCode status_;
   std::string response_message_;
-  std::vector<uint8_t> data_;
+  std::vector<char> data_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_RDCP_RDCP_RESPONSE_H_

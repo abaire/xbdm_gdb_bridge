@@ -4,7 +4,6 @@
 #include <sys/socket.h>
 
 #include <cctype>
-#include <deque>
 #include <list>
 #include <mutex>
 #include <string>
@@ -45,7 +44,10 @@ class IPTransport {
   virtual void DoReceive();
   virtual void DoSend();
 
- private:
+  std::vector<uint8_t>::iterator FirstIndexOf(uint8_t element);
+  std::vector<uint8_t>::iterator FirstIndexOf(const std::vector<uint8_t> &pattern);
+
+ protected:
   std::string name_;
 
   std::mutex socket_lock_;
@@ -53,9 +55,9 @@ class IPTransport {
   Address address_;
 
   std::mutex read_lock_;
-  std::deque<std::vector<uint8_t>> read_buffer_;
+  std::vector<uint8_t> read_buffer_;
   std::mutex write_lock_;
-  std::deque<std::vector<uint8_t>> write_buffer_;
+  std::vector<uint8_t> write_buffer_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_NET_IP_TRANSPORT_H_

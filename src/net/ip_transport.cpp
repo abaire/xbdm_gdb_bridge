@@ -1,5 +1,6 @@
 #include "ip_transport.h"
 
+#include <algorithm>
 #include <sys/select.h>
 #include <unistd.h>
 
@@ -17,27 +18,16 @@ void IPTransport::ShiftReadBuffer(long shift_bytes) {
   }
 
   const std::lock_guard<std::mutex> lock(read_lock_);
-  while (shift_bytes > 0 && read_buffer_.empty()) {
-    auto &buffer = read_buffer_.front();
-    auto buffer_size = buffer.size();
-    if (buffer_size <= shift_bytes) {
-      shift_bytes -= static_cast<long>(buffer_size);
-      read_buffer_.pop_front();
-      continue;
-    }
-
-    buffer.erase(buffer.begin(), std::next(buffer.begin(), shift_bytes));
-    shift_bytes = 0;
+  if (shift_bytes > read_buffer_.size()) {
+    return;
   }
+
+  read_buffer_.erase(read_buffer_.begin(), std::next(read_buffer_.begin(), shift_bytes));
 }
 
 size_t IPTransport::BytesAvailable() {
   const std::lock_guard<std::mutex> lock(read_lock_);
-  size_t ret = 0;
-  for (const auto &buffer : read_buffer_) {
-    ret += buffer.size();
-  }
-  return 0;
+  return read_buffer_.size();
 }
 
 void IPTransport::Close() {
@@ -62,7 +52,7 @@ void IPTransport::DropSendBuffer() {
 
 void IPTransport::Send(const uint8_t *buffer, size_t len) {
   const std::lock_guard<std::mutex> lock(write_lock_);
-  write_buffer_.emplace_back(std::vector<uint8_t>(buffer, buffer + len));
+  write_buffer_.insert(write_buffer_.end(), buffer, buffer + len);
 }
 
 bool IPTransport::HasBufferedData() {
@@ -129,15 +119,14 @@ void IPTransport::DoReceive() {
 
   const std::lock_guard<std::mutex> read_lock(read_lock_);
   buffer.resize(bytes_read);
-  read_buffer_.emplace_back(buffer);
+  read_buffer_.insert(read_buffer_.end(), buffer.begin(), buffer.end());
 }
 
 void IPTransport::DoSend() {
   const std::lock_guard<std::mutex> socket_lock(socket_lock_);
   const std::lock_guard<std::mutex> write_lock(write_lock_);
 
-  auto &buffer = write_buffer_.front();
-  ssize_t bytes_sent = send(socket_, buffer.data(), buffer.size(), 0);
+  ssize_t bytes_sent = send(socket_, write_buffer_.data(), write_buffer_.size(), 0);
   if (bytes_sent < 0) {
     BOOST_LOG_TRIVIAL(trace)
         << "send returned " << bytes_sent << " errno: " << errno << std::endl;
@@ -145,10 +134,17 @@ void IPTransport::DoSend() {
     return;
   }
 
-  if (bytes_sent == buffer.size()) {
-    write_buffer_.pop_front();
-    return;
-  }
+  write_buffer_.erase(write_buffer_.begin(), std::next(write_buffer_.begin(), bytes_sent));
+}
 
-  buffer.erase(buffer.begin(), std::next(buffer.begin(), bytes_sent));
+std::vector<uint8_t>::iterator IPTransport::FirstIndexOf(uint8_t element) {
+  const std::lock_guard<std::mutex> lock(read_lock_);
+  return std::find(read_buffer_.begin(), read_buffer_.end(), element);
+}
+
+std::vector<uint8_t>::iterator IPTransport::FirstIndexOf(
+    const std::vector<uint8_t> &pattern) {
+  const std::lock_guard<std::mutex> lock(read_lock_);
+
+  return std::search(read_buffer_.begin(), read_buffer_.end(), pattern.begin(), pattern.end());
 }
