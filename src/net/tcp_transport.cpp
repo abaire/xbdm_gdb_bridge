@@ -1,18 +1,12 @@
-#include "ip_transport.h"
+#include "tcp_transport.h"
 
-#include <algorithm>
 #include <sys/select.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <boost/log/trivial.hpp>
 
-void IPTransport::SetConnection(int sock, const Address &address) {
-  const std::lock_guard<std::mutex> lock(socket_lock_);
-  socket_ = sock;
-  address_ = address;
-}
-
-void IPTransport::ShiftReadBuffer(long shift_bytes) {
+void TCPTransport::ShiftReadBuffer(long shift_bytes) {
   if (!shift_bytes) {
     return;
   }
@@ -25,44 +19,34 @@ void IPTransport::ShiftReadBuffer(long shift_bytes) {
   read_buffer_.erase(read_buffer_.begin(), std::next(read_buffer_.begin(), shift_bytes));
 }
 
-size_t IPTransport::BytesAvailable() {
+size_t TCPTransport::BytesAvailable() {
   const std::lock_guard<std::mutex> lock(read_lock_);
   return read_buffer_.size();
 }
 
-void IPTransport::Close() {
-  if (socket_ < 0) {
-    return;
-  }
-  const std::lock_guard<std::mutex> lock(socket_lock_);
-  shutdown(socket_, SHUT_RDWR);
-  close(socket_);
-  socket_ = -1;
-}
-
-void IPTransport::DropReceiveBuffer() {
+void TCPTransport::DropReceiveBuffer() {
   const std::lock_guard<std::mutex> lock(read_lock_);
   read_buffer_.clear();
 }
 
-void IPTransport::DropSendBuffer() {
+void TCPTransport::DropSendBuffer() {
   const std::lock_guard<std::mutex> lock(write_lock_);
   write_buffer_.clear();
 }
 
-void IPTransport::Send(const uint8_t *buffer, size_t len) {
+void TCPTransport::Send(const uint8_t *buffer, size_t len) {
   const std::lock_guard<std::mutex> lock(write_lock_);
   write_buffer_.insert(write_buffer_.end(), buffer, buffer + len);
 }
 
-bool IPTransport::HasBufferedData() {
+bool TCPTransport::HasBufferedData() {
   const std::lock_guard<std::mutex> read_lock(read_lock_);
   const std::lock_guard<std::mutex> write_lock(write_lock_);
 
   return !read_buffer_.empty() || !write_buffer_.empty();
 }
 
-void IPTransport::Select(fd_set &read_fds, fd_set &write_fds,
+void TCPTransport::Select(fd_set &read_fds, fd_set &write_fds,
                          fd_set &except_fds) {
   const std::lock_guard<std::mutex> lock(socket_lock_);
   if (socket_ < 0) {
@@ -78,7 +62,7 @@ void IPTransport::Select(fd_set &read_fds, fd_set &write_fds,
   }
 }
 
-void IPTransport::Process(const fd_set &read_fds, const fd_set &write_fds,
+void TCPTransport::Process(const fd_set &read_fds, const fd_set &write_fds,
                           const fd_set &except_fds) {
   const std::lock_guard<std::mutex> lock(socket_lock_);
   if (socket_ < 0) {
@@ -101,7 +85,7 @@ void IPTransport::Process(const fd_set &read_fds, const fd_set &write_fds,
   }
 }
 
-void IPTransport::DoReceive() {
+void TCPTransport::DoReceive() {
   const std::lock_guard<std::mutex> socket_lock(socket_lock_);
   std::vector<uint8_t> buffer(1024);
 
@@ -122,7 +106,7 @@ void IPTransport::DoReceive() {
   read_buffer_.insert(read_buffer_.end(), buffer.begin(), buffer.end());
 }
 
-void IPTransport::DoSend() {
+void TCPTransport::DoSend() {
   const std::lock_guard<std::mutex> socket_lock(socket_lock_);
   const std::lock_guard<std::mutex> write_lock(write_lock_);
 
@@ -137,12 +121,12 @@ void IPTransport::DoSend() {
   write_buffer_.erase(write_buffer_.begin(), std::next(write_buffer_.begin(), bytes_sent));
 }
 
-std::vector<uint8_t>::iterator IPTransport::FirstIndexOf(uint8_t element) {
+std::vector<uint8_t>::iterator TCPTransport::FirstIndexOf(uint8_t element) {
   const std::lock_guard<std::mutex> lock(read_lock_);
   return std::find(read_buffer_.begin(), read_buffer_.end(), element);
 }
 
-std::vector<uint8_t>::iterator IPTransport::FirstIndexOf(
+std::vector<uint8_t>::iterator TCPTransport::FirstIndexOf(
     const std::vector<uint8_t> &pattern) {
   const std::lock_guard<std::mutex> lock(read_lock_);
 

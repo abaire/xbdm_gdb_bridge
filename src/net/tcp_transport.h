@@ -10,19 +10,12 @@
 #include <utility>
 #include <vector>
 
-#include "address.h"
+#include "tcp_socket_base.h"
 
-class IPTransport {
+class TCPTransport : public TCPSocketBase {
  public:
-  explicit IPTransport(std::string name, int sock = -1)
-      : name_(std::move(name)), socket_(sock) {}
-  IPTransport(std::string name, int sock, Address address)
-      : name_(std::move(name)), socket_(sock), address_(std::move(address)) {}
-
-  void SetConnection(int sock, const Address &address);
   void ShiftReadBuffer(long shift_bytes);
   size_t BytesAvailable();
-  virtual void Close();
   void DropReceiveBuffer();
   void DropSendBuffer();
 
@@ -31,12 +24,10 @@ class IPTransport {
   }
   void Send(uint8_t const *buffer, size_t len);
 
-  [[nodiscard]] bool IsConnected() const { return socket_ >= 0; }
   [[nodiscard]] virtual bool HasBufferedData();
 
-  void Select(fd_set &read_fds, fd_set &write_fds, fd_set &except_fds);
-  void Process(const fd_set &read_fds, const fd_set &write_fds,
-               const fd_set &except_fds);
+  void Select(fd_set &read_fds, fd_set &write_fds, fd_set &except_fds) override;
+  void Process(const fd_set &read_fds, const fd_set &write_fds, const fd_set &except_fds) override;
 
  protected:
   virtual void OnBytesRead() {}
@@ -48,12 +39,6 @@ class IPTransport {
   std::vector<uint8_t>::iterator FirstIndexOf(const std::vector<uint8_t> &pattern);
 
  protected:
-  std::string name_;
-
-  std::mutex socket_lock_;
-  int socket_{-1};
-  Address address_;
-
   std::mutex read_lock_;
   std::vector<uint8_t> read_buffer_;
   std::mutex write_lock_;

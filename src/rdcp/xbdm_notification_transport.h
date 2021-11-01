@@ -1,0 +1,10 @@
+#ifndef XBDM_GDB_BRIDGE_XBDMNOTIFICATIONTRANSPORT_H
+#define XBDM_GDB_BRIDGE_XBDMNOTIFICATIONTRANSPORT_H
+
+#include "net/tcp_transport.h"
+
+class XBDMNotificationTransport : public TCPTransport {
+
+};
+
+#endif  // XBDM_GDB_BRIDGE_XBDMNOTIFICATIONTRANSPORT_H

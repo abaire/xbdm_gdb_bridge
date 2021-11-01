@@ -21,7 +21,10 @@ void validate(boost::any &v, const std::vector<std::string> &values, Address *,
   v = boost::any(addr);
 }
 
-static int _main(const Address &xbox_addr, bool colorize_output) { return 0; }
+static int _main(const Address &xbox_addr, bool colorize_output) {
+
+  return 0;
+}
 
 int main(int argc, char *argv[]) {
   BOOST_LOG_TRIVIAL(trace) << "Startup.";

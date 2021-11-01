@@ -20,15 +20,25 @@ add_executable(
         src/discovery/discoverer.h
         src/net/address.cpp
         src/net/address.h
-        src/net/ip_transport.cpp
-        src/net/ip_transport.h
-        src/util/timer.cpp
-        src/util/timer.h
+        src/net/tcp_server.cpp
+        src/net/tcp_server.h
+        src/net/tcp_socket_base.cpp
+        src/net/tcp_socket_base.h
+        src/net/tcp_transport.cpp
+        src/net/tcp_transport.h
+        src/rdcp/rdcp_request.cpp
+        src/rdcp/rdcp_request.h
         src/rdcp/rdcp_response.cpp
         src/rdcp/rdcp_response.h
+        src/rdcp/xbdm_notification_transport.cpp
+        src/rdcp/xbdm_notification_transport.h
         src/rdcp/xbdm_transport.cpp
         src/rdcp/xbdm_transport.h
-        src/rdcp/rdcp_request.cpp src/rdcp/rdcp_request.h)
+        src/shell/shell.cpp
+        src/shell/shell.h
+        src/util/timer.cpp
+        src/util/timer.h
+)
 
 target_include_directories(
         xbdm_gdb_bridge
