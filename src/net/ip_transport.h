@@ -33,6 +33,7 @@ class IPTransport {
   void Send(uint8_t const *buffer, size_t len);
 
   [[nodiscard]] bool IsConnected() const { return socket_ >= 0; }
+  [[nodiscard]] virtual bool HasBufferedData();
 
   void Select(fd_set &read_fds, fd_set &write_fds, fd_set &except_fds);
   void Process(const fd_set &read_fds, const fd_set &write_fds,

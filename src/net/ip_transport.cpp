@@ -65,6 +65,13 @@ void IPTransport::Send(const uint8_t *buffer, size_t len) {
   write_buffer_.emplace_back(std::vector<uint8_t>(buffer, buffer + len));
 }
 
+bool IPTransport::HasBufferedData() {
+  const std::lock_guard<std::mutex> read_lock(read_lock_);
+  const std::lock_guard<std::mutex> write_lock(write_lock_);
+
+  return !read_buffer_.empty() || !write_buffer_.empty();
+}
+
 void IPTransport::Select(fd_set &read_fds, fd_set &write_fds,
                          fd_set &except_fds) {
   const std::lock_guard<std::mutex> lock(socket_lock_);
@@ -96,6 +103,7 @@ void IPTransport::Process(const fd_set &read_fds, const fd_set &write_fds,
 
   if (FD_ISSET(socket_, &read_fds)) {
     DoReceive();
+    OnBytesRead();
   }
 
   if (FD_ISSET(socket_, &write_fds)) {
