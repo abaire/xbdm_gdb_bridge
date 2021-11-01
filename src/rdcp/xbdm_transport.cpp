@@ -4,6 +4,28 @@
 
 #include "rdcp/rdcp_response.h"
 
+bool XBDMTransport::Connect(const Address& address) {
+  if (socket_ >= 0) {
+    Close();
+  }
+
+  socket_ = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if (socket_ < 0) {
+    return false;
+  }
+
+  address_ = address;
+  const struct sockaddr_in &addr = address.address();
+  if (connect(socket_, reinterpret_cast<struct sockaddr const *>(&addr), sizeof(addr))) {
+    BOOST_LOG_TRIVIAL(error) << "connect failed " << errno << std::endl;
+    close(socket_);
+    socket_ = -1;
+    return false;
+  }
+
+  return true;
+}
+
 void XBDMTransport::Close() {
   state_ = ConnectionState::INIT;
   TCPConnection::Close();

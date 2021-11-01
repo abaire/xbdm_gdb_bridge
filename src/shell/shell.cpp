@@ -8,9 +8,10 @@
 
 Shell::Shell(std::shared_ptr<XBOXInterface>& interface) : interface_(interface), prompt_("> ") {
   auto quit = std::make_shared<ShellCommandQuit>();
-  commands_["quit"] = quit;
   commands_["exit"] = quit;
   commands_["help"] = nullptr;
+  commands_["reconnect"] = std::make_shared<ShellCommandReconnect>();
+  commands_["quit"] = quit;
 }
 
 void Shell::Run() {

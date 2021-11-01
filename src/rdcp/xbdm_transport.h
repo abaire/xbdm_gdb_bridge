@@ -12,6 +12,9 @@ class XBDMTransport : public TCPConnection {
   enum ConnectionState { INIT = 0, CONNECTED, AWAITING_RESPONSE };
 
  public:
+  explicit XBDMTransport(std::string name) : TCPConnection(std::move(name)) {}
+
+  bool Connect(const Address &address);
   void Close() override;
 
   [[nodiscard]] ConnectionState State() const { return state_; }
@@ -28,7 +31,7 @@ class XBDMTransport : public TCPConnection {
   void WriteNextRequest();
 
  private:
-  ConnectionState state_;
+  ConnectionState state_{ConnectionState::INIT};
 
   std::mutex request_queue_lock_;
   std::deque<RDCPRequest> request_queue_;

@@ -24,6 +24,16 @@ void XBOXInterface::Stop() {
   select_thread_.reset();
 }
 
+bool XBOXInterface::ReconnectXBDM() {
+  if (xbdm_transport_) {
+    xbdm_transport_->Close();
+    xbdm_transport_.reset();
+  }
+
+  xbdm_transport_ = std::make_shared<XBDMTransport>(name_);
+  return xbdm_transport_->Connect(xbox_address_);
+}
+
 void XBOXInterface::OnNotificationChannelConnected(int sock, Address& address) {
   std::shared_ptr<XBDMNotificationTransport> transport = std::make_shared<XBDMNotificationTransport>(name_, [this](XBDMNotification& notification) { this->OnNotificationReceived(notification); } );
 }

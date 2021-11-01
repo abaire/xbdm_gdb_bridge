@@ -17,6 +17,8 @@ class XBOXInterface {
   void Start();
   void Stop();
 
+  bool ReconnectXBDM();
+
  private:
   void OnNotificationChannelConnected(int sock, Address &address);
   void OnNotificationReceived(XBDMNotification& notification);
