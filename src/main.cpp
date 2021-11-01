@@ -6,6 +6,8 @@
 #include <vector>
 
 #include "net/address.h"
+#include "shell/shell.h"
+#include "xbox/xbox_interface.h"
 
 #define DEFAULT_PORT 731
 
@@ -22,7 +24,13 @@ void validate(boost::any &v, const std::vector<std::string> &values, Address *,
 }
 
 static int _main(const Address &xbox_addr, bool colorize_output) {
+  auto interface = std::make_shared<XBOXInterface>("XBOX", xbox_addr);
+  interface->Start();
 
+  auto shell = Shell(interface);
+  shell.Run();
+
+  interface->Stop();
   return 0;
 }
 

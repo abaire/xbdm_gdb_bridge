@@ -23,7 +23,7 @@ class SelectThread {
   static void ThreadMainBootstrap(SelectThread* instance);
 
  protected:
-  std::atomic<bool> running_;
+  std::atomic<bool> running_{false};
   std::thread thread_;
 
   std::mutex connection_lock_;

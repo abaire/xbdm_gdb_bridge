@@ -28,18 +28,21 @@ add_executable(
         src/net/tcp_socket_base.h
         src/net/tcp_connection.cpp
         src/net/tcp_connection.h
+        src/notification/xbdm_notification.cpp
+        src/notification/xbdm_notification.h
+        src/notification/xbdm_notification_transport.cpp
+        src/notification/xbdm_notification_transport.h
         src/rdcp/rdcp_request.cpp
         src/rdcp/rdcp_request.h
         src/rdcp/rdcp_response.cpp
         src/rdcp/rdcp_response.h
-        src/rdcp/xbdm_notification.cpp
-        src/rdcp/xbdm_notification.h
-        src/rdcp/xbdm_notification_transport.cpp
-        src/rdcp/xbdm_notification_transport.h
         src/rdcp/xbdm_transport.cpp
         src/rdcp/xbdm_transport.h
+        src/shell/command.cpp
+        src/shell/command.h
         src/shell/shell.cpp
         src/shell/shell.h
+        src/shell/shell_commands.h
         src/util/timer.cpp
         src/util/timer.h
         src/xbox/xbox_interface.cpp

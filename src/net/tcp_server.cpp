@@ -80,7 +80,8 @@ bool TCPServer::Process(const fd_set &read_fds, const fd_set &write_fds,
     if (accepted_socket < 0) {
       BOOST_LOG_TRIVIAL(error) << "accept failed" << errno << std::endl;
     } else {
-      OnAccepted(accepted_socket, Address(bind_addr));
+      auto address = Address(bind_addr);
+      OnAccepted(accepted_socket, address);
     }
   }
 

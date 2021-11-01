@@ -4,7 +4,7 @@
 #include <functional>
 
 #include "net/tcp_connection.h"
-#include "rdcp/xbdm_notification.h"
+#include "xbdm_notification.h"
 
 class XBDMNotificationTransport : public TCPConnection {
  public:
