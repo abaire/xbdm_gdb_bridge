@@ -20,6 +20,8 @@ add_executable(
         src/discovery/discoverer.h
         src/net/address.cpp
         src/net/address.h
+        src/net/select_thread.cpp
+        src/net/select_thread.h
         src/net/tcp_server.cpp
         src/net/tcp_server.h
         src/net/tcp_socket_base.cpp

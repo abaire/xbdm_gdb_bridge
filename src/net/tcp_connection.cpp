@@ -46,11 +46,11 @@ bool TCPConnection::HasBufferedData() {
   return !read_buffer_.empty() || !write_buffer_.empty();
 }
 
-void TCPConnection::Select(fd_set &read_fds, fd_set &write_fds,
+int TCPConnection::Select(fd_set &read_fds, fd_set &write_fds,
                          fd_set &except_fds) {
   const std::lock_guard<std::mutex> lock(socket_lock_);
   if (socket_ < 0) {
-    return;
+    return socket_;
   }
 
   FD_SET(socket_, &read_fds);
@@ -60,19 +60,21 @@ void TCPConnection::Select(fd_set &read_fds, fd_set &write_fds,
   if (!write_buffer_.empty()) {
     FD_SET(socket_, &write_fds);
   }
+
+  return socket_;
 }
 
-void TCPConnection::Process(const fd_set &read_fds, const fd_set &write_fds,
+bool TCPConnection::Process(const fd_set &read_fds, const fd_set &write_fds,
                           const fd_set &except_fds) {
   const std::lock_guard<std::mutex> lock(socket_lock_);
   if (socket_ < 0) {
-    return;
+    return false;
   }
 
   if (FD_ISSET(socket_, &except_fds)) {
     BOOST_LOG_TRIVIAL(trace) << "Socket exception detected." << std::endl;
     Close();
-    return;
+    return false;
   }
 
   if (FD_ISSET(socket_, &read_fds)) {
@@ -83,6 +85,8 @@ void TCPConnection::Process(const fd_set &read_fds, const fd_set &write_fds,
   if (FD_ISSET(socket_, &write_fds)) {
     DoSend();
   }
+
+  return true;
 }
 
 void TCPConnection::DoReceive() {

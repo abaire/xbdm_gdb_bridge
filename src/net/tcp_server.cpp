@@ -47,28 +47,29 @@ void TCPServer::SetConnection(int sock, const Address& address) {
   assert(false);
 }
 
-void TCPServer::Select(fd_set &read_fds, fd_set &write_fds,
+int TCPServer::Select(fd_set &read_fds, fd_set &write_fds,
                           fd_set &except_fds) {
   const std::lock_guard<std::mutex> lock(socket_lock_);
   if (socket_ < 0) {
-    return;
+    return socket_;
   }
 
   FD_SET(socket_, &read_fds);
   FD_SET(socket_, &except_fds);
+  return socket_;
 }
 
-void TCPServer::Process(const fd_set &read_fds, const fd_set &write_fds,
+bool TCPServer::Process(const fd_set &read_fds, const fd_set &write_fds,
                            const fd_set &except_fds) {
   const std::lock_guard<std::mutex> lock(socket_lock_);
   if (socket_ < 0) {
-    return;
+    return false;
   }
 
   if (FD_ISSET(socket_, &except_fds)) {
     BOOST_LOG_TRIVIAL(trace) << "Socket exception detected." << std::endl;
     Close();
-    return;
+    return false;
   }
 
   if (FD_ISSET(socket_, &read_fds)) {
@@ -82,4 +83,6 @@ void TCPServer::Process(const fd_set &read_fds, const fd_set &write_fds,
       OnAccepted(accepted_socket, Address(bind_addr));
     }
   }
+
+  return true;
 }

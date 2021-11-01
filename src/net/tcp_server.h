@@ -8,8 +8,8 @@ class TCPServer : public TCPSocketBase {
   bool Listen(const Address &address);
   void SetConnection(int sock, const Address &address) override;
 
-  void Select(fd_set &read_fds, fd_set &write_fds, fd_set &except_fds) override;
-  void Process(const fd_set &read_fds, const fd_set &write_fds, const fd_set &except_fds) override;
+  int Select(fd_set &read_fds, fd_set &write_fds, fd_set &except_fds) override;
+  bool Process(const fd_set &read_fds, const fd_set &write_fds, const fd_set &except_fds) override;
 
  protected:
   virtual void OnAccepted(int sock, Address &&address) = 0;

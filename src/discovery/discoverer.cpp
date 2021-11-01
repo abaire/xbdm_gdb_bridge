@@ -2,10 +2,10 @@
 
 #include <sys/socket.h>
 #include <unistd.h>
-
-#include <boost/log/trivial.hpp>
 #include <utility>
 #include <vector>
+
+#include <boost/log/trivial.hpp>
 
 #include "util/timer.h"
 
