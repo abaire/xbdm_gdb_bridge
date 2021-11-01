@@ -6,7 +6,7 @@
 
 void XBDMTransport::Close() {
   state_ = ConnectionState::INIT;
-  TCPTransport::Close();
+  TCPConnection::Close();
 }
 
 void XBDMTransport::SetConnected() {
@@ -33,11 +33,11 @@ void XBDMTransport::WriteNextRequest() {
   }
 
   std::vector<uint8_t> buffer = static_cast<std::vector<uint8_t>>(request_queue_.front());
-  TCPTransport::Send(buffer);
+  TCPConnection::Send(buffer);
 }
 
 void XBDMTransport::OnBytesRead() {
-  TCPTransport::OnBytesRead();
+  TCPConnection::OnBytesRead();
 
   const std::lock_guard<std::mutex> read_lock(read_lock_);
   char const* char_buffer = reinterpret_cast<char*>(read_buffer_.data());

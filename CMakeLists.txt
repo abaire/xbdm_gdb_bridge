@@ -24,12 +24,14 @@ add_executable(
         src/net/tcp_server.h
         src/net/tcp_socket_base.cpp
         src/net/tcp_socket_base.h
-        src/net/tcp_transport.cpp
-        src/net/tcp_transport.h
+        src/net/tcp_connection.cpp
+        src/net/tcp_connection.h
         src/rdcp/rdcp_request.cpp
         src/rdcp/rdcp_request.h
         src/rdcp/rdcp_response.cpp
         src/rdcp/rdcp_response.h
+        src/rdcp/xbdm_notification.cpp
+        src/rdcp/xbdm_notification.h
         src/rdcp/xbdm_notification_transport.cpp
         src/rdcp/xbdm_notification_transport.h
         src/rdcp/xbdm_transport.cpp

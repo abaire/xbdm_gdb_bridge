@@ -1,4 +1,4 @@
-#include "tcp_transport.h"
+#include "tcp_connection.h"
 
 #include <sys/select.h>
 #include <unistd.h>
@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <boost/log/trivial.hpp>
 
-void TCPTransport::ShiftReadBuffer(long shift_bytes) {
+void TCPConnection::ShiftReadBuffer(long shift_bytes) {
   if (!shift_bytes) {
     return;
   }
@@ -19,34 +19,34 @@ void TCPTransport::ShiftReadBuffer(long shift_bytes) {
   read_buffer_.erase(read_buffer_.begin(), std::next(read_buffer_.begin(), shift_bytes));
 }
 
-size_t TCPTransport::BytesAvailable() {
+size_t TCPConnection::BytesAvailable() {
   const std::lock_guard<std::mutex> lock(read_lock_);
   return read_buffer_.size();
 }
 
-void TCPTransport::DropReceiveBuffer() {
+void TCPConnection::DropReceiveBuffer() {
   const std::lock_guard<std::mutex> lock(read_lock_);
   read_buffer_.clear();
 }
 
-void TCPTransport::DropSendBuffer() {
+void TCPConnection::DropSendBuffer() {
   const std::lock_guard<std::mutex> lock(write_lock_);
   write_buffer_.clear();
 }
 
-void TCPTransport::Send(const uint8_t *buffer, size_t len) {
+void TCPConnection::Send(const uint8_t *buffer, size_t len) {
   const std::lock_guard<std::mutex> lock(write_lock_);
   write_buffer_.insert(write_buffer_.end(), buffer, buffer + len);
 }
 
-bool TCPTransport::HasBufferedData() {
+bool TCPConnection::HasBufferedData() {
   const std::lock_guard<std::mutex> read_lock(read_lock_);
   const std::lock_guard<std::mutex> write_lock(write_lock_);
 
   return !read_buffer_.empty() || !write_buffer_.empty();
 }
 
-void TCPTransport::Select(fd_set &read_fds, fd_set &write_fds,
+void TCPConnection::Select(fd_set &read_fds, fd_set &write_fds,
                          fd_set &except_fds) {
   const std::lock_guard<std::mutex> lock(socket_lock_);
   if (socket_ < 0) {
@@ -62,7 +62,7 @@ void TCPTransport::Select(fd_set &read_fds, fd_set &write_fds,
   }
 }
 
-void TCPTransport::Process(const fd_set &read_fds, const fd_set &write_fds,
+void TCPConnection::Process(const fd_set &read_fds, const fd_set &write_fds,
                           const fd_set &except_fds) {
   const std::lock_guard<std::mutex> lock(socket_lock_);
   if (socket_ < 0) {
@@ -85,7 +85,7 @@ void TCPTransport::Process(const fd_set &read_fds, const fd_set &write_fds,
   }
 }
 
-void TCPTransport::DoReceive() {
+void TCPConnection::DoReceive() {
   const std::lock_guard<std::mutex> socket_lock(socket_lock_);
   std::vector<uint8_t> buffer(1024);
 
@@ -106,7 +106,7 @@ void TCPTransport::DoReceive() {
   read_buffer_.insert(read_buffer_.end(), buffer.begin(), buffer.end());
 }
 
-void TCPTransport::DoSend() {
+void TCPConnection::DoSend() {
   const std::lock_guard<std::mutex> socket_lock(socket_lock_);
   const std::lock_guard<std::mutex> write_lock(write_lock_);
 
@@ -121,12 +121,12 @@ void TCPTransport::DoSend() {
   write_buffer_.erase(write_buffer_.begin(), std::next(write_buffer_.begin(), bytes_sent));
 }
 
-std::vector<uint8_t>::iterator TCPTransport::FirstIndexOf(uint8_t element) {
+std::vector<uint8_t>::iterator TCPConnection::FirstIndexOf(uint8_t element) {
   const std::lock_guard<std::mutex> lock(read_lock_);
   return std::find(read_buffer_.begin(), read_buffer_.end(), element);
 }
 
-std::vector<uint8_t>::iterator TCPTransport::FirstIndexOf(
+std::vector<uint8_t>::iterator TCPConnection::FirstIndexOf(
     const std::vector<uint8_t> &pattern) {
   const std::lock_guard<std::mutex> lock(read_lock_);
 

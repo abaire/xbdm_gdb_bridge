@@ -12,8 +12,11 @@
 
 #include "tcp_socket_base.h"
 
-class TCPTransport : public TCPSocketBase {
+class TCPConnection : public TCPSocketBase {
  public:
+  explicit TCPConnection(std::string name, int sock = -1) : TCPSocketBase(std::move(name), sock) {}
+  TCPConnection(std::string name, int sock, Address address) : TCPSocketBase(std::move(name), sock, std::move(address)) {}
+
   void ShiftReadBuffer(long shift_bytes);
   size_t BytesAvailable();
   void DropReceiveBuffer();

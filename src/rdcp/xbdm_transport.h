@@ -4,10 +4,10 @@
 #include <deque>
 #include <mutex>
 
-#include "net/tcp_transport.h"
+#include "net/tcp_connection.h"
 #include "rdcp/rdcp_request.h"
 
-class XBDMTransport : public TCPTransport {
+class XBDMTransport : public TCPConnection {
  public:
   enum ConnectionState { INIT = 0, CONNECTED, AWAITING_RESPONSE };
 
