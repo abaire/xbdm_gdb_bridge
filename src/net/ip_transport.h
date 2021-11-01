@@ -2,24 +2,58 @@
 #define XBDM_GDB_BRIDGE_SRC_NET_IP_TRANSPORT_H_
 
 #include <cctype>
+#include <deque>
 #include <list>
+#include <mutex>
 #include <string>
 #include <sys/socket.h>
+#include <utility>
+#include <vector>
+
+#include "address.h"
 
 class IPTransport {
+public:
+  explicit IPTransport(std::string name, int sock = -1)
+      : name_(std::move(name)), socket_(sock) {}
+  IPTransport(std::string name, int sock, Address address)
+      : name_(std::move(name)), socket_(sock), address_(std::move(address)) {}
+
+  void SetConnection(int sock, const Address &address);
+  void ShiftReadBuffer(long shift_bytes);
+  size_t BytesAvailable();
+  virtual void Close();
+  void DropReceiveBuffer();
+  void DropSendBuffer();
+
+  void Send(const std::vector<uint8_t> &buffer) {
+    Send(buffer.data(), buffer.size());
+  }
+  void Send(uint8_t const *buffer, size_t len);
+
+  [[nodiscard]] bool IsConnected() const { return socket_ >= 0; }
+
+  void Select(fd_set &read_fds, fd_set &write_fds, fd_set &except_fds);
+  void Process(const fd_set &read_fds, const fd_set &write_fds,
+               const fd_set &except_fds);
+
+protected:
+  virtual void OnBytesRead() {}
+
+  virtual void DoReceive();
+  virtual void DoSend();
+
 private:
   std::string name_;
-  int socket_;
-  uint32_t address_;
-  uint16_t port_;
 
-  //    std::list<std::filebuf
-  //  self.addr: Optional[Tuple[str, int]] = None
-  //  self._read_buffer: bytearray = bytearray()
-  //  self._write_buffer_lock: threading.RLock = threading.RLock()
-  //  self._write_buffer: bytearray = bytearray()
-  //  self._on_bytes_read: Optional[Callable[[IPTransport], None]] =
-  //  process_callback
+  std::mutex socket_lock_;
+  int socket_{-1};
+  Address address_;
+
+  std::mutex read_lock_;
+  std::deque<std::vector<uint8_t>> read_buffer_;
+  std::mutex write_lock_;
+  std::deque<std::vector<uint8_t>> write_buffer_;
 };
 
 #endif // XBDM_GDB_BRIDGE_SRC_NET_IP_TRANSPORT_H_

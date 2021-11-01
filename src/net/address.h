@@ -22,10 +22,11 @@ public:
   bool operator<(const Address &other) const;
 
 private:
+  friend std::ostream &operator<<(std::ostream &, Address const &);
+
+private:
   std::string hostname_;
   struct sockaddr_in addr_ {};
-
-  friend std::ostream &operator<<(std::ostream &os, Address const &m);
 };
 
 #endif // XBDM_GDB_BRIDGE_SRC_NET_ADDRESS_H_

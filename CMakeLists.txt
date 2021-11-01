@@ -24,7 +24,7 @@ add_executable(
         src/net/ip_transport.h
         src/util/timer.cpp
         src/util/timer.h
-)
+        src/rdcp/rdcp_response.cpp src/rdcp/rdcp_response.h)
 
 target_include_directories(
         xbdm_gdb_bridge
