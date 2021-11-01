@@ -42,7 +42,9 @@ add_executable(
         src/shell/shell.h
         src/util/timer.cpp
         src/util/timer.h
-)
+        src/xbox/xbox_interface.cpp
+        src/xbox/xbox_interface.h
+        src/xbox/notification_server.cpp src/xbox/notification_server.h)
 
 target_include_directories(
         xbdm_gdb_bridge
