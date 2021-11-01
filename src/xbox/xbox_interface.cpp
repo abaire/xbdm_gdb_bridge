@@ -1,8 +1,9 @@
 #include "xbox_interface.h"
 
+#include <cassert>
 #include <utility>
 
-XBOXInterface::XBOXInterface(std::string name, Address  xbox_address) : name_(std::move(name)), xbox_address_(std::move(xbox_address)) {
+XBOXInterface::XBOXInterface(std::string name, IPAddress xbox_address) : name_(std::move(name)), xbox_address_(std::move(xbox_address)) {
 }
 
 void XBOXInterface::Start() {
@@ -11,7 +12,7 @@ void XBOXInterface::Start() {
   select_thread_ = std::make_shared<SelectThread>();
   select_thread_->Start();
 
-  notification_server_ = std::make_shared<NotificationServer>(name_, [this](int sock, Address& address) { this->OnNotificationChannelConnected(sock, address); } );
+  notification_server_ = std::make_shared<DelegatingServer>(name_, [this](int sock, IPAddress& address) { this->OnNotificationChannelConnected(sock, address); } );
   select_thread_->AddConnection(notification_server_);
 }
 
@@ -34,10 +35,45 @@ bool XBOXInterface::ReconnectXBDM() {
   return xbdm_transport_->Connect(xbox_address_);
 }
 
-void XBOXInterface::OnNotificationChannelConnected(int sock, Address& address) {
-  std::shared_ptr<XBDMNotificationTransport> transport = std::make_shared<XBDMNotificationTransport>(name_, [this](XBDMNotification& notification) { this->OnNotificationReceived(notification); } );
+void XBOXInterface::StartGDBServer(const IPAddress&address) {
+  if (gdb_server_) {
+    gdb_server_->Close();
+    gdb_server_.reset();
+  }
+
+  gdb_server_ = std::make_shared<DelegatingServer>(
+      name_,
+      [this](int sock, IPAddress& address) {
+        this->OnGDBClientConnected(sock, address);
+      });
+  select_thread_->AddConnection(gdb_server_);
+}
+
+void XBOXInterface::StopGDBServer() {
+  if (!gdb_server_) {
+    return;
+  }
+
+  gdb_server_->Close();
+  gdb_server_.reset();
+}
+
+
+void XBOXInterface::OnNotificationChannelConnected(int sock,
+                                                   IPAddress& address) {
+  auto transport = std::make_shared<XBDMNotificationTransport>(
+      name_,
+      [this](XBDMNotification& notification) {
+        this->OnNotificationReceived(notification);
+      });
+
+  select_thread_->AddConnection(transport);
 }
 
 void XBOXInterface::OnNotificationReceived(XBDMNotification& notification) {
+
+}
+
+void XBOXInterface::OnGDBClientConnected(int sock, IPAddress& address) {
 
 }

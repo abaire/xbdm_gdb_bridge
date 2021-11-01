@@ -2,7 +2,7 @@
 
 #include <unistd.h>
 
-void TCPSocketBase::SetConnection(int sock, const Address &address) {
+void TCPSocketBase::SetConnection(int sock, const IPAddress &address) {
   const std::lock_guard<std::mutex> lock(socket_lock_);
   socket_ = sock;
   address_ = address;

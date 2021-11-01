@@ -22,4 +22,31 @@ struct ShellCommandReconnect : Command {
   }
 };
 
+struct ShellCommandGDB : Command {
+  ShellCommandGDB() : Command(
+                          "[ip][:port]\n"
+                          "\n"
+                          "Starts a GDB server, allowing GDB to communicate with the XBDM target.\n"
+                          "\n"
+                          "[ip][:port] - The IP and port at which GDB can connect.\n"
+                          "              Both components are optional. Default IP is to bind to all local interfaces at an arbitrary port.\n") {}
+  virtual Result operator()(XBOXInterface &interface, const std::vector<std::string> &args) {
+    std::vector<std::string> components;
+    IPAddress address;
+
+    if (!args.empty()) {
+      address = IPAddress(args.front());
+    }
+
+    interface.StartGDBServer(address);
+    if (!interface.GetGDBListenAddress(address)) {
+      std::cout << "Failed to start GDB server." << std::endl;
+    } else {
+      std::cout << "GDB server listening at address " << address << std::endl;
+    }
+
+    return Result::HANDLED;
+  }
+};
+
 #endif  // XBDM_GDB_BRIDGE_SHELL_COMMANDS_H

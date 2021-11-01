@@ -4,19 +4,19 @@
 #include <set>
 #include <string>
 
-#include "net/address.h"
+#include "net/ip_address.h"
 
 class Discoverer {
  public:
   struct XBDMServer {
     std::string name;
-    Address address;
+    IPAddress address;
 
     bool operator<(const XBDMServer &other) const;
   };
 
  public:
-  explicit Discoverer(Address bind_address);
+  explicit Discoverer(IPAddress bind_address);
 
   //! Sends a discovery packet and waits `wait_milliseconds` for replies.
   std::set<XBDMServer> Run(int wait_milliseconds = 50);
@@ -27,7 +27,7 @@ class Discoverer {
   [[nodiscard]] bool ReceiveResponse(XBDMServer &result) const;
 
  private:
-  Address bind_address_;
+  IPAddress bind_address_;
   int socket_;
 };
 

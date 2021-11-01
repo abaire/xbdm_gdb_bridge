@@ -5,7 +5,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-bool TCPServer::Listen(const Address& address) {
+#include "net/ip_address.h"
+
+bool TCPServer::Listen(const IPAddress & address) {
   const std::lock_guard<std::mutex> lock(socket_lock_);
   address_ = address;
 
@@ -27,7 +29,7 @@ bool TCPServer::Listen(const Address& address) {
     BOOST_LOG_TRIVIAL(error) << "getsockname failed" << errno << std::endl;
     goto close_and_fail;
   }
-  address_ = Address(bind_addr);
+  address_ = IPAddress(bind_addr);
 
   if (listen(socket_, 1)) {
     BOOST_LOG_TRIVIAL(error) << "listen failed" << errno << std::endl;
@@ -43,7 +45,7 @@ close_and_fail:
   return false;
 }
 
-void TCPServer::SetConnection(int sock, const Address& address) {
+void TCPServer::SetConnection(int sock, const IPAddress & address) {
   assert(false);
 }
 
@@ -80,7 +82,7 @@ bool TCPServer::Process(const fd_set &read_fds, const fd_set &write_fds,
     if (accepted_socket < 0) {
       BOOST_LOG_TRIVIAL(error) << "accept failed" << errno << std::endl;
     } else {
-      auto address = Address(bind_addr);
+      auto address = IPAddress(bind_addr);
       OnAccepted(accepted_socket, address);
     }
   }

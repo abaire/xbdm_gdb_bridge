@@ -54,7 +54,7 @@ struct NAPPacket {
   }
 };
 
-Discoverer::Discoverer(Address bind_address)
+Discoverer::Discoverer(IPAddress bind_address)
     : bind_address_(std::move(bind_address)) {
   socket_ = -1;
 }
@@ -175,7 +175,7 @@ bool Discoverer::ReceiveResponse(XBDMServer &result) const {
   }
 
   result.name = packet.name;
-  result.address = Address(recv_addr);
+  result.address = IPAddress(recv_addr);
 
   return true;
 }

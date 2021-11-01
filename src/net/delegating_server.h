@@ -7,17 +7,17 @@
 #include "net/tcp_server.h"
 #include "notification/xbdm_notification_transport.h"
 
-class NotificationServer : public TCPServer {
+class DelegatingServer : public TCPServer {
  public:
-  typedef std::function<void(int, Address&)> ConnectionAcceptedHandler;
+  typedef std::function<void(int, IPAddress &)> ConnectionAcceptedHandler;
 
  public:
-  explicit NotificationServer(std::string name,
+  explicit DelegatingServer(std::string name,
                               ConnectionAcceptedHandler connection_accepted) : TCPServer(std::move(name)),
         connection_accepted_(std::move(connection_accepted)) {}
 
  protected:
-  void OnAccepted(int sock, Address &address) override {
+  void OnAccepted(int sock, IPAddress &address) override {
     connection_accepted_(sock, address);
   }
 

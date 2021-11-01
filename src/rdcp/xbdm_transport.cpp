@@ -4,7 +4,7 @@
 
 #include "rdcp/rdcp_response.h"
 
-bool XBDMTransport::Connect(const Address& address) {
+bool XBDMTransport::Connect(const IPAddress & address) {
   if (socket_ >= 0) {
     Close();
   }

@@ -3,17 +3,19 @@
 
 #include <mutex>
 
-#include "address.h"
+#include "ip_address.h"
 
 class TCPSocketBase {
  public:
   explicit TCPSocketBase(std::string name, int sock = -1)
   : name_(std::move(name)), socket_(sock) {}
-  TCPSocketBase(std::string name, int sock, Address address)
+  TCPSocketBase(std::string name, int sock, IPAddress address)
   : name_(std::move(name)), socket_(sock), address_(std::move(address)) {}
 
-  virtual void SetConnection(int sock, const Address &address);
+  virtual void SetConnection(int sock, const IPAddress &address);
+  [[nodiscard]] const std::string &Name() const { return name_; }
   [[nodiscard]] bool IsConnected() const { return socket_ >= 0; }
+  [[nodiscard]] const IPAddress &Address() const { return address_; }
 
   virtual void Close();
 
@@ -31,7 +33,7 @@ class TCPSocketBase {
 
   std::mutex socket_lock_;
   int socket_{-1};
-  Address address_;
+  IPAddress address_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_TCP_SOCKET_BASE_H

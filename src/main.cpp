@@ -5,7 +5,7 @@
 #include <iostream>
 #include <vector>
 
-#include "net/address.h"
+#include "net/ip_address.h"
 #include "shell/shell.h"
 #include "xbox/xbox_interface.h"
 
@@ -14,16 +14,17 @@
 namespace logging = boost::log;
 namespace po = boost::program_options;
 
-void validate(boost::any &v, const std::vector<std::string> &values, Address *,
+void validate(boost::any &v, const std::vector<std::string> &values,
+              IPAddress *,
               int) {
   po::validators::check_first_occurrence(v);
   const std::string &value = po::validators::get_single_string(values);
 
-  Address addr(value, DEFAULT_PORT);
+  IPAddress addr(value, DEFAULT_PORT);
   v = boost::any(addr);
 }
 
-static int _main(const Address &xbox_addr, bool colorize_output) {
+static int _main(const IPAddress &xbox_addr, bool colorize_output) {
   auto interface = std::make_shared<XBOXInterface>("XBOX", xbox_addr);
   interface->Start();
 
@@ -43,7 +44,7 @@ int main(int argc, char *argv[]) {
   // clang-format off
   opts.add_options()
       ("help,?", po::bool_switch(), "Print this help message.")
-      ("xbox", po::value<Address>()->value_name("<ip[:port]>"), "IP (and optionally port) of the XBOX to connect to.")
+      ("xbox", po::value<IPAddress>()->value_name("<ip[:port]>"), "IP (and optionally port) of the XBOX to connect to.")
       ("color,c", po::bool_switch(&colorize), "Colorize output.")
       ("verbosity,v", po::value<uint32_t>()->value_name("<level>")->default_value(0), "Sets logging verbosity.")
       ;
@@ -80,7 +81,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  Address xbox_addr = vm["xbox"].as<Address>();
+  IPAddress xbox_addr = vm["xbox"].as<IPAddress>();
   uint32_t verbosity = vm["verbosity"].as<uint32_t>();
   logging::core::get()->set_filter(logging::trivial::severity >=
                                    logging::trivial::info - verbosity);

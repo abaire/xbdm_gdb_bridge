@@ -18,8 +18,12 @@ add_executable(
         src/main.cpp
         src/discovery/discoverer.cpp
         src/discovery/discoverer.h
-        src/net/address.cpp
-        src/net/address.h
+        src/gdb/gdb_transport.cpp
+        src/gdb/gdb_transport.h
+        src/net/ip_address.cpp
+        src/net/ip_address.h
+        src/net/delegating_server.cpp
+        src/net/delegating_server.h
         src/net/select_thread.cpp
         src/net/select_thread.h
         src/net/tcp_server.cpp
@@ -47,7 +51,7 @@ add_executable(
         src/util/timer.h
         src/xbox/xbox_interface.cpp
         src/xbox/xbox_interface.h
-        src/xbox/notification_server.cpp src/xbox/notification_server.h)
+)
 
 target_include_directories(
         xbdm_gdb_bridge
