@@ -5,7 +5,7 @@
 #include <boost/log/trivial.hpp>
 #include <chrono>
 
-static long kMaxWaitMilliseconds = 100;
+static int kMaxWaitMilliseconds = 100;
 
 void SelectThread::ThreadMainBootstrap(SelectThread *instance) {
   instance->ThreadMain();
