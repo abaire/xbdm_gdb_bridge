@@ -2,14 +2,15 @@
 
 #include <cstring>
 
-static bool StartsWith(const char *buffer, long buffer_len, const char *prefix, long prefix_len);
+static bool StartsWith(const char *buffer, long buffer_len, const char *prefix,
+                       long prefix_len);
 
 XBDMNotification::XBDMNotification(const char *buffer, long buffer_len) {
-#define SETIF(prefix, type) \
+#define SETIF(prefix, type)                                         \
   if (StartsWith(buffer, buffer_len, prefix, sizeof(prefix) - 1)) { \
-    type_ = type;           \
+    type_ = type;                                                   \
     data_.assign(buffer + sizeof(prefix) - 1, buffer + buffer_len); \
-  return;                   \
+    return;                                                         \
   }
 
   SETIF("vx!", NotificationType::VX)
@@ -28,7 +29,8 @@ XBDMNotification::XBDMNotification(const char *buffer, long buffer_len) {
 #undef SETIF
 }
 
-static bool StartsWith(const char *buffer, long buffer_len, const char *prefix, long prefix_len) {
+static bool StartsWith(const char *buffer, long buffer_len, const char *prefix,
+                       long prefix_len) {
   if (prefix_len > buffer_len) {
     return false;
   }

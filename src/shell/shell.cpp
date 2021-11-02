@@ -7,7 +7,8 @@
 #include "debugger_commands.h"
 #include "shell_commands.h"
 
-Shell::Shell(std::shared_ptr<XBOXInterface>& interface) : interface_(interface), prompt_("> ") {
+Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
+    : interface_(interface), prompt_("> ") {
   auto quit = std::make_shared<ShellCommandQuit>();
   commands_["exit"] = quit;
   commands_["gdb"] = std::make_shared<ShellCommandGDB>();
@@ -20,7 +21,7 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface) : interface_(interface),
   commands_["/attach"] = std::make_shared<DebuggerCommandAttach>();
   commands_["/detach"] = std::make_shared<DebuggerCommandDetach>();
   commands_["/restart"] = std::make_shared<DebuggerCommandRestart>();
-  commands_[      "/switch"] = std::make_shared<DebuggerCommandSetActiveThread>();
+  commands_["/switch"] = std::make_shared<DebuggerCommandSetActiveThread>();
   commands_["/threads"] = std::make_shared<DebuggerCommandGetThreads>();
   commands_["/info"] = std::make_shared<DebuggerCommandGetThreadInfo>();
   commands_["/stepi"] = std::make_shared<DebuggerCommandStepInstruction>();
@@ -42,7 +43,7 @@ void Shell::Run() {
   std::string line;
   std::vector<std::string> args;
 
-  while(true) {
+  while (true) {
     std::cout << prompt_;
     std::getline(std::cin, line);
 
@@ -51,7 +52,8 @@ void Shell::Run() {
       continue;
     }
 
-    boost::algorithm::split(args, line, boost::algorithm::is_space(), boost::algorithm::token_compress_on);
+    boost::algorithm::split(args, line, boost::algorithm::is_space(),
+                            boost::algorithm::token_compress_on);
 
     Command::Result result = ProcessCommand(args);
     if (result == Command::EXIT_REQUESTED) {
@@ -85,7 +87,7 @@ Command::Result Shell::ProcessCommand(std::vector<std::string> &args) {
 
 void Shell::PrintHelp(std::vector<std::string> &args) const {
   if (args.empty()) {
-    std::cout <<"Commands:" << std::endl;
+    std::cout << "Commands:" << std::endl;
 
     for (auto &it : commands_) {
       std::cout << it.first << std::endl;
@@ -98,8 +100,9 @@ void Shell::PrintHelp(std::vector<std::string> &args) const {
 
   if (target == "help") {
     std::cout << "[command]" << std::endl;
-    std::cout <<  "With no argument: print all commands." << std::endl;
-    std::cout <<  "With argument: print detailed help about `command`." << std::endl;
+    std::cout << "With no argument: print all commands." << std::endl;
+    std::cout << "With argument: print detailed help about `command`."
+              << std::endl;
     return;
   }
 

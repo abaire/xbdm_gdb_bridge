@@ -13,7 +13,8 @@ class DelegatingServer : public TCPServer {
 
  public:
   explicit DelegatingServer(std::string name,
-                              ConnectionAcceptedHandler connection_accepted) : TCPServer(std::move(name)),
+                            ConnectionAcceptedHandler connection_accepted)
+      : TCPServer(std::move(name)),
         connection_accepted_(std::move(connection_accepted)) {}
 
  protected:

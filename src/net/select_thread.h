@@ -16,7 +16,7 @@ class SelectThread {
 
   [[nodiscard]] bool IsRunning() const { return running_; }
 
-  void AddConnection(const std::shared_ptr<TCPSocketBase> &conn);
+  void AddConnection(const std::shared_ptr<TCPSocketBase>& conn);
 
  private:
   void ThreadMain();

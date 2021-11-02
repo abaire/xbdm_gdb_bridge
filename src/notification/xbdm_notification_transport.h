@@ -8,10 +8,11 @@
 
 class XBDMNotificationTransport : public TCPConnection {
  public:
-  typedef std::function<void(XBDMNotification&)> NotificationHandler;
+  typedef std::function<void(XBDMNotification &)> NotificationHandler;
 
  public:
-  explicit XBDMNotificationTransport(std::string name, NotificationHandler handler);
+  explicit XBDMNotificationTransport(std::string name,
+                                     NotificationHandler handler);
 
   [[nodiscard]] bool IsHelloReceived() const { return hello_received_; }
 

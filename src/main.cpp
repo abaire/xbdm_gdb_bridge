@@ -15,8 +15,7 @@ namespace logging = boost::log;
 namespace po = boost::program_options;
 
 void validate(boost::any &v, const std::vector<std::string> &values,
-              IPAddress *,
-              int) {
+              IPAddress *, int) {
   po::validators::check_first_occurrence(v);
   const std::string &value = po::validators::get_single_string(values);
 

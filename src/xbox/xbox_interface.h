@@ -12,7 +12,7 @@
 #include "rdcp/xbdm_transport.h"
 
 class XBOXInterface {
-  public:
+ public:
   XBOXInterface(std::string name, IPAddress xbox_address);
 
   void Start();
@@ -32,7 +32,7 @@ class XBOXInterface {
 
  private:
   void OnNotificationChannelConnected(int sock, IPAddress &address);
-  void OnNotificationReceived(XBDMNotification& notification);
+  void OnNotificationReceived(XBDMNotification &notification);
 
   void OnGDBClientConnected(int sock, IPAddress &address);
 

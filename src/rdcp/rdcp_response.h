@@ -50,13 +50,16 @@ class RDCPResponse {
   [[nodiscard]] const std::string &message() const { return response_message_; }
   [[nodiscard]] const std::vector<char> &data() const { return data_; }
 
-  long Parse(const char *buffer, size_t buffer_length, long binary_response_size=kBinaryNotAllowed);
+  long Parse(const char *buffer, size_t buffer_length,
+             long binary_response_size = kBinaryNotAllowed);
 
  private:
   friend std::ostream &operator<<(std::ostream &, RDCPResponse const &);
 
-  const char *ParseMultilineResponse(const char *body_start, const char* buffer_end);
-  const char *ParseBinaryResponse(const char *buffer, const char *buffer_end, long binary_response_size);
+  const char *ParseMultilineResponse(const char *body_start,
+                                     const char *buffer_end);
+  const char *ParseBinaryResponse(const char *buffer, const char *buffer_end,
+                                  long binary_response_size);
 
  private:
   StatusCode status_;

@@ -1,12 +1,13 @@
 #include "select_thread.h"
 
+#include <sys/socket.h>
+
 #include <boost/log/trivial.hpp>
 #include <chrono>
-#include <sys/socket.h>
 
 static long kMaxWaitMilliseconds = 100;
 
-void SelectThread::ThreadMainBootstrap(SelectThread* instance) {
+void SelectThread::ThreadMainBootstrap(SelectThread *instance) {
   instance->ThreadMain();
 }
 
@@ -15,7 +16,8 @@ void SelectThread::ThreadMain() {
   fd_set send_fds;
   fd_set except_fds;
 
-  struct timeval timeout = {.tv_sec = 0, .tv_usec = 1000 * kMaxWaitMilliseconds};
+  struct timeval timeout = {.tv_sec = 0,
+                            .tv_usec = 1000 * kMaxWaitMilliseconds};
 
   while (running_) {
     FD_ZERO(&recv_fds);
@@ -56,9 +58,7 @@ void SelectThread::ThreadMain() {
   }
 }
 
-void SelectThread::Start() {
-  thread_ = std::thread(ThreadMainBootstrap, this);
-}
+void SelectThread::Start() { thread_ = std::thread(ThreadMainBootstrap, this); }
 
 void SelectThread::Stop() {
   running_ = false;

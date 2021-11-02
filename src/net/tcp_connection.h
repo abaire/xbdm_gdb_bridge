@@ -14,8 +14,10 @@
 
 class TCPConnection : public TCPSocketBase {
  public:
-  explicit TCPConnection(std::string name, int sock = -1) : TCPSocketBase(std::move(name), sock) {}
-  TCPConnection(std::string name, int sock, IPAddress address) : TCPSocketBase(std::move(name), sock, std::move(address)) {}
+  explicit TCPConnection(std::string name, int sock = -1)
+      : TCPSocketBase(std::move(name), sock) {}
+  TCPConnection(std::string name, int sock, IPAddress address)
+      : TCPSocketBase(std::move(name), sock, std::move(address)) {}
 
   void ShiftReadBuffer(long shift_bytes);
   size_t BytesAvailable();
@@ -30,7 +32,8 @@ class TCPConnection : public TCPSocketBase {
   [[nodiscard]] virtual bool HasBufferedData();
 
   int Select(fd_set &read_fds, fd_set &write_fds, fd_set &except_fds) override;
-  bool Process(const fd_set &read_fds, const fd_set &write_fds, const fd_set &except_fds) override;
+  bool Process(const fd_set &read_fds, const fd_set &write_fds,
+               const fd_set &except_fds) override;
 
  protected:
   virtual void OnBytesRead() {}
@@ -39,7 +42,8 @@ class TCPConnection : public TCPSocketBase {
   virtual void DoSend();
 
   std::vector<uint8_t>::iterator FirstIndexOf(uint8_t element);
-  std::vector<uint8_t>::iterator FirstIndexOf(const std::vector<uint8_t> &pattern);
+  std::vector<uint8_t>::iterator FirstIndexOf(
+      const std::vector<uint8_t> &pattern);
 
  protected:
   std::mutex read_lock_;

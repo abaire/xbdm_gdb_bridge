@@ -15,7 +15,8 @@ struct Command {
 
   explicit Command(std::string help) : help(std::move(help)) {}
 
-  virtual Result operator()(XBOXInterface &interface, const std::vector<std::string> &args) = 0;
+  virtual Result operator()(XBOXInterface &interface,
+                            const std::vector<std::string> &args) = 0;
 
   std::string name;
   std::string help;

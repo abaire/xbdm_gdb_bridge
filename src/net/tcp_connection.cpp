@@ -16,7 +16,8 @@ void TCPConnection::ShiftReadBuffer(long shift_bytes) {
     return;
   }
 
-  read_buffer_.erase(read_buffer_.begin(), std::next(read_buffer_.begin(), shift_bytes));
+  read_buffer_.erase(read_buffer_.begin(),
+                     std::next(read_buffer_.begin(), shift_bytes));
 }
 
 size_t TCPConnection::BytesAvailable() {
@@ -47,7 +48,7 @@ bool TCPConnection::HasBufferedData() {
 }
 
 int TCPConnection::Select(fd_set &read_fds, fd_set &write_fds,
-                         fd_set &except_fds) {
+                          fd_set &except_fds) {
   const std::lock_guard<std::mutex> lock(socket_lock_);
   if (socket_ < 0) {
     return socket_;
@@ -65,7 +66,7 @@ int TCPConnection::Select(fd_set &read_fds, fd_set &write_fds,
 }
 
 bool TCPConnection::Process(const fd_set &read_fds, const fd_set &write_fds,
-                          const fd_set &except_fds) {
+                            const fd_set &except_fds) {
   const std::lock_guard<std::mutex> lock(socket_lock_);
   if (socket_ < 0) {
     return false;
@@ -114,7 +115,8 @@ void TCPConnection::DoSend() {
   const std::lock_guard<std::mutex> socket_lock(socket_lock_);
   const std::lock_guard<std::mutex> write_lock(write_lock_);
 
-  ssize_t bytes_sent = send(socket_, write_buffer_.data(), write_buffer_.size(), 0);
+  ssize_t bytes_sent =
+      send(socket_, write_buffer_.data(), write_buffer_.size(), 0);
   if (bytes_sent < 0) {
     BOOST_LOG_TRIVIAL(trace)
         << "send returned " << bytes_sent << " errno: " << errno << std::endl;
@@ -122,7 +124,8 @@ void TCPConnection::DoSend() {
     return;
   }
 
-  write_buffer_.erase(write_buffer_.begin(), std::next(write_buffer_.begin(), bytes_sent));
+  write_buffer_.erase(write_buffer_.begin(),
+                      std::next(write_buffer_.begin(), bytes_sent));
 }
 
 std::vector<uint8_t>::iterator TCPConnection::FirstIndexOf(uint8_t element) {
@@ -134,5 +137,6 @@ std::vector<uint8_t>::iterator TCPConnection::FirstIndexOf(
     const std::vector<uint8_t> &pattern) {
   const std::lock_guard<std::mutex> lock(read_lock_);
 
-  return std::search(read_buffer_.begin(), read_buffer_.end(), pattern.begin(), pattern.end());
+  return std::search(read_buffer_.begin(), read_buffer_.end(), pattern.begin(),
+                     pattern.end());
 }

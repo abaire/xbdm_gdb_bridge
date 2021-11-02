@@ -9,11 +9,11 @@ void TCPSocketBase::SetConnection(int sock, const IPAddress &address) {
 }
 
 void TCPSocketBase::Close() {
-    if (socket_ < 0) {
-      return;
-    }
-    const std::lock_guard<std::mutex> lock(socket_lock_);
-    shutdown(socket_, SHUT_RDWR);
-    close(socket_);
-    socket_ = -1;
+  if (socket_ < 0) {
+    return;
+  }
+  const std::lock_guard<std::mutex> lock(socket_lock_);
+  shutdown(socket_, SHUT_RDWR);
+  close(socket_);
+  socket_ = -1;
 }

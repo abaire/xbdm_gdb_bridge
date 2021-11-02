@@ -3,6 +3,10 @@
 
 #include "net/tcp_connection.h"
 
-class GDBTransport : public TCPConnection {};
+class GDBTransport : public TCPConnection {
+ public:
+  GDBTransport(std::string name, int sock, IPAddress address)
+      : TCPConnection(std::move(name), sock, std::move(address)) {}
+};
 
 #endif  // XBDM_GDB_BRIDGE_GDB_TRANSPORT_H
