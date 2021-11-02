@@ -72,7 +72,12 @@ void XBOXInterface::OnNotificationChannelConnected(int sock,
   select_thread_->AddConnection(transport);
 }
 
-void XBOXInterface::OnNotificationReceived(XBDMNotification& notification) {}
+void XBOXInterface::OnNotificationReceived(XBDMNotification& notification) {
+  const std::lock_guard<std::mutex> lock(notification_queue_lock_);
+  notification_queue_.push_back(notification);
+
+  // TODO: Add condition variable and notify it that new data can be processed.
+}
 
 void XBOXInterface::OnGDBClientConnected(int sock, IPAddress& address) {
   if (gdb_transport_ && gdb_transport_->IsConnected()) {
@@ -80,6 +85,13 @@ void XBOXInterface::OnGDBClientConnected(int sock, IPAddress& address) {
     close(sock);
     return;
   }
-  gdb_transport_ = std::make_shared<GDBTransport>(name_, sock, address);
+  gdb_transport_ = std::make_shared<GDBTransport>(name_, sock, address, [this](GDBPacket &packet) { this->OnGDBPacketReceived(packet); });
   select_thread_->AddConnection(gdb_transport_);
+}
+
+void XBOXInterface::OnGDBPacketReceived(GDBPacket& packet) {
+  const std::lock_guard<std::mutex> lock(gdb_queue_lock_);
+  gdb_queue_.push_back(packet);
+
+  // TODO: Add condition variable and notify it that new data can be processed.
 }

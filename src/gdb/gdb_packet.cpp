@@ -11,7 +11,7 @@ static constexpr char kEscapeCharacterSet[] = {kPacketEscapeChar, kPacketLeader,
                                                kPacketTrailer, 0};
 
 struct GDBPacketEscaper {
-  static std::vector<char> EscapeBuffer(const std::vector<char> &buffer) {
+  static std::vector<uint8_t> EscapeBuffer(const std::vector<uint8_t> &buffer) {
     auto escaped_body = boost::algorithm::find_format_all_copy(
         buffer, boost::token_finder(boost::is_any_of(kEscapeCharacterSet)),
         GDBPacketEscaper());
@@ -29,7 +29,7 @@ struct GDBPacketEscaper {
   }
 };
 
-static uint8_t Mod256Checksum(const char *buffer, long buffer_len) {
+static uint8_t Mod256Checksum(const uint8_t *buffer, long buffer_len) {
   int ret = 0;
 
   if (!buffer || buffer_len <= 0) {
@@ -47,17 +47,17 @@ void GDBPacket::CalculateChecksum() {
   checksum_ = Mod256Checksum(data_.data(), static_cast<long>(data_.size()));
 }
 
-long GDBPacket::Parse(const char *buffer, size_t buffer_length) {
-  const char *packet_start =
-      static_cast<const char *>(memchr(buffer, kPacketLeader, buffer_length));
+long GDBPacket::Parse(const uint8_t *buffer, size_t buffer_length) {
+  const auto *packet_start =
+      static_cast<const uint8_t *>(memchr(buffer, kPacketLeader, buffer_length));
   if (!packet_start) {
     return 0;
   }
 
-  const char *body_start = packet_start + 1;
+  const uint8_t *body_start = packet_start + 1;
   size_t max_size = buffer_length - (body_start - buffer);
-  const char *terminator =
-      static_cast<const char *>(memchr(body_start, kPacketTrailer, max_size));
+  const auto *terminator =
+      static_cast<const uint8_t *>(memchr(body_start, kPacketTrailer, max_size));
   if (!terminator) {
     return 0;
   }
@@ -85,16 +85,18 @@ long GDBPacket::Parse(const char *buffer, size_t buffer_length) {
   data_.assign(body_start, terminator);
   CalculateChecksum();
 
-  if (checksum != checksum_) {
+  checksum_ok_ = checksum == checksum_;
+  if (!checksum_ok_) {
     BOOST_LOG_TRIVIAL(error) << "Checksum mismatch " << checksum_
                              << " != sent checksum " << checksum << std::endl;
+
   }
 
   return (terminator - buffer) + 3;
 }
 
 std::vector<uint8_t> GDBPacket::Serialize() const {
-  std::vector<char> escaped_body = GDBPacketEscaper::EscapeBuffer(data_);
+  std::vector<uint8_t> escaped_body = GDBPacketEscaper::EscapeBuffer(data_);
 
   std::vector<uint8_t> ret(escaped_body.size() + 4);
   ret.push_back(kPacketLeader);
@@ -104,6 +106,36 @@ std::vector<uint8_t> GDBPacket::Serialize() const {
   char checksum_buf[3] = {0};
   sprintf(checksum_buf, "%02x", checksum_);
   ret.insert(ret.end(), checksum_buf, checksum_buf + 2);
+
+  return ret;
+}
+
+long GDBPacket::UnescapeBuffer(const std::vector<uint8_t> &buffer,
+                               std::vector<uint8_t> &out_buffer) {
+  if (buffer.empty()) {
+    return 0;
+  }
+
+  long ret = 0;
+  auto start = buffer.begin();
+  auto it = std::find(start, buffer.end(), kPacketEscapeChar);
+
+  for (; it != buffer.end();
+       it = std::find(start, buffer.end(), kPacketEscapeChar)) {
+    ret += it - start;
+    out_buffer.insert(out_buffer.end(), start, it);
+
+    ++it;
+    if (it == buffer.end()) {
+      return ret;
+    }
+
+    out_buffer.push_back(*it ^ 0x20);
+    start = it + 1;
+  }
+
+  ret += buffer.end() - start;
+  out_buffer.insert(out_buffer.end(), start, buffer.end());
 
   return ret;
 }

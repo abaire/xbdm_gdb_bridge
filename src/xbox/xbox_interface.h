@@ -2,6 +2,7 @@
 #define XBDM_GDB_BRIDGE_SRC_XBOX_XBOX_INTERFACE_H_
 
 #include <deque>
+#include <list>
 #include <memory>
 #include <string>
 
@@ -35,6 +36,7 @@ class XBOXInterface {
   void OnNotificationReceived(XBDMNotification &notification);
 
   void OnGDBClientConnected(int sock, IPAddress &address);
+  void OnGDBPacketReceived(GDBPacket &packet);
 
  private:
   std::string name_;
@@ -46,6 +48,12 @@ class XBOXInterface {
 
   std::shared_ptr<DelegatingServer> gdb_server_;
   std::shared_ptr<DelegatingServer> notification_server_;
+
+  std::mutex notification_queue_lock_;
+  std::list<XBDMNotification> notification_queue_;
+
+  std::mutex gdb_queue_lock_;
+  std::list<GDBPacket> gdb_queue_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_XBOX_XBOX_INTERFACE_H_
