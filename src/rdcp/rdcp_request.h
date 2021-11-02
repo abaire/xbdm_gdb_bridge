@@ -15,7 +15,7 @@ class RDCPRequest {
 
   explicit operator std::vector<uint8_t>() const;
 
-  void Complete(const std::shared_ptr<RDCPResponse> &response);
+  virtual void Complete(const std::shared_ptr<RDCPResponse> &response) = 0;
 
  private:
   std::string command_;

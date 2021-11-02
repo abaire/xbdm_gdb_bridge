@@ -18,6 +18,8 @@ add_executable(
         src/main.cpp
         src/discovery/discoverer.cpp
         src/discovery/discoverer.h
+        src/gdb/gdb_packet.cpp
+        src/gdb/gdb_packet.h
         src/gdb/gdb_transport.cpp
         src/gdb/gdb_transport.h
         src/net/ip_address.cpp
@@ -36,10 +38,13 @@ add_executable(
         src/notification/xbdm_notification.h
         src/notification/xbdm_notification_transport.cpp
         src/notification/xbdm_notification_transport.h
+        src/rdcp/rdcp_processed_request.cpp
+        src/rdcp/rdcp_processed_request.h
         src/rdcp/rdcp_request.cpp
         src/rdcp/rdcp_request.h
         src/rdcp/rdcp_response.cpp
         src/rdcp/rdcp_response.h
+        src/rdcp/xbdm_requests.h
         src/rdcp/xbdm_transport.cpp
         src/rdcp/xbdm_transport.h
         src/shell/command.cpp
@@ -52,7 +57,7 @@ add_executable(
         src/util/timer.h
         src/xbox/xbox_interface.cpp
         src/xbox/xbox_interface.h
-        src/gdb/gdb_packet.cpp src/gdb/gdb_packet.h)
+)
 
 target_include_directories(
         xbdm_gdb_bridge

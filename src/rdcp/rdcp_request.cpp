@@ -11,7 +11,3 @@ RDCPRequest::operator std::vector<uint8_t>() const {
   ret.insert(ret.end(), kTerminator, kTerminator + kTerminatorLen);
   return ret;
 }
-
-void RDCPRequest::Complete(const std::shared_ptr<RDCPResponse>& response) {
-  // TODO: Implement me.
-}

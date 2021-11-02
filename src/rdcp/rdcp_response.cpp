@@ -6,12 +6,6 @@
 #include <boost/log/trivial.hpp>
 #include <ostream>
 
-static constexpr uint8_t kTerminator[] = {'\r', '\n'};
-static constexpr long kTerminatorLen =
-    sizeof(kTerminator) / sizeof(kTerminator[0]);
-static constexpr uint8_t kMultilineTerminator[] = {'\r', '\n', '.', '\r', '\n'};
-static constexpr long kMultilineTerminatorLen =
-    sizeof(kMultilineTerminator) / sizeof(kMultilineTerminator[0]);
 
 std::ostream &operator<<(std::ostream &os, RDCPResponse const &r) {
   return os << "RDCPResponse [" << r.status_ << "]";
@@ -22,14 +16,14 @@ static const char *ParseMultilineResponse(
     std::vector<char> &data,
     const char *body_start,
     const char *buffer_end) {
-  auto terminator = std::search(body_start, buffer_end, kMultilineTerminator,
-                                kMultilineTerminator + kMultilineTerminatorLen);
+  auto terminator = std::search(body_start, buffer_end, RDCPResponse::kMultilineTerminator,
+                                RDCPResponse::kMultilineTerminator + RDCPResponse::kMultilineTerminatorLen);
   if (terminator == buffer_end) {
     return nullptr;
   }
 
   data.assign(body_start, terminator);
-  return terminator + kMultilineTerminatorLen;
+  return terminator + RDCPResponse::kMultilineTerminatorLen;
 }
 
 static const char *ParseBinaryResponse(std::vector<char> &data,

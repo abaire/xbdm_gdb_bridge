@@ -1,6 +1,7 @@
 #include "gdb_packet.h"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/log/trivial.hpp>
 #include <cstdint>
 
