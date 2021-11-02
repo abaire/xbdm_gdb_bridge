@@ -23,9 +23,6 @@ struct RDCPProcessedRequest : public RDCPRequest {
     message = response->Message();
   }
 
- protected:
-
-
  public:
   StatusCode status{INVALID};
   std::string message;
@@ -45,11 +42,11 @@ struct RDCPMapResponse {
   [[nodiscard]] std::string GetString(const std::string &key) const { return GetString(key, ""); }
   [[nodiscard]] std::string GetString(const std::string &key, const std::string &default_value) const;
 
-  [[nodiscard]] int32_t GetDWORD(const std::string &key, int base) const { return GetDWORD(key, base, 0); }
-  [[nodiscard]] int32_t GetDWORD(const std::string &key, int base, int32_t default_value) const;
+  [[nodiscard]] int32_t GetDWORD(const std::string &key) const { return GetDWORD(key, 0); }
+  [[nodiscard]] int32_t GetDWORD(const std::string &key, int32_t default_value) const;
 
-  [[nodiscard]] int64_t GetQWORD(const std::string &key, int base) const { return GetQWORD(key, base, 0); }
-  [[nodiscard]] int64_t GetQWORD(const std::string &key, int base, int64_t default_value) const;
+  [[nodiscard]] int64_t GetQWORD(const std::string &key) const { return GetQWORD(key, 0); }
+  [[nodiscard]] int64_t GetQWORD(const std::string &key, int64_t default_value) const;
 
   std::map<std::string, std::string> map;
 };

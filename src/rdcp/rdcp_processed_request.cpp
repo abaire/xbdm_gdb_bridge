@@ -70,24 +70,34 @@ std::string RDCPMapResponse::GetString(const std::string &key,
   return it->second;
 }
 
-int32_t RDCPMapResponse::GetDWORD(const std::string &key, int base,
-                                  int32_t default_value) const {
+int32_t RDCPMapResponse::GetDWORD(const std::string &key, int32_t default_value) const {
   auto it = map.find(key);
   if (it == map.end()) {
     return default_value;
   }
 
-  return static_cast<int32_t>(strtol(it->second.c_str(), nullptr, base));
+  const std::string &value = it->second;
+  int base = 10;
+  if (value.size() > 2 && (value[1] == 'x' || value[1] == 'X')) {
+    base = 16;
+  }
+
+  return static_cast<int32_t>(strtol(value.c_str(), nullptr, base));
 }
 
-int64_t RDCPMapResponse::GetQWORD(const std::string &key, int base,
-                                  int64_t default_value) const {
+int64_t RDCPMapResponse::GetQWORD(const std::string &key, int64_t default_value) const {
   auto it = map.find(key);
   if (it == map.end()) {
     return default_value;
   }
 
-  return strtoll(it->second.c_str(), nullptr, base);
+  const std::string &value = it->second;
+  int base = 10;
+  if (value.size() > 2 && (value[1] == 'x' || value[1] == 'X')) {
+    base = 16;
+  }
+
+  return strtoll(value.c_str(), nullptr, base);
 }
 
 RDCPMultiMapResponse::RDCPMultiMapResponse(const std::vector<char> &data) {

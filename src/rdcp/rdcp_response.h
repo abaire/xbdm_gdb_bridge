@@ -25,6 +25,7 @@ class RDCPResponse {
       sizeof(kMultilineTerminator) / sizeof(kMultilineTerminator[0]);
 
  public:
+  RDCPResponse(StatusCode status, std::string message) : status_(status), response_message_(std::move(message)) {}
   RDCPResponse(StatusCode status, std::string message, std::vector<char> data) : status_(status), response_message_(std::move(message)), data_(std::move(data)) {}
 
   [[nodiscard]] StatusCode Status() const { return status_; }

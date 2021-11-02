@@ -2,6 +2,7 @@
 #define XBDM_GDB_BRIDGE_SRC_RDCP_RDCP_REQUEST_H_
 
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <string>
 #include <vector>
@@ -17,7 +18,23 @@ class RDCPRequest {
 
   virtual void Complete(const std::shared_ptr<RDCPResponse> &response) = 0;
 
- private:
+  void SetData(const std::vector<uint8_t> &data) {
+    data_ = data;
+  }
+
+  void SetData(const std::string &data) {
+    data_.clear();
+    data_.assign(data.begin(), data.end());
+  }
+
+  void SetData(const char *data) {
+    data_.clear();
+    if (data) {
+      data_.assign(data, data + strlen(data));
+    }
+  }
+
+ protected:
   std::string command_;
   std::vector<uint8_t> data_;
 };

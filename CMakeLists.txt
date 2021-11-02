@@ -74,12 +74,20 @@ target_link_libraries(
 
 # Tests ----------------------------------------------
 
+add_library(
+        test_util
+        test/test_util/vector.cpp
+        test/test_util/vector.h
+)
+
 add_executable(
         test_rdcp
+        test/rdcp/test_main.cpp
         test/rdcp/test_rdcp_processed_request.cpp
-        test/test_util/vector.h
+        test/rdcp/test_xbdm_requests.cpp
         src/rdcp/rdcp_processed_request.cpp
         src/rdcp/rdcp_processed_request.h
+        src/rdcp/xbdm_requests.h
 )
 target_include_directories(
         test_rdcp
@@ -88,8 +96,10 @@ target_include_directories(
 )
 target_link_libraries(
         test_rdcp
-        LINK_PUBLIC
+        LINK_PRIVATE
         ${Boost_LIBRARIES}
+        LINK_PRIVATE
+        test_util
 )
 
 

@@ -1,6 +1,5 @@
 #include "rdcp/rdcp_processed_request.h"
 
-#define BOOST_TEST_MODULE TestRDCPProcessedRequest
 #include <boost/test/unit_test.hpp>
 
 #include "test_util/vector.h"
@@ -110,30 +109,30 @@ BOOST_AUTO_TEST_CASE(single_decimal_key)
 
   RDCPMapResponse response(data);
   BOOST_TEST(response.map.size() == 1);
-  auto value = response.GetDWORD("test", 10);
+  auto value = response.GetDWORD("test");
   BOOST_TEST(value == 123);
 }
 
 BOOST_AUTO_TEST_CASE(single_hex_key)
 {
-  const char test_data[] = "test=3DA2";
+  const char test_data[] = "test=0x3DA2";
   std::vector<char> data(test_data, std::end(test_data) - 1);
 
   RDCPMapResponse response(data);
   BOOST_TEST(response.map.size() == 1);
-  auto value = response.GetDWORD("test", 16);
+  auto value = response.GetDWORD("test");
   BOOST_TEST(value == 0x3DA2);
 }
 
 BOOST_AUTO_TEST_CASE(multiple_keys)
 {
-  const char test_data[] = "string=test flag quoted=\"quoted string\" decimal=123456 hex=3DA2 last_flag";
+  const char test_data[] = "string=test flag quoted=\"quoted string\" decimal=123456 hex=0x3DA2 last_flag";
   std::vector<char> data(test_data, std::end(test_data) - 1);
 
   RDCPMapResponse response(data);
   BOOST_TEST(response.map.size() == 6);
-  BOOST_TEST(response.GetDWORD("hex", 16) == 0x3DA2);
-  BOOST_TEST(response.GetDWORD("decimal", 10) == 123456);
+  BOOST_TEST(response.GetDWORD("hex") == 0x3DA2);
+  BOOST_TEST(response.GetDWORD("decimal") == 123456);
   BOOST_TEST(response.HasKey("flag"));
   BOOST_TEST(response.HasKey("last_flag"));
   BOOST_TEST(response.GetString("string") == "test");
@@ -165,7 +164,7 @@ BOOST_AUTO_TEST_CASE(multi_maps)
 {
   const char *lines[] = {
       "test",
-      "hex=ABCD flag quoted=\"quoted string\"",
+      "hex=0xABCD flag quoted=\"quoted string\"",
   };
   std::vector<char> data;
   AppendLines(data, lines, std::end(lines));
@@ -174,7 +173,7 @@ BOOST_AUTO_TEST_CASE(multi_maps)
   BOOST_TEST(response.maps.size() == 2);
   BOOST_TEST(response.maps.front().HasKey("test"));
   BOOST_TEST(response.maps.back().HasKey("flag"));
-  BOOST_TEST(response.maps.back().GetDWORD("hex", 16) == 0xABCD);
+  BOOST_TEST(response.maps.back().GetDWORD("hex") == 0xABCD);
   BOOST_TEST(response.maps.back().GetString("quoted") == "quoted string");
 }
 
