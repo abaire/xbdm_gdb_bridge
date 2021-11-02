@@ -3,6 +3,7 @@
 
 #include <iostream>
 
+#include "rdcp/xbdm_requests.h"
 #include "shell/command.h"
 
 struct DebuggerCommandLaunch : Command {

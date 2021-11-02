@@ -15,7 +15,7 @@ class XBDMTransport : public TCPConnection {
  public:
   explicit XBDMTransport(std::string name) : TCPConnection(std::move(name)) {}
 
-  bool Connect(const IPAddress &address);
+  bool Connect(const IPAddress& address);
   void Close() override;
 
   [[nodiscard]] ConnectionState State() const { return state_; }

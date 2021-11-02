@@ -1,7 +1,6 @@
 #include "gdb_packet.h"
 
 #include <boost/algorithm/string.hpp>
-#include <boost/algorithm/string.hpp>
 #include <boost/log/trivial.hpp>
 #include <cstdint>
 
@@ -49,16 +48,16 @@ void GDBPacket::CalculateChecksum() {
 }
 
 long GDBPacket::Parse(const uint8_t *buffer, size_t buffer_length) {
-  const auto *packet_start =
-      static_cast<const uint8_t *>(memchr(buffer, kPacketLeader, buffer_length));
+  const auto *packet_start = static_cast<const uint8_t *>(
+      memchr(buffer, kPacketLeader, buffer_length));
   if (!packet_start) {
     return 0;
   }
 
   const uint8_t *body_start = packet_start + 1;
   size_t max_size = buffer_length - (body_start - buffer);
-  const auto *terminator =
-      static_cast<const uint8_t *>(memchr(body_start, kPacketTrailer, max_size));
+  const auto *terminator = static_cast<const uint8_t *>(
+      memchr(body_start, kPacketTrailer, max_size));
   if (!terminator) {
     return 0;
   }
@@ -90,7 +89,6 @@ long GDBPacket::Parse(const uint8_t *buffer, size_t buffer_length) {
   if (!checksum_ok_) {
     BOOST_LOG_TRIVIAL(error) << "Checksum mismatch " << checksum_
                              << " != sent checksum " << checksum << std::endl;
-
   }
 
   return (terminator - buffer) + 3;

@@ -6,18 +6,17 @@
 #include <boost/log/trivial.hpp>
 #include <ostream>
 
-
 std::ostream &operator<<(std::ostream &os, RDCPResponse const &r) {
   return os << "RDCPResponse [" << r.status_ << "]";
 }
 
-
-static const char *ParseMultilineResponse(
-    std::vector<char> &data,
-    const char *body_start,
-    const char *buffer_end) {
-  auto terminator = std::search(body_start, buffer_end, RDCPResponse::kMultilineTerminator,
-                                RDCPResponse::kMultilineTerminator + RDCPResponse::kMultilineTerminatorLen);
+static const char *ParseMultilineResponse(std::vector<char> &data,
+                                          const char *body_start,
+                                          const char *buffer_end) {
+  auto terminator =
+      std::search(body_start, buffer_end, RDCPResponse::kMultilineTerminator,
+                  RDCPResponse::kMultilineTerminator +
+                      RDCPResponse::kMultilineTerminatorLen);
   if (terminator == buffer_end) {
     return nullptr;
   }
@@ -57,11 +56,9 @@ static const char *ParseBinaryResponse(std::vector<char> &data,
   return body_end;
 }
 
-long RDCPResponse::Parse(
-    std::shared_ptr<RDCPResponse> &response,
-    const char *buffer,
-    size_t buffer_length,
-    long binary_response_size) {
+long RDCPResponse::Parse(std::shared_ptr<RDCPResponse> &response,
+                         const char *buffer, size_t buffer_length,
+                         long binary_response_size) {
   response.reset();
   if (buffer_length < 4) {
     return 0;
@@ -106,8 +103,8 @@ long RDCPResponse::Parse(
       break;
 
     case OK_BINARY_RESPONSE:
-      after_body_end =
-          ParseBinaryResponse(data, body_start, buffer_end, binary_response_size);
+      after_body_end = ParseBinaryResponse(data, body_start, buffer_end,
+                                           binary_response_size);
       break;
 
     default:

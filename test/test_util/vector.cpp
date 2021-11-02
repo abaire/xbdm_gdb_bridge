@@ -16,7 +16,7 @@ std::vector<char> &operator+=(std::vector<char> &dest, const std::string &str) {
 
 std::vector<char> Serialize(const std::map<std::string, std::string> &map) {
   std::vector<char> buffer;
-  for (const auto & it : map) {
+  for (const auto &it : map) {
     const std::string &value = it.second;
     if (value.empty()) {
       if (!buffer.empty()) {

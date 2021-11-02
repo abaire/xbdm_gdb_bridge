@@ -1,12 +1,14 @@
 #include "rdcp_processed_request.h"
 
 #include <algorithm>
-#include <boost/regex.hpp>
-#include <boost/tokenizer.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string_regex.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/regex.hpp>
+#include <boost/tokenizer.hpp>
 
-static std::vector<std::vector<char>> SplitMultiline(const std::vector<char> &data) {
+static std::vector<std::vector<char>> SplitMultiline(
+    const std::vector<char> &data) {
   std::vector<std::vector<char>> ret;
   if (data.empty()) {
     return ret;
@@ -42,6 +44,7 @@ RDCPMapResponse::RDCPMapResponse(const std::vector<char> &data) {
     auto delimiter = token.find('=');
     if (delimiter == std::string::npos) {
       map[token] = "";
+      valueless_keys.insert(token);
       continue;
     }
 
@@ -70,13 +73,17 @@ std::string RDCPMapResponse::GetString(const std::string &key,
   return it->second;
 }
 
-int32_t RDCPMapResponse::GetDWORD(const std::string &key, int32_t default_value) const {
-  auto it = map.find(key);
-  if (it == map.end()) {
-    return default_value;
-  }
+int32_t RDCPMapResponse::ParseInteger(const std::vector<uint8_t> &data) {
+  std::string value(reinterpret_cast<const char *>(data.data()), data.size());
+  return ParseInteger(value);
+}
 
-  const std::string &value = it->second;
+int32_t RDCPMapResponse::ParseInteger(const std::vector<char> &data) {
+  std::string value(data.data(), data.size());
+  return ParseInteger(value);
+}
+
+int32_t RDCPMapResponse::ParseInteger(const std::string &value) {
   int base = 10;
   if (value.size() > 2 && (value[1] == 'x' || value[1] == 'X')) {
     base = 16;
@@ -85,19 +92,55 @@ int32_t RDCPMapResponse::GetDWORD(const std::string &key, int32_t default_value)
   return static_cast<int32_t>(strtol(value.c_str(), nullptr, base));
 }
 
-int64_t RDCPMapResponse::GetQWORD(const std::string &key, int64_t default_value) const {
+boost::optional<int32_t> RDCPMapResponse::GetOptionalDWORD(
+    const std::string &key) const {
+  auto it = map.find(key);
+  if (it == map.end()) {
+    return boost::none;
+  }
+  return ParseInteger(it->second);
+}
+
+int32_t RDCPMapResponse::GetDWORD(const std::string &key,
+                                  int32_t default_value) const {
   auto it = map.find(key);
   if (it == map.end()) {
     return default_value;
   }
 
-  const std::string &value = it->second;
-  int base = 10;
-  if (value.size() > 2 && (value[1] == 'x' || value[1] == 'X')) {
-    base = 16;
+  return ParseInteger(it->second);
+}
+
+uint32_t RDCPMapResponse::GetUInt32(const std::string &key, uint32_t default_value) const {
+  auto it = map.find(key);
+  if (it == map.end()) {
+    return default_value;
   }
 
-  return strtoll(value.c_str(), nullptr, base);
+  return ParseInteger(it->second);
+}
+
+int64_t RDCPMapResponse::GetQWORD(const std::string &low_key,
+                                  const std::string &high_key,
+                                  int64_t default_value) const {
+  auto it = map.find(low_key);
+  if (it == map.end()) {
+    return default_value;
+  }
+
+  int64_t low = ParseInteger(it->second);
+
+  it = map.find(high_key);
+  if (it == map.end()) {
+    BOOST_LOG_TRIVIAL(warning)
+        << "Found QWORD low key " << low_key << " but missing high key "
+        << high_key << std::endl;
+    return default_value;
+  }
+
+  int64_t high = ParseInteger(it->second);
+
+  return low + (high << 32);
 }
 
 RDCPMultiMapResponse::RDCPMultiMapResponse(const std::vector<char> &data) {

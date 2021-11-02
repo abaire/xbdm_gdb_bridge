@@ -25,7 +25,8 @@ class GDBTransport : public TCPConnection {
   typedef std::function<void(GDBPacket &)> PacketReceivedHandler;
 
  public:
-  GDBTransport(std::string name, int sock, IPAddress address, PacketReceivedHandler handler);
+  GDBTransport(std::string name, int sock, IPAddress address,
+               PacketReceivedHandler handler);
 
   void Send(const GDBPacket &packet);
 

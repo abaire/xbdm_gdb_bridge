@@ -3,12 +3,13 @@
 #include <boost/log/trivial.hpp>
 #include <utility>
 
-static constexpr uint8_t kAck[1] = { '+' };
-static constexpr uint8_t kNAck[1] = { '-' };
+static constexpr uint8_t kAck[1] = {'+'};
+static constexpr uint8_t kNAck[1] = {'-'};
 
-GDBTransport::GDBTransport(std::string name, int sock, IPAddress address, PacketReceivedHandler handler)
-    : TCPConnection(std::move(name), sock, std::move(address)), packet_received_handler_(std::move(handler)) {
-}
+GDBTransport::GDBTransport(std::string name, int sock, IPAddress address,
+                           PacketReceivedHandler handler)
+    : TCPConnection(std::move(name), sock, std::move(address)),
+      packet_received_handler_(std::move(handler)) {}
 
 void GDBTransport::Send(const GDBPacket &packet) {
   const std::lock_guard<std::mutex> lock(packet_queue_lock_);

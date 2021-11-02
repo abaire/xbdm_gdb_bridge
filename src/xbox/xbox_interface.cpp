@@ -85,7 +85,9 @@ void XBOXInterface::OnGDBClientConnected(int sock, IPAddress& address) {
     close(sock);
     return;
   }
-  gdb_transport_ = std::make_shared<GDBTransport>(name_, sock, address, [this](GDBPacket &packet) { this->OnGDBPacketReceived(packet); });
+  gdb_transport_ = std::make_shared<GDBTransport>(
+      name_, sock, address,
+      [this](GDBPacket& packet) { this->OnGDBPacketReceived(packet); });
   select_thread_->AddConnection(gdb_transport_);
 }
 
