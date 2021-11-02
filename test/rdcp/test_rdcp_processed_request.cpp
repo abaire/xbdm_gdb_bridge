@@ -141,3 +141,42 @@ BOOST_AUTO_TEST_CASE(multiple_keys)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(multimap_response_suite)
+
+BOOST_AUTO_TEST_CASE(empty_data_returns_empty_map)
+{
+  std::vector<char> data;
+  RDCPMultiMapResponse response(data);
+  BOOST_TEST(response.maps.empty());
+}
+
+BOOST_AUTO_TEST_CASE(single_valueless_key)
+{
+  const char test_data[] = "test";
+  std::vector<char> data(test_data, std::end(test_data) - 1);
+
+  RDCPMultiMapResponse response(data);
+  BOOST_TEST(response.maps.size() == 1);
+  BOOST_TEST(response.maps.front().HasKey("test"));
+}
+
+BOOST_AUTO_TEST_CASE(multi_maps)
+{
+  const char *lines[] = {
+      "test",
+      "hex=ABCD flag quoted=\"quoted string\"",
+  };
+  std::vector<char> data;
+  AppendLines(data, lines, std::end(lines));
+
+  RDCPMultiMapResponse response(data);
+  BOOST_TEST(response.maps.size() == 2);
+  BOOST_TEST(response.maps.front().HasKey("test"));
+  BOOST_TEST(response.maps.back().HasKey("flag"));
+  BOOST_TEST(response.maps.back().GetDWORD("hex", 16) == 0xABCD);
+  BOOST_TEST(response.maps.back().GetString("quoted") == "quoted string");
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
