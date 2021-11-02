@@ -71,5 +71,73 @@ BOOST_AUTO_TEST_CASE(multiple_lines_returns_multiple_lines)
   }
 }
 
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(map_response_suite)
+
+BOOST_AUTO_TEST_CASE(empty_data_returns_empty_map)
+{
+  std::vector<char> data;
+  RDCPMapResponse response(data);
+  BOOST_TEST(response.map.empty());
+}
+
+BOOST_AUTO_TEST_CASE(single_valueless_key)
+{
+  const char test_data[] = "test";
+  std::vector<char> data(test_data, std::end(test_data) - 1);
+
+  RDCPMapResponse response(data);
+  BOOST_TEST(response.map.size() == 1);
+  BOOST_TEST(response.HasKey("test"));
+}
+
+BOOST_AUTO_TEST_CASE(single_string_key)
+{
+  const char test_data[] = "test=value";
+  std::vector<char> data(test_data, std::end(test_data) - 1);
+
+  RDCPMapResponse response(data);
+  BOOST_TEST(response.map.size() == 1);
+  std::string value = response.GetString("test");
+  BOOST_TEST(value == "value");
+}
+
+BOOST_AUTO_TEST_CASE(single_decimal_key)
+{
+  const char test_data[] = "test=123";
+  std::vector<char> data(test_data, std::end(test_data) - 1);
+
+  RDCPMapResponse response(data);
+  BOOST_TEST(response.map.size() == 1);
+  auto value = response.GetDWORD("test", 10);
+  BOOST_TEST(value == 123);
+}
+
+BOOST_AUTO_TEST_CASE(single_hex_key)
+{
+  const char test_data[] = "test=3DA2";
+  std::vector<char> data(test_data, std::end(test_data) - 1);
+
+  RDCPMapResponse response(data);
+  BOOST_TEST(response.map.size() == 1);
+  auto value = response.GetDWORD("test", 16);
+  BOOST_TEST(value == 0x3DA2);
+}
+
+BOOST_AUTO_TEST_CASE(multiple_keys)
+{
+  const char test_data[] = "string=test flag quoted=\"quoted string\" decimal=123456 hex=3DA2 last_flag";
+  std::vector<char> data(test_data, std::end(test_data) - 1);
+
+  RDCPMapResponse response(data);
+  BOOST_TEST(response.map.size() == 6);
+  BOOST_TEST(response.GetDWORD("hex", 16) == 0x3DA2);
+  BOOST_TEST(response.GetDWORD("decimal", 10) == 123456);
+  BOOST_TEST(response.HasKey("flag"));
+  BOOST_TEST(response.HasKey("last_flag"));
+  BOOST_TEST(response.GetString("string") == "test");
+  BOOST_TEST(response.GetString("quoted") == "quoted string");
+}
 
 BOOST_AUTO_TEST_SUITE_END()

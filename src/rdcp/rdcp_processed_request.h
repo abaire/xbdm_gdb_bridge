@@ -40,14 +40,16 @@ struct RDCPMultilineResponse {
 struct RDCPMapResponse {
   explicit RDCPMapResponse(const std::vector<char> &data);
 
-  std::string GetString(const std::string &key) { return GetString(key, ""); }
-  std::string GetString(const std::string &key, const std::string &default_value);
+  [[nodiscard]] bool HasKey(const std::string &key) const;
 
-  int32_t GetDWORD(const std::string &key, int base) { return GetDWORD(key, base, 0); }
-  int32_t GetDWORD(const std::string &key, int base, int32_t default_value);
+  [[nodiscard]] std::string GetString(const std::string &key) const { return GetString(key, ""); }
+  [[nodiscard]] std::string GetString(const std::string &key, const std::string &default_value) const;
 
-  int64_t GetQWORD(const std::string &key, int base) { return GetQWORD(key, base, 0); }
-  int64_t GetQWORD(const std::string &key, int base, int64_t default_value);
+  [[nodiscard]] int32_t GetDWORD(const std::string &key, int base) const { return GetDWORD(key, base, 0); }
+  [[nodiscard]] int32_t GetDWORD(const std::string &key, int base, int32_t default_value) const;
+
+  [[nodiscard]] int64_t GetQWORD(const std::string &key, int base) const { return GetQWORD(key, base, 0); }
+  [[nodiscard]] int64_t GetQWORD(const std::string &key, int base, int64_t default_value) const;
 
   std::map<std::string, std::string> map;
 };

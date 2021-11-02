@@ -30,33 +30,38 @@ RDCPMapResponse::RDCPMapResponse(const std::vector<char> &data) {
     return;
   }
 
-  std::string sanitized_data(data.begin(), data.end());
+  std::string sanitized_data(data.data(), data.size());
   boost::algorithm::replace_all(sanitized_data, RDCPResponse::kTerminator, " ");
 
   boost::escaped_list_separator<char> separator('\\', ' ', '\"');
   typedef boost::tokenizer<boost::escaped_list_separator<char>> SpaceTokenizer;
   SpaceTokenizer keyvals(sanitized_data, separator);
   for (auto it = keyvals.begin(); it != keyvals.end(); ++it) {
+    const std::string &token = *it;
     // See if this is a key=value pair or just a key[=true].
-    auto delimiter = it->find("=");
+    auto delimiter = token.find('=');
     if (delimiter == std::string::npos) {
-      map[*it] = "";
+      map[token] = "";
       continue;
     }
 
-    if (it->at(delimiter + 1) == '\"') {
+    if (token[delimiter + 1] == '\"') {
       // Insert the unescaped contents of the string.
-      std::string value = it->substr(delimiter + 2, it->size() - 1);
+      std::string value = token.substr(delimiter + 2, token.size() - 1);
       boost::replace_all(value, "\\\"", "\"");
-      map[it->substr(0, delimiter)] = value;
+      map[token.substr(0, delimiter)] = value;
     } else {
-      map[it->substr(0, delimiter)] = it->substr(delimiter + 1);
+      map[token.substr(0, delimiter)] = token.substr(delimiter + 1);
     }
   }
 }
 
+bool RDCPMapResponse::HasKey(const std::string &key) const {
+  return map.find(key) != map.end();
+}
+
 std::string RDCPMapResponse::GetString(const std::string &key,
-                                       const std::string &default_value) {
+                                       const std::string &default_value) const {
   auto it = map.find(key);
   if (it == map.end()) {
     return default_value;
@@ -66,7 +71,7 @@ std::string RDCPMapResponse::GetString(const std::string &key,
 }
 
 int32_t RDCPMapResponse::GetDWORD(const std::string &key, int base,
-                                  int32_t default_value) {
+                                  int32_t default_value) const {
   auto it = map.find(key);
   if (it == map.end()) {
     return default_value;
@@ -76,7 +81,7 @@ int32_t RDCPMapResponse::GetDWORD(const std::string &key, int base,
 }
 
 int64_t RDCPMapResponse::GetQWORD(const std::string &key, int base,
-                                  int64_t default_value) {
+                                  int64_t default_value) const {
   auto it = map.find(key);
   if (it == map.end()) {
     return default_value;
