@@ -52,7 +52,7 @@ add_executable(
         src/util/timer.h
         src/xbox/xbox_interface.cpp
         src/xbox/xbox_interface.h
-)
+        src/gdb/gdb_packet.cpp src/gdb/gdb_packet.h)
 
 target_include_directories(
         xbdm_gdb_bridge
