@@ -8,12 +8,16 @@
 
 static std::vector<std::vector<char>> SplitMultiline(const std::vector<char> &data) {
   std::vector<std::vector<char>> ret;
+  if (data.empty()) {
+    return ret;
+  }
 
   char delimiter[RDCPResponse::kTerminatorLen] = {0};
   memcpy(delimiter, RDCPResponse::kTerminator, RDCPResponse::kTerminatorLen);
 
   auto delimiter_regex = boost::regex(delimiter);
   boost::algorithm::split_regex(ret, data, delimiter_regex);
+
   return ret;
 }
 

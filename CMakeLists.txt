@@ -1,17 +1,19 @@
 cmake_minimum_required(VERSION 3.18)
 project(xbdm_gdb_bridge)
 
+enable_testing()
 set(CMAKE_CXX_STANDARD 17)
 
-FIND_PACKAGE(
+find_package(
         Boost 1.70
         COMPONENTS
         log
         program_options
+        unit_test_framework
         REQUIRED
 )
 
-INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
+include_directories(${Boost_INCLUDE_DIR})
 
 add_executable(
         xbdm_gdb_bridge
@@ -64,10 +66,31 @@ target_include_directories(
         PRIVATE src
 )
 
-TARGET_LINK_LIBRARIES(
+target_link_libraries(
         xbdm_gdb_bridge
         LINK_PUBLIC
         ${Boost_LIBRARIES}
 )
 
+# Tests ----------------------------------------------
 
+add_executable(
+        test_rdcp
+        test/rdcp/test_rdcp_processed_request.cpp
+        test/test_util/vector.h
+        src/rdcp/rdcp_processed_request.cpp
+        src/rdcp/rdcp_processed_request.h
+)
+target_include_directories(
+        test_rdcp
+        PRIVATE src
+        PRIVATE test
+)
+target_link_libraries(
+        test_rdcp
+        LINK_PUBLIC
+        ${Boost_LIBRARIES}
+)
+
+
+add_test(NAME test_rdcp COMMAND test_rdcp)
