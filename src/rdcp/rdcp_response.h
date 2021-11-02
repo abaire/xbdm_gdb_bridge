@@ -2,6 +2,7 @@
 #define XBDM_GDB_BRIDGE_SRC_RDCP_RDCP_RESPONSE_H_
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -46,20 +47,20 @@ class RDCPResponse {
   static constexpr size_t kBinaryNotAllowed = 0;
 
  public:
+  RDCPResponse(StatusCode status, std::string message, std::vector<char> data) : status_(status), response_message_(std::move(message)), data_(std::move(data)) {}
+
   [[nodiscard]] StatusCode status() const { return status_; }
   [[nodiscard]] const std::string &message() const { return response_message_; }
   [[nodiscard]] const std::vector<char> &data() const { return data_; }
 
-  long Parse(const char *buffer, size_t buffer_length,
-             long binary_response_size = kBinaryNotAllowed);
+  static long Parse(
+      std::shared_ptr<RDCPResponse> &response,
+      const char *buffer,
+      size_t buffer_length,
+      long binary_response_size = kBinaryNotAllowed);
 
  private:
   friend std::ostream &operator<<(std::ostream &, RDCPResponse const &);
-
-  const char *ParseMultilineResponse(const char *body_start,
-                                     const char *buffer_end);
-  const char *ParseBinaryResponse(const char *buffer, const char *buffer_end,
-                                  long binary_response_size);
 
  private:
   StatusCode status_;

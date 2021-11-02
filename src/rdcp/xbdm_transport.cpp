@@ -38,7 +38,7 @@ void XBDMTransport::SetConnected() {
   }
 }
 
-void XBDMTransport::Send(const RDCPRequest &request) {
+void XBDMTransport::Send(const std::shared_ptr<RDCPRequest>& request) {
   const std::lock_guard<std::mutex> lock(request_queue_lock_);
   request_queue_.push_back(request);
 
@@ -56,7 +56,7 @@ void XBDMTransport::WriteNextRequest() {
   }
 
   std::vector<uint8_t> buffer =
-      static_cast<std::vector<uint8_t>>(request_queue_.front());
+      static_cast<std::vector<uint8_t>>(*request_queue_.front());
   TCPConnection::Send(buffer);
 }
 
@@ -66,8 +66,8 @@ void XBDMTransport::OnBytesRead() {
   const std::lock_guard<std::mutex> read_lock(read_lock_);
   char const *char_buffer = reinterpret_cast<char *>(read_buffer_.data());
 
-  RDCPResponse response;
-  auto bytes_consumed = response.Parse(char_buffer, read_buffer_.size());
+  std::shared_ptr<RDCPResponse> response;
+  auto bytes_consumed = RDCPResponse::Parse(response, char_buffer, read_buffer_.size());
   if (!bytes_consumed) {
     return;
   }
@@ -79,4 +79,11 @@ void XBDMTransport::OnBytesRead() {
   }
 
   ShiftReadBuffer(bytes_consumed);
+
+  auto request = request_queue_.front();
+  request_queue_.pop_front();
+
+  WriteNextRequest();
+
+  request->Complete(response);
 }

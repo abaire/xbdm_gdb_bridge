@@ -17,8 +17,58 @@ std::ostream &operator<<(std::ostream &os, RDCPResponse const &r) {
   return os << "RDCPResponse [" << r.status_ << "]";
 }
 
-long RDCPResponse::Parse(const char *buffer, size_t buffer_length,
-                         long binary_response_size) {
+
+static const char *ParseMultilineResponse(
+    std::vector<char> &data,
+    const char *body_start,
+    const char *buffer_end) {
+  auto terminator = std::search(body_start, buffer_end, kMultilineTerminator,
+                                kMultilineTerminator + kMultilineTerminatorLen);
+  if (terminator == buffer_end) {
+    return nullptr;
+  }
+
+  data.assign(body_start, terminator);
+  return terminator + kMultilineTerminatorLen;
+}
+
+static const char *ParseBinaryResponse(std::vector<char> &data,
+                                       const char *buffer,
+                                       const char *buffer_end,
+                                       long binary_response_size) {
+  if (binary_response_size == RDCPResponse::kBinaryNotAllowed) {
+    BOOST_LOG_TRIVIAL(error) << "Invalid RDCP packet, response contains binary "
+                                "data but no binary was expected."
+                             << std::endl;
+    return nullptr;
+  }
+
+  auto bytes_available = buffer_end - buffer;
+  if (binary_response_size == RDCPResponse::kBinaryInt32SizePrefix) {
+    if (bytes_available < 4) {
+      return nullptr;
+    }
+
+    binary_response_size = ntohl(*reinterpret_cast<int32_t const *>(buffer));
+    bytes_available -= 4;
+    buffer += 4;
+  }
+
+  if (bytes_available < binary_response_size) {
+    return nullptr;
+  }
+
+  const char *body_end = buffer + binary_response_size;
+  data.assign(buffer, body_end);
+  return body_end;
+}
+
+long RDCPResponse::Parse(
+    std::shared_ptr<RDCPResponse> &response,
+    const char *buffer,
+    size_t buffer_length,
+    long binary_response_size) {
+  response.reset();
   if (buffer_length < 4) {
     return 0;
   }
@@ -47,24 +97,27 @@ long RDCPResponse::Parse(const char *buffer, size_t buffer_length,
 
   char code_buffer[4] = {0};
   memcpy(code_buffer, buffer, 3);
-  status_ = static_cast<StatusCode>(strtol(code_buffer, nullptr, 10));
-  response_message_.assign(buffer + 5, buffer + packet_size - kTerminatorLen);
+  auto status = static_cast<StatusCode>(strtol(code_buffer, nullptr, 10));
+  std::string response_message;
+  response_message.assign(buffer + 5, buffer + packet_size - kTerminatorLen);
 
   auto body_start = buffer + packet_size;
   const char *after_body_end = nullptr;
 
-  switch (status_) {
+  std::vector<char> data;
+
+  switch (status) {
     case OK_MULTILINE_RESPONSE:
-      after_body_end = ParseMultilineResponse(body_start, buffer_end);
+      after_body_end = ParseMultilineResponse(data, body_start, buffer_end);
       break;
 
     case OK_BINARY_RESPONSE:
       after_body_end =
-          ParseBinaryResponse(body_start, buffer_end, binary_response_size);
+          ParseBinaryResponse(data, body_start, buffer_end, binary_response_size);
       break;
 
     default:
-      data_.assign(body_start, terminator);
+      data.assign(body_start, terminator);
       after_body_end = terminator + kTerminatorLen;
       break;
   }
@@ -73,47 +126,6 @@ long RDCPResponse::Parse(const char *buffer, size_t buffer_length,
     return 0;
   }
 
+  response = std::make_shared<RDCPResponse>(status, response_message, data);
   return after_body_end - buffer;
-}
-
-const char *RDCPResponse::ParseMultilineResponse(const char *body_start,
-                                                 const char *buffer_end) {
-  auto terminator = std::search(body_start, buffer_end, kMultilineTerminator,
-                                kMultilineTerminator + kMultilineTerminatorLen);
-  if (terminator == buffer_end) {
-    return nullptr;
-  }
-
-  data_.assign(body_start, terminator);
-  return terminator + kMultilineTerminatorLen;
-}
-
-const char *RDCPResponse::ParseBinaryResponse(const char *buffer,
-                                              const char *buffer_end,
-                                              long binary_response_size) {
-  if (binary_response_size == kBinaryNotAllowed) {
-    BOOST_LOG_TRIVIAL(error) << "Invalid RDCP packet, response contains binary "
-                                "data but no binary was expected."
-                             << std::endl;
-    return nullptr;
-  }
-
-  auto bytes_available = buffer_end - buffer;
-  if (binary_response_size == kBinaryInt32SizePrefix) {
-    if (bytes_available < 4) {
-      return nullptr;
-    }
-
-    binary_response_size = ntohl(*reinterpret_cast<int32_t const *>(buffer));
-    bytes_available -= 4;
-    buffer += 4;
-  }
-
-  if (bytes_available < binary_response_size) {
-    return nullptr;
-  }
-
-  const char *body_end = buffer + binary_response_size;
-  data_.assign(buffer, body_end);
-  return body_end;
 }

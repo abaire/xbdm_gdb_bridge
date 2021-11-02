@@ -1,3 +1,17 @@
 #include "rdcp_request.h"
 
-RDCPRequest::operator std::vector<uint8_t>() const { return {}; }
+static constexpr uint8_t kTerminator[] = {'\r', '\n'};
+static constexpr long kTerminatorLen =
+    sizeof(kTerminator) / sizeof(kTerminator[0]);
+
+RDCPRequest::operator std::vector<uint8_t>() const {
+  std::vector<uint8_t> ret(command_.size() + data_.size() + kTerminatorLen);
+  ret.assign(command_.begin(), command_.end());
+  ret.insert(ret.end(), data_.begin(), data_.end());
+  ret.insert(ret.end(), kTerminator, kTerminator + kTerminatorLen);
+  return ret;
+}
+
+void RDCPRequest::Complete(const std::shared_ptr<RDCPResponse>& response) {
+  // TODO: Implement me.
+}

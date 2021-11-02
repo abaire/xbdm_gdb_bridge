@@ -2,6 +2,7 @@
 #define XBDM_GDB_BRIDGE_SRC_RDCP_XBDM_TRANSPORT_H_
 
 #include <deque>
+#include <memory>
 #include <mutex>
 
 #include "net/tcp_connection.h"
@@ -22,7 +23,7 @@ class XBDMTransport : public TCPConnection {
 
   void SetConnected();
 
-  void Send(const RDCPRequest &request);
+  void Send(const std::shared_ptr<RDCPRequest>& request);
 
  protected:
   void OnBytesRead() override;
@@ -34,7 +35,7 @@ class XBDMTransport : public TCPConnection {
   ConnectionState state_{ConnectionState::INIT};
 
   std::mutex request_queue_lock_;
-  std::deque<RDCPRequest> request_queue_;
+  std::deque<std::shared_ptr<RDCPRequest>> request_queue_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_RDCP_XBDM_TRANSPORT_H_
