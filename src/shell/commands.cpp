@@ -102,6 +102,17 @@ struct ArgParser {
     return true;
   }
 
+  bool Parse(int arg_index, std::string &ret) const {
+    if (HasCommand()) {
+      ++arg_index;
+    }
+    if (arg_index >= arguments.size()) {
+      return false;
+    }
+    ret = arguments[arg_index];
+    return true;
+  }
+
   std::string command;
   const std::vector<std::string> &arguments;
 };
@@ -221,5 +232,27 @@ Command::Result CommandDebugOptions::operator()(
   bool enable_dcptrace = parser.ArgExists("d", "dpctrace");
   SendAndPrintMessage(interface, std::make_shared<SetDebugOptions>(
                                      enable_crashdump, enable_dcptrace));
+  return HANDLED;
+}
+
+Command::Result CommandDebugger::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &args) {
+  ArgParser parser(args);
+  bool disable = parser.ArgExists("d", "disable", "off");
+  SendAndPrintMessage(interface, std::make_shared<Debugger>(disable));
+  return HANDLED;
+}
+
+Command::Result CommandDelete::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &args) {
+  ArgParser parser(args);
+  std::string path;
+  if (!parser.Parse(0, path)) {
+    std::cout << "Missing required path argument." << std::endl;
+    PrintUsage();
+    return HANDLED;
+  }
+  bool recursive = parser.ArgExists("-r");
+  SendAndPrintMessage(interface, std::make_shared<Delete>(path, recursive));
   return HANDLED;
 }

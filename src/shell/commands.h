@@ -78,4 +78,28 @@ struct CommandDebugOptions : Command {
                     const std::vector<std::string> &args) override;
 };
 
+struct CommandDebugger : Command {
+  CommandDebugger()
+      : Command(
+            "[disable]\n"
+            "\n"
+            "If no args are given, notifies XBDM that this channel intends to "
+            "act as a debugger.\n"
+            "If 'disable' is given, disables the previously set debugger "
+            "flag.") {}
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &args) override;
+};
+
+struct CommandDelete : Command {
+  CommandDelete()
+      : Command(
+            "path [-r]\n"
+            "\n"
+            "Deletes the given path.\n"
+            "If -r is given, deletes a the given directory recursively.") {}
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &args) override;
+};
+
 #endif  // XBDM_GDB_BRIDGE_COMMANDS_H

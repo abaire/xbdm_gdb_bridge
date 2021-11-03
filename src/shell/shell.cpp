@@ -1,6 +1,7 @@
 #include "shell.h"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/tokenizer.hpp>
 #include <iostream>
 #include <string>
 
@@ -48,6 +49,8 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   REGISTER("bye", CommandBye);
   REGISTER("continue", CommandContinue);
   REGISTER("debugoptions", CommandDebugOptions);
+  REGISTER("debugger", CommandDebugger);
+  REGISTER("rm", CommandDelete);
   /*
     "debugger": _debugger,
     "debugmode": lambda _: rdcp_command.DebugMode(handler=print),
@@ -133,8 +136,21 @@ void Shell::Run() {
       continue;
     }
 
-    boost::algorithm::split(args, line, boost::algorithm::is_space(),
-                            boost::algorithm::token_compress_on);
+    boost::escaped_list_separator<char> separator('\\', ' ', '\"');
+    typedef boost::tokenizer<boost::escaped_list_separator<char>>
+        SpaceTokenizer;
+    SpaceTokenizer keyvals(line, separator);
+    for (auto it = keyvals.begin(); it != keyvals.end(); ++it) {
+      const std::string &token = *it;
+      if (token[0] == '\"') {
+        // Insert the unescaped contents of the string.
+        std::string value = token.substr(1, token.size() - 1);
+        boost::replace_all(value, "\\\"", "\"");
+        args.push_back(value);
+      } else {
+        args.push_back(token);
+      }
+    }
 
     Command::Result result = ProcessCommand(args);
     if (result == Command::EXIT_REQUESTED) {

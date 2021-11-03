@@ -392,6 +392,7 @@ struct Debugger : public RDCPProcessedRequest {
 
 struct DebugMode : public RDCPProcessedRequest {
   DebugMode() : RDCPProcessedRequest("debugmode") {}
+  // TODO: Implement me.
 };
 
 /*
@@ -983,6 +984,10 @@ struct IsStopped : public RDCPProcessedRequest {
   explicit IsStopped(int thread_id) : RDCPProcessedRequest("isstopped") {
     SetData(" thread=");
     AppendHexString(thread_id);
+  }
+
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
+    // TODO: Implement me.
   }
 };
 
