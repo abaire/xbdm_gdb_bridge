@@ -10,42 +10,45 @@
 
 Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
     : interface_(interface), prompt_("> ") {
+#define REGISTER(command, handler) \
+  commands_[command] = std::make_shared<handler>()
+
   auto quit = std::make_shared<ShellCommandQuit>();
   commands_["exit"] = quit;
-  commands_["gdb"] = std::make_shared<ShellCommandGDB>();
+  REGISTER("gdb", ShellCommandGDB);
   commands_["help"] = nullptr;
   commands_["?"] = nullptr;
-  commands_["reconnect"] = std::make_shared<ShellCommandReconnect>();
+  REGISTER("reconnect", ShellCommandReconnect);
   commands_["quit"] = quit;
 
-  commands_["/launch"] = std::make_shared<DebuggerCommandLaunch>();
-  commands_["/launchwait"] = std::make_shared<DebuggerCommandLaunchWait>();
-  commands_["/attach"] = std::make_shared<DebuggerCommandAttach>();
-  commands_["/detach"] = std::make_shared<DebuggerCommandDetach>();
-  commands_["/restart"] = std::make_shared<DebuggerCommandRestart>();
-  commands_["/switch"] = std::make_shared<DebuggerCommandSetActiveThread>();
-  commands_["/threads"] = std::make_shared<DebuggerCommandGetThreads>();
-  commands_["/info"] = std::make_shared<DebuggerCommandGetThreadInfo>();
-  commands_["/stepi"] = std::make_shared<DebuggerCommandStepInstruction>();
+  REGISTER("/launch", DebuggerCommandLaunch);
+  REGISTER("/launchwait", DebuggerCommandLaunchWait);
+  REGISTER("/attach", DebuggerCommandAttach);
+  REGISTER("/detach", DebuggerCommandDetach);
+  REGISTER("/restart", DebuggerCommandRestart);
+  REGISTER("/switch", DebuggerCommandSetActiveThread);
+  REGISTER("/threads", DebuggerCommandGetThreads);
+  REGISTER("/info", DebuggerCommandGetThreadInfo);
+  REGISTER("/stepi", DebuggerCommandStepInstruction);
+  REGISTER("/info", DebuggerCommandGetThreadInfo);
+  REGISTER("/context", DebuggerCommandGetContext);
+  REGISTER("/fullcontext", DebuggerCommandGetFullContext);
+  REGISTER("/haltall", DebuggerCommandHaltAll);
+  REGISTER("/halt", DebuggerCommandHalt);
+  REGISTER("/continueall", DebuggerCommandContinueAll);
+  REGISTER("/continue", DebuggerCommandContinue);
+  REGISTER("/suspend", DebuggerCommandSuspend);
+  REGISTER("/resume", DebuggerCommandResume);
   auto step_function = std::make_shared<DebuggerCommandStepFunction>();
   commands_["/stepf"] = step_function;
   commands_["/stepfun"] = step_function;
-  commands_["/info"] = std::make_shared<DebuggerCommandGetThreadInfo>();
-  commands_["/context"] = std::make_shared<DebuggerCommandGetContext>();
-  commands_["/fullcontext"] = std::make_shared<DebuggerCommandGetFullContext>();
-  commands_["/haltall"] = std::make_shared<DebuggerCommandHaltAll>();
-  commands_["/halt"] = std::make_shared<DebuggerCommandHalt>();
-  commands_["/continueall"] = std::make_shared<DebuggerCommandContinueAll>();
-  commands_["/continue"] = std::make_shared<DebuggerCommandContinue>();
-  commands_["/suspend"] = std::make_shared<DebuggerCommandSuspend>();
-  commands_["/resume"] = std::make_shared<DebuggerCommandResume>();
 
-  commands_["altaddr"] = std::make_shared<CommandAltAddr>();
-  commands_["break"] = std::make_shared<CommandBreak>();
+  REGISTER("altaddr", CommandAltAddr);
+  REGISTER("break", CommandBreak);
+  REGISTER("bye", CommandBye);
+  REGISTER("continue", CommandContinue);
+  REGISTER("debugoptions", CommandDebugOptions);
   /*
-   "bye": lambda _: rdcp_command.Bye(handler=print),
-    "continue": _continue,
-    "debugoptions": _debug_options,
     "debugger": _debugger,
     "debugmode": lambda _: rdcp_command.DebugMode(handler=print),
     "dedicate": _dedicate,
@@ -114,6 +117,7 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
    _walk_memory, "walkmem": _walk_memory, # WriteFile "xbeinfo": _xbe_info,
     "xtlinfo": lambda _: rdcp_command.XTLInfo(handler=print),
    */
+#undef REGISTER
 }
 
 void Shell::Run() {

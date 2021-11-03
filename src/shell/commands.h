@@ -49,12 +49,31 @@ struct CommandBreak : Command {
                     const std::vector<std::string> &args) override;
 };
 
+struct CommandBye : Command {
+  CommandBye() : Command("Closes the connection gracefully.") {}
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &) override;
+};
+
 struct CommandContinue : Command {
   CommandContinue()
       : Command(
             "<thread_id> [break_on_exception=false]\n"
             "\n"
             "Continues execution of the given thread.") {}
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &args) override;
+};
+
+struct CommandDebugOptions : Command {
+  CommandDebugOptions()
+      : Command(
+            "[crashdump | dpctrace] [...]\n"
+            "\n"
+            "If no arguments are given, retrieves the currently active debug "
+            "options.\n"
+            "If at least one argument is given, enables that debug option and "
+            "disables any options that are not given.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };

@@ -54,6 +54,24 @@ struct ArgParser {
     return IsCommand(rest...);
   }
 
+  template <typename T>
+  [[nodiscard]] bool ArgExists(const T &arg) const {
+    std::string test(arg);
+    return std::find_if(arguments.begin(), arguments.end(),
+                        [&test](const auto &v) {
+                          return test == boost::algorithm::to_lower_copy(v);
+                        }) != arguments.end();
+  }
+
+  template <typename T, typename... Ts, typename = are_same_type<T, Ts...>>
+  [[nodiscard]] bool ArgExists(const T &arg, const Ts &...rest) const {
+    if (ArgExists(arg)) {
+      return true;
+    }
+
+    return ArgExists(rest...);
+  }
+
   template <
       typename T,
       std::enable_if_t<std::is_integral<T>::value && sizeof(T) == 4, int> = 0>
@@ -90,27 +108,27 @@ struct ArgParser {
 
 Command::Result CommandBreak::operator()(XBOXInterface &interface,
                                          const std::vector<std::string> &args) {
-  ArgParser parsed(args, true);
-  if (!parsed.HasCommand()) {
+  ArgParser parser(args, true);
+  if (!parser.HasCommand()) {
     PrintUsage();
     return HANDLED;
   }
 
-  if (parsed.IsCommand("start")) {
+  if (parser.IsCommand("start")) {
     SendAndPrintMessage(interface, std::make_shared<BreakAtStart>());
     return HANDLED;
   }
 
-  if (parsed.IsCommand("clearall")) {
+  if (parser.IsCommand("clearall")) {
     SendAndPrintMessage(interface, std::make_shared<BreakClearAll>());
     return HANDLED;
   }
 
-  bool clear = parsed.ShiftPrefixModifier('-');
+  bool clear = parser.ShiftPrefixModifier('-');
 
-  if (parsed.IsCommand("a", "addr", "address")) {
+  if (parser.IsCommand("a", "addr", "address")) {
     uint32_t address;
-    if (!parsed.Parse(0, address)) {
+    if (!parser.Parse(0, address)) {
       std::cout << "Missing required address argument." << std::endl;
       PrintUsage();
       return HANDLED;
@@ -120,43 +138,43 @@ Command::Result CommandBreak::operator()(XBOXInterface &interface,
     return HANDLED;
   }
 
-  if (parsed.IsCommand("r", "read")) {
+  if (parser.IsCommand("r", "read")) {
     uint32_t address;
-    if (!parsed.Parse(0, address)) {
+    if (!parser.Parse(0, address)) {
       std::cout << "Missing required address argument." << std::endl;
       PrintUsage();
       return HANDLED;
     }
     int32_t size = 1;
-    parsed.Parse(1, size);
+    parser.Parse(1, size);
     SendAndPrintMessage(interface,
                         std::make_shared<BreakOnRead>(address, size, clear));
     return HANDLED;
   }
 
-  if (parsed.IsCommand("w", "write")) {
+  if (parser.IsCommand("w", "write")) {
     uint32_t address;
-    if (!parsed.Parse(0, address)) {
+    if (!parser.Parse(0, address)) {
       std::cout << "Missing required address argument." << std::endl;
       PrintUsage();
       return HANDLED;
     }
     int32_t size = 1;
-    parsed.Parse(1, size);
+    parser.Parse(1, size);
     SendAndPrintMessage(interface,
                         std::make_shared<BreakOnWrite>(address, size, clear));
     return HANDLED;
   }
 
-  if (parsed.IsCommand("e", "exec", "execute")) {
+  if (parser.IsCommand("e", "exec", "execute")) {
     uint32_t address;
-    if (!parsed.Parse(0, address)) {
+    if (!parser.Parse(0, address)) {
       std::cout << "Missing required address argument." << std::endl;
       PrintUsage();
       return HANDLED;
     }
     int32_t size = 1;
-    parsed.Parse(1, size);
+    parser.Parse(1, size);
     SendAndPrintMessage(interface,
                         std::make_shared<BreakOnExecute>(address, size, clear));
     return HANDLED;
@@ -167,20 +185,41 @@ Command::Result CommandBreak::operator()(XBOXInterface &interface,
   return HANDLED;
 }
 
+Command::Result CommandBye::operator()(XBOXInterface &interface,
+                                       const std::vector<std::string> &) {
+  SendAndPrintMessage(interface, std::make_shared<Bye>());
+  return HANDLED;
+}
+
 Command::Result CommandContinue::operator()(
     XBOXInterface &interface, const std::vector<std::string> &args) {
-  ArgParser parsed(args);
+  ArgParser parser(args);
   int thread_id;
-  if (!parsed.Parse(0, thread_id)) {
+  if (!parser.Parse(0, thread_id)) {
     std::cout << "Missing required thread_id argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
 
   bool exception = false;
-  parsed.Parse(1, exception);
+  parser.Parse(1, exception);
 
   SendAndPrintMessage(interface,
                       std::make_shared<Continue>(thread_id, exception));
+  return HANDLED;
+}
+
+Command::Result CommandDebugOptions::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &args) {
+  if (args.empty()) {
+    SendAndPrintMessage(interface, std::make_shared<GetDebugOptions>());
+    return HANDLED;
+  }
+
+  ArgParser parser(args);
+  bool enable_crashdump = parser.ArgExists("c", "crashdump");
+  bool enable_dcptrace = parser.ArgExists("d", "dpctrace");
+  SendAndPrintMessage(interface, std::make_shared<SetDebugOptions>(
+                                     enable_crashdump, enable_dcptrace));
   return HANDLED;
 }
