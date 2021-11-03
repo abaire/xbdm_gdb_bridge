@@ -2,7 +2,10 @@
 #define XBDM_GDB_BRIDGE_RDCP_PROCESSED_REQUEST_H
 
 #include <boost/optional.hpp>
+#include <chrono>
+#include <condition_variable>
 #include <map>
+#include <mutex>
 #include <set>
 #include <string>
 #include <vector>
@@ -20,14 +23,39 @@ struct RDCPProcessedRequest : public RDCPRequest {
 
   [[nodiscard]] virtual bool IsOK() const { return status == StatusCode::OK; }
 
-  void Complete(const std::shared_ptr<RDCPResponse> &response) override {
+  void Complete(const std::shared_ptr<RDCPResponse> &response) final {
     status = response->Status();
     message = response->Message();
+
+    ProcessResponse(response);
+
+    completed_.notify_all();
   }
 
+  void Abandon() final {
+    status = StatusCode::ERR_ABANDONED;
+    completed_.notify_all();
+  }
+
+  virtual void ProcessResponse(const std::shared_ptr<RDCPResponse> &response) = 0;
+
+  void WaitUntilCompleted() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    completed_.wait(lock);
+  }
+
+  bool WaitUntilCompleted(int max_wait_milliseconds) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    auto result = completed_.wait_for(lock, std::chrono::milliseconds(max_wait_milliseconds));
+    return result == std::cv_status::no_timeout;
+  }
  public:
   StatusCode status{INVALID};
   std::string message;
+
+ protected:
+  std::mutex mutex_;
+  std::condition_variable completed_;
 };
 
 struct RDCPMultilineResponse {

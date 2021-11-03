@@ -19,6 +19,8 @@ class RDCPRequest {
   explicit operator std::vector<uint8_t>() const;
 
   virtual void Complete(const std::shared_ptr<RDCPResponse> &response) = 0;
+  virtual void Abandon() = 0;
+
   [[nodiscard]] virtual long ExpectedBinaryResponseSize() const {
     return RDCPResponse::kBinaryNotAllowed;
   }

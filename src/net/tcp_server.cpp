@@ -9,7 +9,7 @@
 #include "net/ip_address.h"
 
 bool TCPServer::Listen(const IPAddress &address) {
-  const std::lock_guard<std::mutex> lock(socket_lock_);
+  const std::lock_guard<std::recursive_mutex> lock(socket_lock_);
   address_ = address;
 
   socket_ = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -28,13 +28,13 @@ bool TCPServer::Listen(const IPAddress &address) {
 
   if (getsockname(socket_, reinterpret_cast<struct sockaddr *>(&bind_addr),
                   &bind_addr_len) < 0) {
-    BOOST_LOG_TRIVIAL(error) << "getsockname failed" << errno << std::endl;
+    BOOST_LOG_TRIVIAL(error) << "getsockname failed" << errno;
     goto close_and_fail;
   }
   address_ = IPAddress(bind_addr);
 
   if (listen(socket_, 1)) {
-    BOOST_LOG_TRIVIAL(error) << "listen failed" << errno << std::endl;
+    BOOST_LOG_TRIVIAL(error) << "listen failed" << errno;
     goto close_and_fail;
   }
 
@@ -44,6 +44,7 @@ close_and_fail:
   shutdown(socket_, SHUT_RDWR);
   close(socket_);
   socket_ = -1;
+  is_shutdown_ = true;
   return false;
 }
 
@@ -52,7 +53,7 @@ void TCPServer::SetConnection(int sock, const IPAddress &address) {
 }
 
 int TCPServer::Select(fd_set &read_fds, fd_set &write_fds, fd_set &except_fds) {
-  const std::lock_guard<std::mutex> lock(socket_lock_);
+  const std::lock_guard<std::recursive_mutex> lock(socket_lock_);
   if (socket_ < 0) {
     return socket_;
   }
@@ -64,13 +65,14 @@ int TCPServer::Select(fd_set &read_fds, fd_set &write_fds, fd_set &except_fds) {
 
 bool TCPServer::Process(const fd_set &read_fds, const fd_set &write_fds,
                         const fd_set &except_fds) {
-  const std::lock_guard<std::mutex> lock(socket_lock_);
+  const std::lock_guard<std::recursive_mutex> lock(socket_lock_);
   if (socket_ < 0) {
-    return false;
+    // If the socket was previously connected and is now shutdown, request deletion.
+    return !is_shutdown_;
   }
 
   if (FD_ISSET(socket_, &except_fds)) {
-    BOOST_LOG_TRIVIAL(trace) << "Socket exception detected." << std::endl;
+    BOOST_LOG_TRIVIAL(trace) << "Socket exception detected.";
     Close();
     return false;
   }
@@ -83,7 +85,7 @@ bool TCPServer::Process(const fd_set &read_fds, const fd_set &write_fds,
         accept(socket_, reinterpret_cast<struct sockaddr *>(&bind_addr),
                &bind_addr_len);
     if (accepted_socket < 0) {
-      BOOST_LOG_TRIVIAL(error) << "accept failed" << errno << std::endl;
+      BOOST_LOG_TRIVIAL(error) << "accept failed" << errno;
     } else {
       auto address = IPAddress(bind_addr);
       OnAccepted(accepted_socket, address);

@@ -26,7 +26,7 @@ class SelectThread {
   std::atomic<bool> running_{false};
   std::thread thread_;
 
-  std::mutex connection_lock_;
+  std::recursive_mutex connection_lock_;
   std::vector<std::shared_ptr<TCPSocketBase>> connections_;
 };
 

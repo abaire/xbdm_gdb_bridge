@@ -184,8 +184,7 @@ struct ThreadFloatContext {
 struct AltAddr : public RDCPProcessedRequest {
   AltAddr() : RDCPProcessedRequest("altaddr") {}
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
-    RDCPProcessedRequest::Complete(response);
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -299,7 +298,7 @@ struct Continue : public RDCPProcessedRequest {
 struct GetDevkitName : public RDCPProcessedRequest {
   GetDevkitName() : RDCPProcessedRequest("dbgname") {}
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       name.clear();
       return;
@@ -325,7 +324,7 @@ struct SetDevkitName : public RDCPProcessedRequest {
 struct GetDebugOptions : public RDCPProcessedRequest {
   GetDebugOptions() : RDCPProcessedRequest("dbgoptions") {}
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -475,7 +474,7 @@ struct DirList : public RDCPProcessedRequest {
     return status == StatusCode::OK_MULTILINE_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -497,7 +496,7 @@ struct DirList : public RDCPProcessedRequest {
 
 struct DebugMonitorVersion : public RDCPProcessedRequest {
   DebugMonitorVersion() : RDCPProcessedRequest("dmversion") {}
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -522,7 +521,7 @@ struct DriveFreeSpace : public RDCPProcessedRequest {
     return status == StatusCode::OK_MULTILINE_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -541,7 +540,7 @@ struct DriveFreeSpace : public RDCPProcessedRequest {
 struct DriveList : public RDCPProcessedRequest {
   DriveList() : RDCPProcessedRequest("drivelist") {}
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -585,7 +584,7 @@ struct GetContext : public RDCPProcessedRequest {
     return status == StatusCode::OK_MULTILINE_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -645,7 +644,7 @@ struct GetExtContext : public RDCPProcessedRequest {
     return status == StatusCode::OK_BINARY_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -680,7 +679,7 @@ struct GetFile : public RDCPProcessedRequest {
     return status == StatusCode::OK_BINARY_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -704,7 +703,7 @@ struct GetFileAttributes : public RDCPProcessedRequest {
     return status == StatusCode::OK_MULTILINE_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -730,7 +729,7 @@ struct GetGamma : public RDCPProcessedRequest {
     return status == StatusCode::OK_BINARY_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -790,7 +789,7 @@ struct GetMemBinary : public RDCPProcessedRequest {
     return status == StatusCode::OK_BINARY_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -819,7 +818,7 @@ struct GetPalette : public RDCPProcessedRequest {
 struct GetProcessID : public RDCPProcessedRequest {
   GetProcessID() : RDCPProcessedRequest("getpid") {}
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -855,7 +854,7 @@ struct GetChecksum : public RDCPProcessedRequest {
     return status == StatusCode::OK_BINARY_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -891,7 +890,7 @@ struct GetUserPrivileges : public RDCPProcessedRequest {
     AppendData("\"");
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -904,7 +903,7 @@ struct GetUserPrivileges : public RDCPProcessedRequest {
 
 struct GetUtilityDriveInfo : public RDCPProcessedRequest {
   GetUtilityDriveInfo() : RDCPProcessedRequest("getutildrvinfo") {}
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -954,7 +953,7 @@ struct IsBreak : public RDCPProcessedRequest {
     AppendHexString(addr);
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -973,7 +972,7 @@ struct IsDebugger : public RDCPProcessedRequest {
            status == StatusCode::ERR_EXISTS;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     attached = status == StatusCode::ERR_EXISTS;
   }
 
@@ -1535,7 +1534,7 @@ struct MemoryMapGlobal : public RDCPProcessedRequest {
     return status == StatusCode::OK_MULTILINE_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -1609,7 +1608,7 @@ struct ModSections : public RDCPProcessedRequest {
     return status == StatusCode::OK_MULTILINE_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -1647,7 +1646,7 @@ struct Modules : public RDCPProcessedRequest {
     return status == StatusCode::OK_MULTILINE_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -1776,7 +1775,7 @@ struct PerformanceCounterList : public RDCPProcessedRequest {
     return status == StatusCode::OK_MULTILINE_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -2076,7 +2075,7 @@ struct Suspend : public RDCPProcessedRequest {
 struct SystemTime : public RDCPProcessedRequest {
   SystemTime() : RDCPProcessedRequest("systime") {}
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -2098,7 +2097,7 @@ struct ThreadInfo : public RDCPProcessedRequest {
     return status == StatusCode::OK_MULTILINE_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -2131,7 +2130,7 @@ struct Threads : public RDCPProcessedRequest {
     return status == StatusCode::OK_MULTILINE_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -2220,7 +2219,7 @@ struct WalkMem : public RDCPProcessedRequest {
     return status == StatusCode::OK_MULTILINE_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -2258,7 +2257,7 @@ struct XBEInfo : public RDCPProcessedRequest {
     return status == StatusCode::OK_MULTILINE_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }
@@ -2281,7 +2280,7 @@ struct XTLInfo : public RDCPProcessedRequest {
     return status == StatusCode::OK_MULTILINE_RESPONSE;
   }
 
-  void Complete(const std::shared_ptr<RDCPResponse>& response) override {
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
     if (!IsOK()) {
       return;
     }

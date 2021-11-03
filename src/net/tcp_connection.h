@@ -38,7 +38,7 @@ class TCPConnection : public TCPSocketBase {
  protected:
   virtual void OnBytesRead() {}
 
-  virtual void DoReceive();
+  virtual bool DoReceive();
   virtual void DoSend();
 
   std::vector<uint8_t>::iterator FirstIndexOf(uint8_t element);
@@ -46,9 +46,9 @@ class TCPConnection : public TCPSocketBase {
       const std::vector<uint8_t> &pattern);
 
  protected:
-  std::mutex read_lock_;
+  std::recursive_mutex read_lock_;
   std::vector<uint8_t> read_buffer_;
-  std::mutex write_lock_;
+  std::recursive_mutex write_lock_;
   std::vector<uint8_t> write_buffer_;
 };
 

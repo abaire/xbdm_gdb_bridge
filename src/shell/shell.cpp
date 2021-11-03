@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 
+#include "commands.h"
 #include "debugger_commands.h"
 #include "shell_commands.h"
 
@@ -37,6 +38,8 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   commands_["/continue"] = std::make_shared<DebuggerCommandContinue>();
   commands_["/suspend"] = std::make_shared<DebuggerCommandSuspend>();
   commands_["/resume"] = std::make_shared<DebuggerCommandResume>();
+
+  commands_["altaddr"] = std::make_shared<CommandAltAddr>();
 }
 
 void Shell::Run() {

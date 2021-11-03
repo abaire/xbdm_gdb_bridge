@@ -7,8 +7,8 @@
 
 struct ShellCommandQuit : Command {
   ShellCommandQuit() : Command("Terminate the connection and exit.") {}
-  virtual Result operator()(XBOXInterface &interface,
-                            const std::vector<std::string> &) {
+  Result operator()(XBOXInterface &interface,
+                            const std::vector<std::string> &) override {
     return Result::EXIT_REQUESTED;
   }
 };

@@ -32,9 +32,10 @@ class TCPSocketBase {
  protected:
   std::string name_;
 
-  std::mutex socket_lock_;
+  std::recursive_mutex socket_lock_;
   int socket_{-1};
   IPAddress address_;
+  bool is_shutdown_{false};
 };
 
 #endif  // XBDM_GDB_BRIDGE_TCP_SOCKET_BASE_H

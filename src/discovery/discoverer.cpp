@@ -157,7 +157,7 @@ bool Discoverer::ReceiveResponse(XBDMServer &result) const {
       recvfrom(socket_, buffer, sizeof(buffer), 0,
                reinterpret_cast<struct sockaddr *>(&recv_addr), &recv_addr_len);
   if (received < 0) {
-    BOOST_LOG_TRIVIAL(trace) << "recvfrom failed" << std::endl;
+    BOOST_LOG_TRIVIAL(trace) << "recvfrom failed " << errno;
     return false;
   }
 

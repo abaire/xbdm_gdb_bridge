@@ -27,6 +27,7 @@ class XBDMTransport : public TCPConnection {
 
  protected:
   void OnBytesRead() override;
+  void HandleInitialConnectResponse(const std::shared_ptr<RDCPResponse>& response);
 
  private:
   void WriteNextRequest();
@@ -34,7 +35,7 @@ class XBDMTransport : public TCPConnection {
  private:
   ConnectionState state_{ConnectionState::INIT};
 
-  std::mutex request_queue_lock_;
+  std::recursive_mutex request_queue_lock_;
   std::deque<std::shared_ptr<RDCPRequest>> request_queue_;
 };
 

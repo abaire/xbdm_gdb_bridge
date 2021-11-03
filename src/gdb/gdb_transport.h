@@ -41,10 +41,10 @@ class GDBTransport : public TCPConnection {
  private:
   bool no_ack_mode_{false};
 
-  std::mutex packet_queue_lock_;
+  std::recursive_mutex packet_queue_lock_;
   std::deque<GDBPacket> packet_queue_;
 
-  std::mutex unescaped_read_lock_;
+  std::recursive_mutex unescaped_read_lock_;
   std::vector<uint8_t> unescaped_read_buffer_;
 
   PacketReceivedHandler packet_received_handler_;

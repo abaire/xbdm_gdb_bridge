@@ -12,13 +12,13 @@ GDBTransport::GDBTransport(std::string name, int sock, IPAddress address,
       packet_received_handler_(std::move(handler)) {}
 
 void GDBTransport::Send(const GDBPacket &packet) {
-  const std::lock_guard<std::mutex> lock(packet_queue_lock_);
+  const std::lock_guard<std::recursive_mutex> lock(packet_queue_lock_);
   packet_queue_.push_back(packet);
   WriteNextPacket();
 }
 
 void GDBTransport::WriteNextPacket() {
-  const std::lock_guard<std::mutex> lock(packet_queue_lock_);
+  const std::lock_guard<std::recursive_mutex> lock(packet_queue_lock_);
   if (packet_queue_.empty()) {
     return;
   }
@@ -33,11 +33,11 @@ void GDBTransport::OnBytesRead() {
   TCPConnection::OnBytesRead();
 
   {
-    const std::lock_guard<std::mutex> unescaped_lock(unescaped_read_lock_);
+    const std::lock_guard<std::recursive_mutex> unescaped_lock(unescaped_read_lock_);
     size_t read_buffer_size = unescaped_read_buffer_.size();
 
     {
-      const std::lock_guard<std::mutex> lock(read_lock_);
+      const std::lock_guard<std::recursive_mutex> lock(read_lock_);
 
       auto it = read_buffer_.begin();
       for (; it != read_buffer_.end(); ++it) {
@@ -79,7 +79,7 @@ void GDBTransport::ProcessUnescapedReadBuffer() {
   std::list<GDBPacket> packets;
 
   {
-    const std::lock_guard<std::mutex> unescaped_lock(unescaped_read_lock_);
+    const std::lock_guard<std::recursive_mutex> unescaped_lock(unescaped_read_lock_);
     auto it = unescaped_read_buffer_.begin();
     auto it_end = unescaped_read_buffer_.end();
 

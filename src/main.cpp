@@ -23,7 +23,8 @@ void validate(boost::any &v, const std::vector<std::string> &values,
   v = boost::any(addr);
 }
 
-static int _main(const IPAddress &xbox_addr, bool colorize_output) {
+static int main_(const IPAddress &xbox_addr, bool colorize_output) {
+  BOOST_LOG_TRIVIAL(trace) << "Startup - XBDM @ " << xbox_addr;
   auto interface = std::make_shared<XBOXInterface>("XBOX", xbox_addr);
   interface->Start();
 
@@ -35,8 +36,6 @@ static int _main(const IPAddress &xbox_addr, bool colorize_output) {
 }
 
 int main(int argc, char *argv[]) {
-  BOOST_LOG_TRIVIAL(trace) << "Startup.";
-
   bool colorize;
 
   po::options_description opts("Options:");
@@ -82,8 +81,16 @@ int main(int argc, char *argv[]) {
 
   IPAddress xbox_addr = vm["xbox"].as<IPAddress>();
   uint32_t verbosity = vm["verbosity"].as<uint32_t>();
-  logging::core::get()->set_filter(logging::trivial::severity >=
-                                   logging::trivial::info - verbosity);
+  logging::core::get()->set_filter([verbosity](const boost::log::attribute_value_set &values) mutable {
+    auto severity = values["Severity"].extract<logging::trivial::severity_level>();
+    int info_level = logging::trivial::info;
+    if (verbosity > info_level) {
+      verbosity = info_level;
+    } else if (info_level - verbosity > logging::trivial::fatal) {
+      verbosity = info_level - logging::trivial::fatal;
+    }
+    return severity >= (logging::trivial::info - verbosity);
+  });
 
-  return _main(xbox_addr, colorize);
+  return main_(xbox_addr, colorize);
 }

@@ -108,7 +108,9 @@ long RDCPResponse::Parse(std::shared_ptr<RDCPResponse> &response,
       break;
 
     default:
-      data.assign(body_start, terminator);
+      if (body_start < terminator) {
+        data.assign(body_start, terminator);
+      }
       after_body_end = terminator + kTerminatorLen;
       break;
   }

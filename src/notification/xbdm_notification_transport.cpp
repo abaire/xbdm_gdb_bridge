@@ -20,7 +20,7 @@ XBDMNotificationTransport::XBDMNotificationTransport(
 void XBDMNotificationTransport::OnBytesRead() {
   TCPConnection::OnBytesRead();
 
-  const std::lock_guard<std::mutex> read_lock(read_lock_);
+  const std::lock_guard<std::recursive_mutex> read_lock(read_lock_);
   char const *buffer = reinterpret_cast<char *>(read_buffer_.data());
 
   auto buffer_end = buffer + read_buffer_.size();
