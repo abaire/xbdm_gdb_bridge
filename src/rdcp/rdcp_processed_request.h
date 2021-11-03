@@ -37,7 +37,7 @@ struct RDCPProcessedRequest : public RDCPRequest {
     completed_.notify_all();
   }
 
-  virtual void ProcessResponse(const std::shared_ptr<RDCPResponse> &response) = 0;
+  virtual void ProcessResponse(const std::shared_ptr<RDCPResponse> &response) {}
 
   void WaitUntilCompleted() {
     std::unique_lock<std::mutex> lock(mutex_);
@@ -49,6 +49,9 @@ struct RDCPProcessedRequest : public RDCPRequest {
     auto result = completed_.wait_for(lock, std::chrono::milliseconds(max_wait_milliseconds));
     return result == std::cv_status::no_timeout;
   }
+
+  friend std::ostream &operator<<(std::ostream &, RDCPProcessedRequest const &);
+
  public:
   StatusCode status{INVALID};
   std::string message;
@@ -97,10 +100,6 @@ struct RDCPMapResponse {
   [[nodiscard]] int64_t GetQWORD(const std::string &low_key,
                                  const std::string &high_key,
                                  int64_t default_value) const;
-
-  static int32_t ParseInteger(const std::vector<uint8_t> &value);
-  static int32_t ParseInteger(const std::vector<char> &data);
-  static int32_t ParseInteger(const std::string &value);
 
   std::map<std::string, std::string> map;
   std::set<std::string> valueless_keys;

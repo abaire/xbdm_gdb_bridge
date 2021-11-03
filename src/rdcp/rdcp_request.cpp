@@ -11,3 +11,7 @@ RDCPRequest::operator std::vector<uint8_t>() const {
   ret.insert(ret.end(), kTerminator, kTerminator + kTerminatorLen);
   return ret;
 }
+
+std::ostream &operator<<(std::ostream &os, RDCPRequest const &r) {
+  return os << r.command_ << " " << r.data_.size();
+}

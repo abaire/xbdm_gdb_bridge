@@ -62,8 +62,10 @@ void XBDMTransport::WriteNextRequest() {
     return;
   }
 
+  const auto &request = request_queue_.front();
+  BOOST_LOG_TRIVIAL(trace) << "Sending " << *request;
   std::vector<uint8_t> buffer =
-      static_cast<std::vector<uint8_t>>(*request_queue_.front());
+      static_cast<std::vector<uint8_t>>(*request);
   TCPConnection::Send(buffer);
 }
 

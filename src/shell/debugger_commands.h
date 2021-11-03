@@ -12,7 +12,7 @@ struct DebuggerCommandLaunch : Command {
             "<path_to_xbe> [commandline_args]\n"
             "\n"
             "Launches the given path, passing any remaining parameters as "
-            "launch args.") {}
+            "launch rest.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
     // TODO: Implement me.
@@ -26,7 +26,7 @@ struct DebuggerCommandLaunchWait : Command {
             "<path_to_xbe> [commandline_args]\n"
             "\n"
             "Launches the given path, passing any remaining parameters as "
-            "launch args.\n"
+            "launch rest.\n"
             "A breakpoint will be set on the XBE entrypoint and execution will "
             "wait for a `go` command.") {}
   Result operator()(XBOXInterface &interface,

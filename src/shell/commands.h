@@ -20,4 +20,26 @@ struct CommandAltAddr : Command {
   }
 };
 
+struct CommandBreak : Command {
+  CommandBreak() : Command(
+                       "<subcommand> [subcommand_args]\n"
+            "\n"
+            "    Adds or removes a breakpoint.\n"
+            "\n"
+            "    subcommands:\n"
+            "      clearall - Clears all breakpoints\n"
+            "      start - Sets a breakpoint at program entry. Only valid if the remote is in state \"execution pending\".\n"
+            "      [-]addr <address> - Breaks on execution at the given address.\n"
+            "      [-]read <address> <length> - Breaks on read access to the given memory range.\n"
+            "      [-]write <address> <length> - Breaks on write access to the given memory range.\n"
+            "      [-]execute <address> <length> - Breaks on execution within the given memory range.\n"
+            "\n"
+            "    Subcommands with [-] can be prefixed with '-' to disable a previously set breakpoint.\n"
+            "    E.g., addr 0x12345   # sets a breakpoint at 0x12345\n"
+            "          -addr 0x12345  # clears the breakpoint") {}
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &args) override;
+};
+
+
 #endif  // XBDM_GDB_BRIDGE_COMMANDS_H

@@ -1,6 +1,7 @@
 #ifndef XBDM_GDB_BRIDGE_COMMAND_H
 #define XBDM_GDB_BRIDGE_COMMAND_H
 
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -18,7 +19,10 @@ struct Command {
   virtual Result operator()(XBOXInterface &interface,
                             const std::vector<std::string> &args) = 0;
 
-  std::string name;
+  void PrintUsage() const {
+    std::cout << help << std::endl;
+  }
+
   std::string help;
 };
 

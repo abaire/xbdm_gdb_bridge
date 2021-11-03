@@ -108,6 +108,7 @@ long RDCPResponse::Parse(std::shared_ptr<RDCPResponse> &response,
 
     default:
       data.assign(buffer + 5, terminator);
+      response_message.assign(buffer + 5, terminator);
       after_body_end = terminator + kTerminatorLen;
       break;
   }

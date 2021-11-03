@@ -12,6 +12,7 @@
 #include "rdcp/rdcp_request.h"
 #include "rdcp/rdcp_response.h"
 #include "rdcp/rdcp_status_code.h"
+#include "util/parsing.h"
 
 
 struct ThreadContext {
@@ -909,7 +910,7 @@ struct GetUtilityDriveInfo : public RDCPProcessedRequest {
     }
     auto parsed = RDCPMapResponse(response->Data());
     for (auto& it : parsed.map) {
-      partitions[it.first] = RDCPMapResponse::ParseInteger(it.second);
+      partitions[it.first] = ParseInt32(it.second);
     }
   }
 
@@ -2136,7 +2137,7 @@ struct Threads : public RDCPProcessedRequest {
     }
     auto parsed = RDCPMultilineResponse(response->Data());
     for (const auto &item : parsed.lines) {
-      threads.push_back(RDCPMapResponse::ParseInteger(item));
+      threads.push_back(ParseInt32(item));
     }
   }
 

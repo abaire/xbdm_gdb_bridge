@@ -53,13 +53,9 @@ class RDCPRequest {
     }
   }
 
-  void AppendHexString(uint32_t value) {
-    char buf[32] = {0};
-    snprintf(buf, 31, "0x%xu", value);
-    data_.insert(data_.end(), buf, buf + strlen(buf));
-  }
-
-  void AppendHexString(int value) {
+  template<typename T,
+      std::enable_if_t<std::is_integral<T>::value && sizeof(T) <= 8, int> = 0>
+  void AppendHexString(T value) {
     char buf[32] = {0};
     snprintf(buf, 31, "0x%x", value);
     data_.insert(data_.end(), buf, buf + strlen(buf));
@@ -69,6 +65,9 @@ class RDCPRequest {
   void AppendHexBuffer(const std::vector<T> &buffer) {
     boost::algorithm::hex(buffer.begin(), buffer.end(), back_inserter(data_));
   }
+
+ protected:
+  friend std::ostream &operator<<(std::ostream &, RDCPRequest const &);
 
  protected:
   std::string command_;

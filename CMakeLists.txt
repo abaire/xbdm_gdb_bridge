@@ -51,11 +51,14 @@ add_executable(
         src/rdcp/xbdm_transport.h
         src/shell/command.cpp
         src/shell/command.h
+        src/shell/commands.cpp
         src/shell/commands.h
         src/shell/debugger_commands.h
         src/shell/shell.cpp
         src/shell/shell.h
         src/shell/shell_commands.h
+        src/util/parsing.cpp
+        src/util/parsing.h
         src/util/timer.cpp
         src/util/timer.h
         src/xbox/xbox_interface.cpp
@@ -89,6 +92,8 @@ add_executable(
         src/rdcp/rdcp_processed_request.cpp
         src/rdcp/rdcp_processed_request.h
         src/rdcp/xbdm_requests.h
+        src/util/parsing.cpp
+        src/util/parsing.h
 )
 target_include_directories(
         test_rdcp

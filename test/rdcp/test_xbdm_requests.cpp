@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_CASE(altaddr_ok) {
   std::map<std::string, std::string> data;
 
   const char address_string[] = "127.0.0.1";
-  uint32_t address = htonl(inet_network(address_string));
+  uint32_t address = inet_network(address_string);
 
   char value[32] = {0};
   snprintf(value, 31, "0x%x", address);
