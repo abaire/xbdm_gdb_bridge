@@ -190,7 +190,7 @@ struct AltAddr : public RDCPProcessedRequest {
     }
 
     auto parsed = RDCPMapResponse(response->Data());
-    address = parsed.GetDWORD("addr");
+    address = htonl(parsed.GetDWORD("addr"));
 
     char buf[64] = {0};
     if (inet_ntop(AF_INET, &address, buf, 64)) {
