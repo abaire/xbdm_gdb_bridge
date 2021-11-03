@@ -49,20 +49,19 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
     "debugger": _debugger,
     "debugmode": lambda _: rdcp_command.DebugMode(handler=print),
     "dedicate": _dedicate,
-    "rm": lambda rest: rdcp_command.Delete(rest[0], rest[0][-1] == "/", handler=print),
-    "ls": _dirlist,
-    "dmversion": lambda _: rdcp_command.DMVersion(handler=print),
-    "df": lambda rest: rdcp_command.DriveFreeSpace(rest[0][0], handler=print),
-    "drivelist": lambda _: rdcp_command.DriveList(handler=print),
-    "funccall": lambda rest: rdcp_command.FuncCall(rest[0], handler=print),
-    "getcontext": _get_context,
+    "rm": lambda rest: rdcp_command.Delete(rest[0], rest[0][-1] == "/",
+   handler=print), "ls": _dirlist, "dmversion": lambda _:
+   rdcp_command.DMVersion(handler=print), "df": lambda rest:
+   rdcp_command.DriveFreeSpace(rest[0][0], handler=print), "drivelist": lambda
+   _: rdcp_command.DriveList(handler=print), "funccall": lambda rest:
+   rdcp_command.FuncCall(rest[0], handler=print), "getcontext": _get_context,
     "getd3dstate": lambda _: rdcp_command.GetD3DState(handler=print),
     "getextcontext": lambda rest: rdcp_command.GetExtContext(
         int(rest[0], 0), handler=print
     ),
     # GetFile
-    "getfileattr": lambda rest: rdcp_command.GetFileAttributes(rest[0], handler=print),
-    "getgamma": lambda _: rdcp_command.GetGamma(handler=print),
+    "getfileattr": lambda rest: rdcp_command.GetFileAttributes(rest[0],
+   handler=print), "getgamma": lambda _: rdcp_command.GetGamma(handler=print),
     "getmem": _get_mem,
     # GetMemBinary
     "getpalette": lambda rest: rdcp_command.GetPalette(rest[0], handler=print),
@@ -72,23 +71,18 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
     ),
     "getsurface": lambda rest: rdcp_command.GetSurface(rest[0], handler=print),
     # GetUserPrivileges
-    "getutilitydriveinfo": lambda _: rdcp_command.GetUtilityDriveInfo(handler=print),
-    "go": lambda _: rdcp_command.Go(handler=print),
-    # GPUCounter
-    "halt": _halt,
-    "isbreak": lambda rest: rdcp_command.IsBreak(int(rest[0], 0), handler=print),
-    "isdebugger": lambda _: rdcp_command.IsDebugger(handler=print),
-    "isstopped": lambda rest: rdcp_command.IsStopped(int(rest[0], 0), handler=print),
-    "irtsweep": lambda _: rdcp_command.IRTSweep(handler=print),
-    "kd": _kernel_debug,
-    # LOP
-    "run": _magic_boot,
-    # MemTrack
-    "memorymap": lambda _: rdcp_command.MemoryMapGlobal(handler=print),
-    "mkdir": lambda rest: rdcp_command.Mkdir(rest[0], handler=print),
-    "modlongname": lambda rest: rdcp_command.ModLongName(rest[0], handler=print),
-    "modsections": lambda rest: rdcp_command.ModSections(rest[0], handler=print),
-    "modules": _modules,
+    "getutilitydriveinfo": lambda _:
+   rdcp_command.GetUtilityDriveInfo(handler=print), "go": lambda _:
+   rdcp_command.Go(handler=print), # GPUCounter "halt": _halt, "isbreak": lambda
+   rest: rdcp_command.IsBreak(int(rest[0], 0), handler=print), "isdebugger":
+   lambda _: rdcp_command.IsDebugger(handler=print), "isstopped": lambda rest:
+   rdcp_command.IsStopped(int(rest[0], 0), handler=print), "irtsweep": lambda _:
+   rdcp_command.IRTSweep(handler=print), "kd": _kernel_debug, # LOP "run":
+   _magic_boot, # MemTrack "memorymap": lambda _:
+   rdcp_command.MemoryMapGlobal(handler=print), "mkdir": lambda rest:
+   rdcp_command.Mkdir(rest[0], handler=print), "modlongname": lambda rest:
+   rdcp_command.ModLongName(rest[0], handler=print), "modsections": lambda rest:
+   rdcp_command.ModSections(rest[0], handler=print), "modules": _modules,
     "nostopon": _no_stop_on,
 
     "notifyat": _notifyat,
@@ -112,16 +106,12 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
     # SetSystemTime
     "stop": lambda _: rdcp_command.Stop(handler=print),
     "stopon": _stop_on,
-    "suspend": lambda rest: rdcp_command.Suspend(int(rest[0], 0), handler=print),
-    "systemtime": lambda _: rdcp_command.SystemTime(handler=print),
-    "threadinfo": lambda rest: rdcp_command.ThreadInfo(int(rest[0], 0), handler=print),
-    "threads": lambda _: rdcp_command.Threads(handler=print),
-    # UserList
-    # VSSnap
-    "memwalk": _walk_memory,
-    "walkmem": _walk_memory,
-    # WriteFile
-    "xbeinfo": _xbe_info,
+    "suspend": lambda rest: rdcp_command.Suspend(int(rest[0], 0),
+   handler=print), "systemtime": lambda _:
+   rdcp_command.SystemTime(handler=print), "threadinfo": lambda rest:
+   rdcp_command.ThreadInfo(int(rest[0], 0), handler=print), "threads": lambda _:
+   rdcp_command.Threads(handler=print), # UserList # VSSnap "memwalk":
+   _walk_memory, "walkmem": _walk_memory, # WriteFile "xbeinfo": _xbe_info,
     "xtlinfo": lambda _: rdcp_command.XTLInfo(handler=print),
    */
 }

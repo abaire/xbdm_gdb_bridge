@@ -25,7 +25,9 @@ class RDCPRequest {
     return RDCPResponse::kBinaryNotAllowed;
   }
 
-  [[nodiscard]] virtual const std::vector<uint8_t> *BinaryPaylod() { return nullptr; }
+  [[nodiscard]] virtual const std::vector<uint8_t> *BinaryPaylod() {
+    return nullptr;
+  }
 
   void SetData(const std::vector<uint8_t> &data) { data_ = data; }
 
@@ -53,7 +55,8 @@ class RDCPRequest {
     }
   }
 
-  template<typename T,
+  template <
+      typename T,
       std::enable_if_t<std::is_integral<T>::value && sizeof(T) <= 8, int> = 0>
   void AppendHexString(T value) {
     char buf[32] = {0};

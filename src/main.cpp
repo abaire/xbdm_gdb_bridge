@@ -81,16 +81,18 @@ int main(int argc, char *argv[]) {
 
   IPAddress xbox_addr = vm["xbox"].as<IPAddress>();
   uint32_t verbosity = vm["verbosity"].as<uint32_t>();
-  logging::core::get()->set_filter([verbosity](const boost::log::attribute_value_set &values) mutable {
-    auto severity = values["Severity"].extract<logging::trivial::severity_level>();
-    int info_level = logging::trivial::info;
-    if (verbosity > info_level) {
-      verbosity = info_level;
-    } else if (info_level - verbosity > logging::trivial::fatal) {
-      verbosity = info_level - logging::trivial::fatal;
-    }
-    return severity >= (logging::trivial::info - verbosity);
-  });
+  logging::core::get()->set_filter(
+      [verbosity](const boost::log::attribute_value_set &values) mutable {
+        auto severity =
+            values["Severity"].extract<logging::trivial::severity_level>();
+        int info_level = logging::trivial::info;
+        if (verbosity > info_level) {
+          verbosity = info_level;
+        } else if (info_level - verbosity > logging::trivial::fatal) {
+          verbosity = info_level - logging::trivial::fatal;
+        }
+        return severity >= (logging::trivial::info - verbosity);
+      });
 
   return main_(xbox_addr, colorize);
 }

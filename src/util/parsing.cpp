@@ -1,6 +1,5 @@
 #include "parsing.h"
 
-
 int32_t ParseInt32(const std::vector<uint8_t> &data) {
   std::string value(reinterpret_cast<const char *>(data.data()), data.size());
   return ParseInt32(value);

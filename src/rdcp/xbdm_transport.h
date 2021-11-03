@@ -27,7 +27,8 @@ class XBDMTransport : public TCPConnection {
 
  protected:
   void OnBytesRead() override;
-  void HandleInitialConnectResponse(const std::shared_ptr<RDCPResponse>& response);
+  void HandleInitialConnectResponse(
+      const std::shared_ptr<RDCPResponse>& response);
 
  private:
   void WriteNextRequest();

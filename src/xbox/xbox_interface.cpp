@@ -1,10 +1,11 @@
 #include "xbox_interface.h"
 
+#include <unistd.h>
+
 #include <boost/asio/dispatch.hpp>
 #include <boost/log/trivial.hpp>
 #include <cassert>
 #include <utility>
-#include <unistd.h>
 
 XBOXInterface::XBOXInterface(std::string name, IPAddress xbox_address)
     : name_(std::move(name)), xbox_address_(std::move(xbox_address)) {}
@@ -117,13 +118,14 @@ std::shared_ptr<RDCPProcessedRequest> XBOXInterface::SendCommandSync(
   return command;
 }
 
-std::future<std::shared_ptr<RDCPProcessedRequest>> XBOXInterface::SendCommand(std::shared_ptr<RDCPProcessedRequest> command) {
+std::future<std::shared_ptr<RDCPProcessedRequest>> XBOXInterface::SendCommand(
+    std::shared_ptr<RDCPProcessedRequest> command) {
   assert(xbdm_control_executor_ && "SendCommand called before Start.");
   std::promise<std::shared_ptr<RDCPProcessedRequest>> promise;
   auto future = promise.get_future();
   boost::asio::dispatch(
       *xbdm_control_executor_,
-      [this, promise = std::move(promise), command] () mutable {
+      [this, promise = std::move(promise), command]() mutable {
         this->ExecuteXBDMPromise(promise, command);
       });
   return future;
@@ -132,7 +134,6 @@ std::future<std::shared_ptr<RDCPProcessedRequest>> XBOXInterface::SendCommand(st
 void XBOXInterface::ExecuteXBDMPromise(
     std::promise<std::shared_ptr<RDCPProcessedRequest>>& promise,
     std::shared_ptr<RDCPProcessedRequest>& request) {
-
   if (!XBDMConnect()) {
     request->status = StatusCode::ERR_NOT_CONNECTED;
   } else {
@@ -149,7 +150,8 @@ bool XBOXInterface::XBDMConnect(int max_wait_millis) {
     return true;
   }
 
-  if (!xbdm_transport_->IsConnected() && !xbdm_transport_->Connect(xbox_address_)) {
+  if (!xbdm_transport_->IsConnected() &&
+      !xbdm_transport_->Connect(xbox_address_)) {
     return false;
   }
 

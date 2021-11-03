@@ -46,7 +46,8 @@ struct RDCPProcessedRequest : public RDCPRequest {
 
   bool WaitUntilCompleted(int max_wait_milliseconds) {
     std::unique_lock<std::mutex> lock(mutex_);
-    auto result = completed_.wait_for(lock, std::chrono::milliseconds(max_wait_milliseconds));
+    auto result = completed_.wait_for(
+        lock, std::chrono::milliseconds(max_wait_milliseconds));
     return result == std::cv_status::no_timeout;
   }
 
@@ -91,7 +92,7 @@ struct RDCPMapResponse {
     return GetUInt32(key, 0);
   }
   [[nodiscard]] uint32_t GetUInt32(const std::string &key,
-                                 uint32_t default_value) const;
+                                   uint32_t default_value) const;
 
   [[nodiscard]] int64_t GetQWORD(const std::string &low_key,
                                  const std::string &high_key) const {

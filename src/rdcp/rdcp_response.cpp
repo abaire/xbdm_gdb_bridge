@@ -7,7 +7,8 @@
 #include <ostream>
 
 std::ostream &operator<<(std::ostream &os, RDCPResponse const &r) {
-  return os << "RDCPResponse [" << r.status_ << "] " << r.response_message_ << " size: " << r.data_.size();
+  return os << "RDCPResponse [" << r.status_ << "] " << r.response_message_
+            << " size: " << r.data_.size();
 }
 
 static const char *ParseMultilineResponse(std::vector<char> &data,
@@ -90,7 +91,6 @@ long RDCPResponse::Parse(std::shared_ptr<RDCPResponse> &response,
   memcpy(code_buffer, buffer, 3);
   auto status = static_cast<StatusCode>(strtol(code_buffer, nullptr, 10));
 
-
   std::string response_message;
   const char *after_body_end = nullptr;
 
@@ -98,12 +98,15 @@ long RDCPResponse::Parse(std::shared_ptr<RDCPResponse> &response,
 
   switch (status) {
     case OK_MULTILINE_RESPONSE:
-      response_message.assign(buffer + 5, buffer + packet_size - kTerminatorLen);
-      after_body_end = ParseMultilineResponse(data, buffer + packet_size, buffer_end);
+      response_message.assign(buffer + 5,
+                              buffer + packet_size - kTerminatorLen);
+      after_body_end =
+          ParseMultilineResponse(data, buffer + packet_size, buffer_end);
       break;
 
     case OK_BINARY_RESPONSE:
-      after_body_end = ParseBinaryResponse(data, buffer + packet_size, buffer_end, binary_response_size);
+      after_body_end = ParseBinaryResponse(data, buffer + packet_size,
+                                           buffer_end, binary_response_size);
       break;
 
     default:
@@ -117,6 +120,7 @@ long RDCPResponse::Parse(std::shared_ptr<RDCPResponse> &response,
     return 0;
   }
 
-  response = std::make_shared<RDCPResponse>(status, std::move(response_message), std::move(data));
+  response = std::make_shared<RDCPResponse>(status, std::move(response_message),
+                                            std::move(data));
   return after_body_end - buffer;
 }

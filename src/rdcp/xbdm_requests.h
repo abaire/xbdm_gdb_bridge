@@ -14,7 +14,6 @@
 #include "rdcp/rdcp_status_code.h"
 #include "util/parsing.h"
 
-
 struct ThreadContext {
   boost::optional<int32_t> ebp;
   boost::optional<int32_t> esp;
@@ -28,7 +27,7 @@ struct ThreadContext {
   boost::optional<int32_t> esi;
   boost::optional<int32_t> cr0_npx_state;
 
-  void Parse(const RDCPMapResponse &parsed) {
+  void Parse(const RDCPMapResponse& parsed) {
     ebp = parsed.GetOptionalDWORD("Ebp");
     esp = parsed.GetOptionalDWORD("Esp");
     eip = parsed.GetOptionalDWORD("Eip");
@@ -113,7 +112,7 @@ struct ThreadFloatContext {
   int64_t st7{0};
   int32_t cr0_npx_state{0};
 
-  void Parse(const std::vector<char> &buffer) {
+  void Parse(const std::vector<char>& buffer) {
     auto data = reinterpret_cast<const uint8_t*>(buffer.data());
     auto values = reinterpret_cast<const int32_t*>(data);
     control = *values++;
@@ -1911,14 +1910,17 @@ rdcp_response.RDCPResponse.STATUS_MULTILINE_RESPONSE
 */
 
 struct SendFile : public RDCPProcessedRequest {
-  SendFile(const std::string &name, std::vector<uint8_t> buffer) : RDCPProcessedRequest("sendfile"), binary_payload(std::move(buffer)) {
+  SendFile(const std::string& name, std::vector<uint8_t> buffer)
+      : RDCPProcessedRequest("sendfile"), binary_payload(std::move(buffer)) {
     SetData(" name=\"");
     AppendData(name);
     AppendData("\" length=");
     AppendHexString(static_cast<uint32_t>(buffer.size()));
   }
 
-  [[nodiscard]] const std::vector<uint8_t> *BinaryPaylod() override { return &binary_payload; }
+  [[nodiscard]] const std::vector<uint8_t>* BinaryPaylod() override {
+    return &binary_payload;
+  }
 
   std::vector<uint8_t> binary_payload;
 };
@@ -1939,7 +1941,8 @@ that matches some internal state var
 */
 
 struct SetNVRAMConfig : public RDCPProcessedRequest {
-  SetNVRAMConfig(int32_t index, int32_t value) : RDCPProcessedRequest("setconfig") {
+  SetNVRAMConfig(int32_t index, int32_t value)
+      : RDCPProcessedRequest("setconfig") {
     SetData(" index=");
     AppendHexString(index);
     AppendData(" value=");
@@ -1947,16 +1950,17 @@ struct SetNVRAMConfig : public RDCPProcessedRequest {
   }
 };
 
-
 struct SetContext : public RDCPProcessedRequest {
-  SetContext(int thread_id, const ThreadContext &context) : RDCPProcessedRequest("setcontext") {
+  SetContext(int thread_id, const ThreadContext& context)
+      : RDCPProcessedRequest("setcontext") {
     SetData(" thread=");
     AppendHexString(thread_id);
     AppendData(" ");
     AppendData(context.Serialize());
   }
 
-  SetContext(int thread_id, const ThreadFloatContext &context) : RDCPProcessedRequest("setcontext") {
+  SetContext(int thread_id, const ThreadFloatContext& context)
+      : RDCPProcessedRequest("setcontext") {
     SetData(" thread=");
     AppendHexString(thread_id);
 
@@ -1965,7 +1969,9 @@ struct SetContext : public RDCPProcessedRequest {
     AppendHexString(static_cast<uint32_t>(binary_payload.size()));
   }
 
-  SetContext(int thread_id, const ThreadContext &context, const ThreadFloatContext &ext) : RDCPProcessedRequest("setcontext") {
+  SetContext(int thread_id, const ThreadContext& context,
+             const ThreadFloatContext& ext)
+      : RDCPProcessedRequest("setcontext") {
     SetData(" thread=");
     AppendHexString(thread_id);
     AppendData(" ");
@@ -1975,19 +1981,20 @@ struct SetContext : public RDCPProcessedRequest {
     AppendHexString(static_cast<uint32_t>(binary_payload.size()));
   }
 
-  [[nodiscard]] const std::vector<uint8_t> *BinaryPaylod() override { return &binary_payload; }
+  [[nodiscard]] const std::vector<uint8_t>* BinaryPaylod() override {
+    return &binary_payload;
+  }
 
   std::vector<uint8_t> binary_payload;
-
 };
 
-
 struct SetFileAttributes : public RDCPProcessedRequest {
-  explicit SetFileAttributes(const std::string &path,
-                    boost::optional<bool> readonly = boost::none,
-                    boost::optional<bool> hidden  = boost::none,
-                    boost::optional<uint64_t> create_timestamp  = boost::none,
-                    boost::optional<uint64_t> change_timestamp  = boost::none) : RDCPProcessedRequest("setfileattributes") {
+  explicit SetFileAttributes(
+      const std::string& path, boost::optional<bool> readonly = boost::none,
+      boost::optional<bool> hidden = boost::none,
+      boost::optional<uint64_t> create_timestamp = boost::none,
+      boost::optional<uint64_t> change_timestamp = boost::none)
+      : RDCPProcessedRequest("setfileattributes") {
     SetData(" name=\"");
     AppendData(path);
     AppendData("\"");
@@ -2012,24 +2019,27 @@ struct SetFileAttributes : public RDCPProcessedRequest {
 
     if (create_timestamp.has_value()) {
       AppendData(" createlo=");
-      AppendHexString(static_cast<uint32_t>(create_timestamp.get() & 0xFFFFFFFF));
+      AppendHexString(
+          static_cast<uint32_t>(create_timestamp.get() & 0xFFFFFFFF));
       AppendData(" createhi=");
-      AppendHexString(static_cast<uint32_t>((create_timestamp.get() >> 32) & 0xFFFFFFFF));
+      AppendHexString(
+          static_cast<uint32_t>((create_timestamp.get() >> 32) & 0xFFFFFFFF));
     }
 
     if (change_timestamp.has_value()) {
       AppendData(" changelo=");
-      AppendHexString(static_cast<uint32_t>(change_timestamp.get() & 0xFFFFFFFF));
+      AppendHexString(
+          static_cast<uint32_t>(change_timestamp.get() & 0xFFFFFFFF));
       AppendData(" changehi=");
-      AppendHexString(static_cast<uint32_t>((change_timestamp.get() >> 32) & 0xFFFFFFFF));
+      AppendHexString(
+          static_cast<uint32_t>((change_timestamp.get() >> 32) & 0xFFFFFFFF));
     }
-
-
   }
 };
 
 struct SetMem : public RDCPProcessedRequest {
-  SetMem(uint32_t address, const std::vector<uint8_t> &data) : RDCPProcessedRequest("setmem") {
+  SetMem(uint32_t address, const std::vector<uint8_t>& data)
+      : RDCPProcessedRequest("setmem") {
     SetData(" addr=");
     AppendHexString(address);
     AppendData(" data=");
@@ -2037,16 +2047,17 @@ struct SetMem : public RDCPProcessedRequest {
   }
 };
 
-
 struct SetSystemTime : public RDCPProcessedRequest {
-  explicit SetSystemTime(uint64_t nt_timestamp) : RDCPProcessedRequest("setsystime") {
+  explicit SetSystemTime(uint64_t nt_timestamp)
+      : RDCPProcessedRequest("setsystime") {
     SetData(" clocklo=");
     AppendHexString(static_cast<uint32_t>(nt_timestamp & 0xFFFFFFFF));
     AppendData(" clockhi=");
     AppendHexString(static_cast<uint32_t>((nt_timestamp >> 32) & 0xFFFFFFFF));
   }
 
-  SetSystemTime(uint64_t nt_timestamp, int32_t tz) : RDCPProcessedRequest("setsystime") {
+  SetSystemTime(uint64_t nt_timestamp, int32_t tz)
+      : RDCPProcessedRequest("setsystime") {
     SetData(" clocklo=");
     AppendHexString(static_cast<uint32_t>(nt_timestamp & 0xFFFFFFFF));
     AppendData(" clockhi=");
@@ -2054,9 +2065,7 @@ struct SetSystemTime : public RDCPProcessedRequest {
     AppendData(" tz=");
     AppendHexString(tz);
   }
-
 };
-
 
 struct Stop : public RDCPProcessedRequest {
   Stop() : RDCPProcessedRequest("stop") {}
@@ -2083,10 +2092,9 @@ struct SystemTime : public RDCPProcessedRequest {
     auto parsed = RDCPMapResponse(response->Data());
     system_time = parsed.GetQWORD("low", "high");
   }
-  
+
   uint64_t system_time{0};
 };
-
 
 struct ThreadInfo : public RDCPProcessedRequest {
   explicit ThreadInfo(int thread_id) : RDCPProcessedRequest("threadinfo") {
@@ -2112,7 +2120,7 @@ struct ThreadInfo : public RDCPProcessedRequest {
     limit = parsed.GetDWORD("limit");
     create_timestamp = parsed.GetQWORD("createlo", "createhi");
   }
-  
+
   int32_t suspend_count{0};
   int32_t priority{0};
   uint32_t tls_base{0};
@@ -2122,9 +2130,7 @@ struct ThreadInfo : public RDCPProcessedRequest {
   uint64_t create_timestamp{0};
 };
 
-
 struct Threads : public RDCPProcessedRequest {
-
   Threads() : RDCPProcessedRequest("threads") {}
 
   [[nodiscard]] bool IsOK() const override {
@@ -2136,7 +2142,7 @@ struct Threads : public RDCPProcessedRequest {
       return;
     }
     auto parsed = RDCPMultilineResponse(response->Data());
-    for (const auto &item : parsed.lines) {
+    for (const auto& item : parsed.lines) {
       threads.push_back(ParseInt32(item));
     }
   }
@@ -2145,15 +2151,14 @@ struct Threads : public RDCPProcessedRequest {
 };
 
 struct LoadOnBootTitle : public RDCPProcessedRequest {
-  LoadOnBootTitle() : RDCPProcessedRequest("title") {
-    SetData(" none");
-  }
+  LoadOnBootTitle() : RDCPProcessedRequest("title") { SetData(" none"); }
 
   explicit LoadOnBootTitle(
-      const std::string &name,
-      const boost::optional<std::string> &directory = boost::none,
-      const boost::optional<std::string> &command_line = boost::none,
-      bool persist = false) : RDCPProcessedRequest("title") {
+      const std::string& name,
+      const boost::optional<std::string>& directory = boost::none,
+      const boost::optional<std::string>& command_line = boost::none,
+      bool persist = false)
+      : RDCPProcessedRequest("title") {
     SetData(" name=\"");
     AppendData(name);
     AppendData("\"");
@@ -2183,7 +2188,7 @@ struct LoadOnBootTitleUnpersist : public RDCPProcessedRequest {
 };
 
 struct UserList : public RDCPProcessedRequest {
-  UserList(): RDCPProcessedRequest("userlist") {}
+  UserList() : RDCPProcessedRequest("userlist") {}
   // TODO: Parse response.
 };
 
@@ -2213,8 +2218,7 @@ struct WalkMem : public RDCPProcessedRequest {
     std::set<std::string> flags;
   };
 
-  WalkMem():      RDCPProcessedRequest("walkmem") {}
-
+  WalkMem() : RDCPProcessedRequest("walkmem") {}
 
   [[nodiscard]] bool IsOK() const override {
     return status == StatusCode::OK_MULTILINE_RESPONSE;
@@ -2226,8 +2230,8 @@ struct WalkMem : public RDCPProcessedRequest {
     }
 
     auto parsed = RDCPMultiMapResponse(response->Data());
-    for (auto &it : parsed.maps) {
-      Region r {
+    for (auto& it : parsed.maps) {
+      Region r{
           .base = it.GetUInt32("base"),
           .size = it.GetUInt32("size"),
           .protect = it.GetUInt32("protect"),
@@ -2241,11 +2245,10 @@ struct WalkMem : public RDCPProcessedRequest {
 };
 
 struct XBEInfo : public RDCPProcessedRequest {
-  XBEInfo() :RDCPProcessedRequest("xbeinfo") {
-    SetData(" running");
-  }
+  XBEInfo() : RDCPProcessedRequest("xbeinfo") { SetData(" running"); }
 
-  explicit XBEInfo(const std::string &name, bool on_disk_only = false):RDCPProcessedRequest("xbeinfo") {
+  explicit XBEInfo(const std::string& name, bool on_disk_only = false)
+      : RDCPProcessedRequest("xbeinfo") {
     SetData(" name=\"");
     AppendData(name);
     AppendData("\"");
@@ -2272,7 +2275,6 @@ struct XBEInfo : public RDCPProcessedRequest {
   uint32_t timestamp{0};
   uint32_t checksum{0};
 };
-
 
 struct XTLInfo : public RDCPProcessedRequest {
   XTLInfo() : RDCPProcessedRequest("xtlinfo") {}

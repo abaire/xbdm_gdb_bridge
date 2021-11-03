@@ -98,7 +98,8 @@ int32_t RDCPMapResponse::GetDWORD(const std::string &key,
   return ParseInt32(it->second);
 }
 
-uint32_t RDCPMapResponse::GetUInt32(const std::string &key, uint32_t default_value) const {
+uint32_t RDCPMapResponse::GetUInt32(const std::string &key,
+                                    uint32_t default_value) const {
   auto it = map.find(key);
   if (it == map.end()) {
     return default_value;

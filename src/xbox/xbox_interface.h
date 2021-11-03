@@ -34,11 +34,15 @@ class XBOXInterface {
     return true;
   }
 
-  std::shared_ptr<RDCPProcessedRequest> SendCommandSync(std::shared_ptr<RDCPProcessedRequest> command);
-  std::future<std::shared_ptr<RDCPProcessedRequest>> SendCommand(std::shared_ptr<RDCPProcessedRequest> command);
+  std::shared_ptr<RDCPProcessedRequest> SendCommandSync(
+      std::shared_ptr<RDCPProcessedRequest> command);
+  std::future<std::shared_ptr<RDCPProcessedRequest>> SendCommand(
+      std::shared_ptr<RDCPProcessedRequest> command);
 
  private:
-  void ExecuteXBDMPromise(std::promise<std::shared_ptr<RDCPProcessedRequest>> &promise, std::shared_ptr<RDCPProcessedRequest> &request);
+  void ExecuteXBDMPromise(
+      std::promise<std::shared_ptr<RDCPProcessedRequest>> &promise,
+      std::shared_ptr<RDCPProcessedRequest> &request);
   bool XBDMConnect(int max_wait_millis = 5000);
 
   void OnNotificationChannelConnected(int sock, IPAddress &address);

@@ -33,7 +33,7 @@ void XBDMTransport::Close() {
   TCPConnection::Close();
 
   const std::lock_guard<std::recursive_mutex> lock(request_queue_lock_);
-  for (auto &request: request_queue_) {
+  for (auto &request : request_queue_) {
     request->Abandon();
   }
   request_queue_.clear();
@@ -64,8 +64,7 @@ void XBDMTransport::WriteNextRequest() {
 
   const auto &request = request_queue_.front();
   BOOST_LOG_TRIVIAL(trace) << "Sending " << *request;
-  std::vector<uint8_t> buffer =
-      static_cast<std::vector<uint8_t>>(*request);
+  std::vector<uint8_t> buffer = static_cast<std::vector<uint8_t>>(*request);
   TCPConnection::Send(buffer);
 }
 
@@ -82,9 +81,8 @@ void XBDMTransport::OnBytesRead() {
     binary_response_size = request->ExpectedBinaryResponseSize();
   }
 
-  auto bytes_consumed =
-      RDCPResponse::Parse(response, char_buffer, read_buffer_.size(),
-                          binary_response_size);
+  auto bytes_consumed = RDCPResponse::Parse(
+      response, char_buffer, read_buffer_.size(), binary_response_size);
   if (!bytes_consumed) {
     return;
   }
@@ -109,12 +107,14 @@ void XBDMTransport::OnBytesRead() {
   }
 }
 
-void XBDMTransport::HandleInitialConnectResponse(const std::shared_ptr<RDCPResponse>& response) {
+void XBDMTransport::HandleInitialConnectResponse(
+    const std::shared_ptr<RDCPResponse> &response) {
   if (response->Status() == StatusCode::OK_CONNECTED) {
     state_ = ConnectionState::CONNECTED;
     return;
   }
 
-  BOOST_LOG_TRIVIAL(error) << "Received unsolicited response " << response->Status();
+  BOOST_LOG_TRIVIAL(error) << "Received unsolicited response "
+                           << response->Status();
   Close();
 }

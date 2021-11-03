@@ -38,7 +38,8 @@ void SelectThread::ThreadMain() {
     }
 
     if (max_fd < 0) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(kMinSleepMilliseconds));
+      std::this_thread::sleep_for(
+          std::chrono::milliseconds(kMinSleepMilliseconds));
       continue;
     }
 
@@ -49,7 +50,8 @@ void SelectThread::ThreadMain() {
     if (fds < 0) {
       BOOST_LOG_TRIVIAL(error) << "select failed " << errno;
       // TODO: Determine if this would ever be recoverable.
-      std::this_thread::sleep_for(std::chrono::milliseconds(kMinSleepMilliseconds));
+      std::this_thread::sleep_for(
+          std::chrono::milliseconds(kMinSleepMilliseconds));
       continue;
     }
 

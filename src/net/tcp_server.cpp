@@ -67,7 +67,8 @@ bool TCPServer::Process(const fd_set &read_fds, const fd_set &write_fds,
                         const fd_set &except_fds) {
   const std::lock_guard<std::recursive_mutex> lock(socket_lock_);
   if (socket_ < 0) {
-    // If the socket was previously connected and is now shutdown, request deletion.
+    // If the socket was previously connected and is now shutdown, request
+    // deletion.
     return !is_shutdown_;
   }
 

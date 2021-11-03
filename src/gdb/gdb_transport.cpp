@@ -33,7 +33,8 @@ void GDBTransport::OnBytesRead() {
   TCPConnection::OnBytesRead();
 
   {
-    const std::lock_guard<std::recursive_mutex> unescaped_lock(unescaped_read_lock_);
+    const std::lock_guard<std::recursive_mutex> unescaped_lock(
+        unescaped_read_lock_);
     size_t read_buffer_size = unescaped_read_buffer_.size();
 
     {
@@ -79,7 +80,8 @@ void GDBTransport::ProcessUnescapedReadBuffer() {
   std::list<GDBPacket> packets;
 
   {
-    const std::lock_guard<std::recursive_mutex> unescaped_lock(unescaped_read_lock_);
+    const std::lock_guard<std::recursive_mutex> unescaped_lock(
+        unescaped_read_lock_);
     auto it = unescaped_read_buffer_.begin();
     auto it_end = unescaped_read_buffer_.end();
 
