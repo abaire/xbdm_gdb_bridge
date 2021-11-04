@@ -299,7 +299,7 @@ struct CommandModuleSections : Command {
             "<path>\n"
             "\n"
             "Returns information about the sections in the given executable "
-            "module.") {}
+            "Module.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };

@@ -46,8 +46,11 @@ add_executable(
         src/rdcp/rdcp_request.h
         src/rdcp/rdcp_response.cpp
         src/rdcp/rdcp_response.h
+        src/rdcp/rdcp_response_processors.cpp
+        src/rdcp/rdcp_response_processors.h
         src/rdcp/xbdm_requests.h
         src/rdcp/xbdm_stop_reasons.h
+        src/rdcp/thread_context.h
         src/rdcp/xbdm_transport.cpp
         src/rdcp/xbdm_transport.h
         src/shell/command.cpp
@@ -58,12 +61,27 @@ add_executable(
         src/shell/shell.cpp
         src/shell/shell.h
         src/shell/shell_commands.h
+        src/util/optional.h
         src/util/parsing.cpp
         src/util/parsing.h
+        src/util/path.cpp
+        src/util/path.h
         src/util/timer.cpp
         src/util/timer.h
+        src/xbox/xbdm_context.cpp
+        src/xbox/xbdm_context.h
         src/xbox/xbox_interface.cpp
         src/xbox/xbox_interface.h
+        src/xbox/debugger/memory_region.cpp
+        src/xbox/debugger/memory_region.h
+        src/xbox/debugger/module.cpp
+        src/xbox/debugger/module.h
+        src/xbox/debugger/section.cpp
+        src/xbox/debugger/section.h
+        src/xbox/debugger/thread.cpp
+        src/xbox/debugger/thread.h
+        src/xbox/debugger/xbdm_debugger.cpp
+        src/xbox/debugger/xbdm_debugger.h
 )
 
 target_include_directories(
@@ -86,28 +104,50 @@ add_library(
 )
 
 add_executable(
-        test_rdcp
+        rdcp_tests
         test/rdcp/test_main.cpp
         test/rdcp/test_rdcp_processed_request.cpp
         test/rdcp/test_xbdm_requests.cpp
         src/rdcp/rdcp_processed_request.cpp
         src/rdcp/rdcp_processed_request.h
+        src/rdcp/rdcp_response_processors.cpp
+        src/rdcp/rdcp_response_processors.h
         src/rdcp/xbdm_requests.h
+        src/util/optional.h
         src/util/parsing.cpp
         src/util/parsing.h
 )
 target_include_directories(
-        test_rdcp
+        rdcp_tests
         PRIVATE src
         PRIVATE test
 )
 target_link_libraries(
-        test_rdcp
+        rdcp_tests
         LINK_PRIVATE
         ${Boost_LIBRARIES}
         LINK_PRIVATE
         test_util
 )
+add_test(NAME rdcp_tests COMMAND rdcp_tests)
 
-
-add_test(NAME test_rdcp COMMAND test_rdcp)
+add_executable(
+        util_tests
+        test/util/test_main.cpp
+        test/util/test_path.cpp
+        src/util/path.cpp
+        src/util/path.h
+)
+target_include_directories(
+        util_tests
+        PRIVATE src
+        PRIVATE test
+)
+target_link_libraries(
+        util_tests
+        LINK_PRIVATE
+        ${Boost_LIBRARIES}
+        LINK_PRIVATE
+        test_util
+)
+add_test(NAME util_tests COMMAND util_tests)

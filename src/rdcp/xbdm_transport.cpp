@@ -2,6 +2,7 @@
 
 #include <boost/log/trivial.hpp>
 
+#include "rdcp/rdcp_request.h"
 #include "rdcp/rdcp_response.h"
 
 bool XBDMTransport::Connect(const IPAddress &address) {
@@ -25,6 +26,7 @@ bool XBDMTransport::Connect(const IPAddress &address) {
     return false;
   }
 
+  BOOST_LOG_TRIVIAL(trace) << "Connected.";
   return true;
 }
 

@@ -6,7 +6,9 @@
 #include <mutex>
 
 #include "net/tcp_connection.h"
-#include "rdcp/rdcp_request.h"
+
+class RDCPRequest;
+class RDCPResponse;
 
 class XBDMTransport : public TCPConnection {
  public:

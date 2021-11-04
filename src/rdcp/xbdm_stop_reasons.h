@@ -100,20 +100,20 @@ struct StopReasonDataBreakpoint : StopReasonTrapBase_ {
     auto value = parsed.GetOptionalDWORD("read");
     if (value.has_value()) {
       access_type = READ;
-      access_address = value.get();
+      access_address = value.value();
       return;
     }
 
     value = parsed.GetOptionalDWORD("write");
     if (value.has_value()) {
       access_type = WRITE;
-      access_address = value.get();
+      access_address = value.value();
       return;
     }
     value = parsed.GetOptionalDWORD("execute");
     if (value.has_value()) {
       access_type = EXECUTE;
-      access_address = value.get();
+      access_address = value.value();
       return;
     }
 
@@ -287,7 +287,7 @@ struct StopReasonModuleLoad : StopReasonTrapBase_ {
   }
 
   std::ostream &write_stream(std::ostream &os) const override {
-    return os << "module load: name: " << name << " base_address: 0x"
+    return os << "Module load: name: " << name << " base_address: 0x"
               << std::hex << std::setfill('0') << std::setw(8) << base_address
               << " size: " << std::dec << size << " checksum: 0x" << std::hex
               << checksum << " timestamp: 0x" << timestamp

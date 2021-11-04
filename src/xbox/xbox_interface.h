@@ -1,19 +1,21 @@
 #ifndef XBDM_GDB_BRIDGE_SRC_XBOX_XBOX_INTERFACE_H_
 #define XBDM_GDB_BRIDGE_SRC_XBOX_XBOX_INTERFACE_H_
 
-#include <boost/asio/thread_pool.hpp>
-#include <deque>
 #include <future>
 #include <list>
 #include <memory>
 #include <string>
 
-#include "gdb/gdb_transport.h"
+#include "gdb/gdb_packet.h"
 #include "net/delegating_server.h"
 #include "net/ip_address.h"
-#include "net/select_thread.h"
-#include "rdcp/rdcp_processed_request.h"
-#include "rdcp/xbdm_transport.h"
+
+class GDBPacket;
+class GDBTransport;
+class RDCPProcessedRequest;
+class SelectThread;
+class XBDMContext;
+class XBDMDebugger;
 
 class XBOXInterface {
  public:
@@ -23,6 +25,9 @@ class XBOXInterface {
   void Stop();
 
   bool ReconnectXBDM();
+
+  bool AttachDebugger();
+
   void StartGDBServer(const IPAddress &address);
   void StopGDBServer();
   bool GetGDBListenAddress(IPAddress &ret) const {
@@ -42,14 +47,6 @@ class XBOXInterface {
       std::shared_ptr<RDCPProcessedRequest> command);
 
  private:
-  void ExecuteXBDMPromise(
-      std::promise<std::shared_ptr<RDCPProcessedRequest>> &promise,
-      std::shared_ptr<RDCPProcessedRequest> &request);
-  bool XBDMConnect(int max_wait_millis = 5000);
-
-  void OnNotificationChannelConnected(int sock, IPAddress &address);
-  void OnNotificationReceived(XBDMNotification &notification);
-
   void OnGDBClientConnected(int sock, IPAddress &address);
   void OnGDBPacketReceived(GDBPacket &packet);
 
@@ -58,19 +55,12 @@ class XBOXInterface {
   IPAddress xbox_address_;
 
   std::shared_ptr<SelectThread> select_thread_;
-  std::shared_ptr<XBDMTransport> xbdm_transport_;
+  std::shared_ptr<XBDMContext> xbdm_context_;
+  std::shared_ptr<XBDMDebugger> xbdm_debugger_;
   std::shared_ptr<GDBTransport> gdb_transport_;
-
   std::shared_ptr<DelegatingServer> gdb_server_;
-  std::shared_ptr<DelegatingServer> notification_server_;
-
-  std::recursive_mutex notification_queue_lock_;
-  std::list<XBDMNotification> notification_queue_;
-
   std::recursive_mutex gdb_queue_lock_;
   std::list<GDBPacket> gdb_queue_;
-
-  std::shared_ptr<boost::asio::thread_pool> xbdm_control_executor_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_XBOX_XBOX_INTERFACE_H_
