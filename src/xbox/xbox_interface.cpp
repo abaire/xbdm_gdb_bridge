@@ -75,6 +75,15 @@ void XBOXInterface::StopGDBServer() {
   gdb_server_.reset();
 }
 
+bool XBOXInterface::StartNotificationListener(const IPAddress& address) {
+  if (notification_server_->IsConnected()) {
+    BOOST_LOG_TRIVIAL(trace) << "Notification server may only be started once.";
+    return false;
+  }
+
+  return notification_server_->Listen(address);
+}
+
 void XBOXInterface::OnNotificationChannelConnected(int sock,
                                                    IPAddress& address) {
   auto transport = std::make_shared<XBDMNotificationTransport>(

@@ -27,6 +27,12 @@ IPAddress::IPAddress(const std::string &addr) {
   }
 }
 
+IPAddress::IPAddress(uint16_t port) {
+  addr_.sin_family = AF_INET;
+  addr_.sin_port = htons(port);
+  addr_.sin_addr.s_addr = INADDR_ANY;
+}
+
 IPAddress::IPAddress(const std::string &addr, uint16_t default_port)
     : IPAddress(addr) {
   if (!addr_.sin_port) {

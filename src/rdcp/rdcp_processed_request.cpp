@@ -33,12 +33,16 @@ RDCPMultilineResponse::RDCPMultilineResponse(const std::vector<char> &data) {
   lines = SplitMultiline(data);
 }
 
-RDCPMapResponse::RDCPMapResponse(const std::vector<char> &data) {
-  if (data.empty()) {
+RDCPMapResponse::RDCPMapResponse(const std::vector<char> &data)
+    : RDCPMapResponse(data.begin(), data.end()) {}
+
+RDCPMapResponse::RDCPMapResponse(std::vector<char>::const_iterator start,
+                                 std::vector<char>::const_iterator end) {
+  if (start == end) {
     return;
   }
 
-  std::string sanitized_data(data.data(), data.size());
+  std::string sanitized_data(start, end);
   boost::algorithm::replace_all(sanitized_data, RDCPResponse::kTerminator, " ");
 
   boost::escaped_list_separator<char> separator('\\', ' ', '\"');

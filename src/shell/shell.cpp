@@ -50,8 +50,48 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   REGISTER("continue", CommandContinue);
   REGISTER("debugoptions", CommandDebugOptions);
   REGISTER("debugger", CommandDebugger);
+  REGISTER("debugmode", CommandDebugMode);
+  REGISTER("dmversion", CommandDebugMonitorVersion);
   REGISTER("rm", CommandDelete);
   REGISTER("ls", CommandDirList);
+  REGISTER("df", CommandDriveFreeSpace);
+  REGISTER("drivelist", CommandDriveList);
+  REGISTER("getchecksum", CommandGetChecksum);
+  REGISTER("getcontext", CommandGetContext);
+  REGISTER("getextcontext", CommandGetExtContext);
+  REGISTER("getfileattr", CommandGetFileAttributes);
+  REGISTER("getmem", CommandGetMem);
+  REGISTER("getpid", CommandGetProcessID);
+  REGISTER("getutilitydriveinfo", CommandGetUtilityDriveInfo);
+  REGISTER("go", CommandGo);
+  REGISTER("halt", CommandHalt);
+  REGISTER("isbreak", CommandIsBreak);
+  REGISTER("isdebugger", CommandIsDebugger);
+  REGISTER("isstopped", CommandIsStopped);
+  REGISTER("run", CommandMagicBoot);
+  auto mem_map = std::make_shared<CommandMemoryMap>();
+  commands_["memorymap"] = mem_map;
+  commands_["mem_map"] = mem_map;
+  REGISTER("mkdir", CommandMakeDirectory);
+  REGISTER("modsections", CommandModuleSections);
+  REGISTER("modules", CommandModules);
+  REGISTER("nostopon", CommandNoStopOn);
+  REGISTER("notifyat", CommandNotifyAt);
+  REGISTER("mv", CommandRename);
+  REGISTER("reboot", CommandReboot);
+  REGISTER("resume", CommandResume);
+  //  REGISTER("setcontext", CommandSetContext);
+  REGISTER("setmem", CommandSetMem);
+  REGISTER("stop", CommandStop);
+  REGISTER("stopon", CommandStopOn);
+  REGISTER("suspend", CommandSuspend);
+  REGISTER("threadinfo", CommandThreadInfo);
+  REGISTER("threads", CommandThreads);
+  auto walk_mem = std::make_shared<CommandWalkMem>();
+  commands_["memwalk"] = walk_mem;
+  commands_["walkmem"] = walk_mem;
+  REGISTER("xbeinfo", CommandXBEInfo);
+  REGISTER("xtlinfo", CommandXTLInfo);
 
 #undef REGISTER
 }

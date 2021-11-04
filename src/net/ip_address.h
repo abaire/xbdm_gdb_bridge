@@ -9,6 +9,7 @@ class IPAddress {
  public:
   IPAddress() = default;
   explicit IPAddress(const std::string &addr);
+  explicit IPAddress(uint16_t port);
   IPAddress(const std::string &addr, uint16_t default_port);
   explicit IPAddress(const struct sockaddr_in &addr);
 

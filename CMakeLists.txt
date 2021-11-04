@@ -47,6 +47,7 @@ add_executable(
         src/rdcp/rdcp_response.cpp
         src/rdcp/rdcp_response.h
         src/rdcp/xbdm_requests.h
+        src/rdcp/xbdm_stop_reasons.h
         src/rdcp/xbdm_transport.cpp
         src/rdcp/xbdm_transport.h
         src/shell/command.cpp

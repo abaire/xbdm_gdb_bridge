@@ -34,6 +34,8 @@ class XBOXInterface {
     return true;
   }
 
+  bool StartNotificationListener(const IPAddress &address);
+
   std::shared_ptr<RDCPProcessedRequest> SendCommandSync(
       std::shared_ptr<RDCPProcessedRequest> command);
   std::future<std::shared_ptr<RDCPProcessedRequest>> SendCommand(

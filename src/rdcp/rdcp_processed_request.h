@@ -70,6 +70,8 @@ struct RDCPMultilineResponse {
 
 struct RDCPMapResponse {
   explicit RDCPMapResponse(const std::vector<char> &data);
+  RDCPMapResponse(std::vector<char>::const_iterator start,
+                  std::vector<char>::const_iterator end);
 
   [[nodiscard]] bool HasKey(const std::string &key) const;
 

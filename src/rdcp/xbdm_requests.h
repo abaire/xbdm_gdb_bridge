@@ -4,6 +4,8 @@
 #include <arpa/inet.h>
 
 #include <boost/optional.hpp>
+#include <boost/optional/optional_io.hpp>
+#include <ostream>
 #include <set>
 #include <string>
 
@@ -12,6 +14,7 @@
 #include "rdcp/rdcp_request.h"
 #include "rdcp/rdcp_response.h"
 #include "rdcp/rdcp_status_code.h"
+#include "rdcp/xbdm_stop_reasons.h"
 #include "util/parsing.h"
 
 struct ThreadContext {
@@ -91,6 +94,17 @@ struct ThreadContext {
     }
 
     return std::move(ret);
+  }
+
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const ThreadContext& context) {
+    os << std::hex << "ebp: " << context.ebp << " esp: " << context.esp
+       << " eip: " << context.eip << " eflags: " << context.eflags
+       << " eax: " << context.eax << " ebx: " << context.ebx
+       << " ecx: " << context.ecx << " edx: " << context.edx
+       << " edi: " << context.edi << " esi: " << context.esi
+       << " cr0_npx_state: " << context.cr0_npx_state;
+    return os;
   }
 };
 
@@ -178,6 +192,22 @@ struct ThreadFloatContext {
     *values = cr0_npx_state;
 
     return std::move(ret);
+  }
+
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const ThreadFloatContext& context) {
+    os << std::hex << "control: " << context.control
+       << " status: " << context.status << " tag: " << context.tag
+       << " error_offset: " << context.error_offset
+       << " error_selector: " << context.error_selector
+       << " data_offset: " << context.data_offset
+       << " data_selector: " << context.data_selector << " st0: " << context.st0
+       << " st1: " << context.st1 << " st2: " << context.st2
+       << " st3: " << context.st3 << " st4: " << context.st4
+       << " st5: " << context.st5 << " st6: " << context.st6
+       << " st7: " << context.st7
+       << " cr0_npx_state: " << context.cr0_npx_state;
+    return os;
   }
 };
 
@@ -514,7 +544,7 @@ struct DriveFreeSpace : public RDCPProcessedRequest {
     SetData(" name=");
     AppendData(drive_letter);
     if (drive_letter.size() == 1) {
-      AppendData(":\\");
+      AppendData(") {\\");
     }
   }
 
@@ -551,6 +581,8 @@ struct DriveList : public RDCPProcessedRequest {
       buf[0] = letter;
       drives.emplace_back(buf);
     }
+
+    std::sort(drives.begin(), drives.end());
   }
 
   std::vector<std::string> drives;
@@ -914,7 +946,7 @@ struct GetUtilityDriveInfo : public RDCPProcessedRequest {
     }
   }
 
-  std::map<std::string, long> partitions;
+  std::map<std::string, uint32_t> partitions;
 };
 
 struct Go : public RDCPProcessedRequest {
@@ -986,376 +1018,107 @@ struct IsStopped : public RDCPProcessedRequest {
     AppendHexString(thread_id);
   }
 
-  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
-    // TODO: Implement me.
+  [[nodiscard]] bool IsOK() const override {
+    return status == StatusCode::OK_BINARY_RESPONSE ||
+           status == StatusCode::ERR_NOT_STOPPED;
   }
+
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
+    if (!IsOK()) {
+      return;
+    }
+
+    stopped = status == StatusCode::OK;
+    if (!stopped) {
+      return;
+    }
+
+    const auto& data = response->Data();
+    auto delimiter = std::find(data.begin(), data.end(), ' ');
+    assert(delimiter != data.end());
+
+    std::string reason(data.begin(), delimiter);
+    RDCPMapResponse parsed(delimiter, data.end());
+
+    if (reason == "stopped") {
+      stop_reason = std::make_shared<StopReasonUnknown>();
+      return;
+    }
+
+    if (reason == "debugstr") {
+      stop_reason = std::make_shared<StopReasonDebugstr>(parsed);
+      return;
+    }
+
+    if (reason == "assert") {
+      stop_reason = std::make_shared<StopReasonAssertion>(parsed);
+      return;
+    }
+
+    if (reason == "break") {
+      stop_reason = std::make_shared<StopReasonBreakpoint>(parsed);
+      return;
+    }
+
+    if (reason == "singlestep") {
+      stop_reason = std::make_shared<StopReasonSingleStep>(parsed);
+      return;
+    }
+
+    if (reason == "data") {
+      stop_reason = std::make_shared<StopReasonDataBreakpoint>(parsed);
+      return;
+    }
+
+    if (reason == "execution") {
+      stop_reason = std::make_shared<StopReasonExecutionStateChange>(parsed);
+      return;
+    }
+
+    if (reason == "exception") {
+      stop_reason = std::make_shared<StopReasonException>(parsed);
+      return;
+    }
+
+    if (reason == "create") {
+      stop_reason = std::make_shared<StopReasonCreateThread>(parsed);
+      return;
+    }
+
+    if (reason == "terminate") {
+      stop_reason = std::make_shared<StopReasonTerminateThread>(parsed);
+      return;
+    }
+
+    if (reason == "modload") {
+      stop_reason = std::make_shared<StopReasonModuleLoad>(parsed);
+      return;
+    }
+
+    if (reason == "sectload") {
+      stop_reason = std::make_shared<StopReasonSectionLoad>(parsed);
+      return;
+    }
+
+    if (reason == "sectunload") {
+      stop_reason = std::make_shared<StopReasonSectionUnload>(parsed);
+      return;
+    }
+
+    if (reason == "rip") {
+      stop_reason = std::make_shared<StopReasonRIP>(parsed);
+      return;
+    }
+
+    if (reason == "ripstop") {
+      stop_reason = std::make_shared<StopReasonRIPStop>(parsed);
+      return;
+    }
+  }
+
+  bool stopped{false};
+  std::shared_ptr<StopReasonBase_> stop_reason;
 };
-
-/*
-    struct StopReason:
-        construct(
-            reason: str, signal: int, info_items: Optional[Dict[str, str]] =
-None
-        ):
-            self.reason = reason
-            self.signal = signal
-            self.info_items = info_items
-
-        def __str__(self):
-            ret = f"{self.__class__.__name__}: {self.reason}"
-            if self.info_items:
-                ret += "> "
-                for key, value in self.info_items.items():
-                    ret += f" {key}: {value}"
-            return ret
-
-    struct Unknown(StopReason):
-        construct(self):
-            RDCPProcessedRequest("unknown reason", signal.SIGTRAP)
-
-    struct Debugstr(StopReason):
-        construct(entries: Dict[bytes, bytes]):
-            self.thread_id = parsed.GetDWORD("thread")
-            RDCPProcessedRequest(
-                "debugstr", signal.SIGTRAP, {"thread": "%d" % self.thread_id}
-            )
-
-    struct Assertion(StopReason):
-        construct(entries: Dict[bytes, bytes]):
-            self.thread_id = parsed.GetDWORD("thread")
-            RDCPProcessedRequest(
-                "assert prompt", signal.SIGTRAP, {"thread": "%d" %
-self.thread_id}
-            )
-
-    struct Breakpoint(StopReason):
-        construct(entries: Dict[bytes, bytes]):
-            self.thread_id: int = rdcp_response.get_int_property(entries,
-b"thread") self.address: int = parsed.GetDWORD("addr")
-            RDCPProcessedRequest(
-                "breakpoint",
-                signal.SIGTRAP,
-                {
-                    "thread": "%d" % self.thread_id,
-                    "address": "0x%08X" % self.address,
-                },
-            )
-
-    struct SingleStep(StopReason):
-        construct(entries: Dict[bytes, bytes]):
-            self.thread_id: int = rdcp_response.get_int_property(entries,
-b"thread") self.address: int = parsed.GetDWORD("addr")
-            RDCPProcessedRequest(
-                "single step",
-                signal.SIGTRAP,
-                {
-                    "thread": "%d" % self.thread_id,
-                    "address": "0x%08X" % self.address,
-                },
-            )
-
-    struct DataBreakpoint(StopReason):
-        ACCESS_INVALID = -1
-        ACCESS_READ = 0
-        ACCESS_WRITE = 1
-        ACCESS_EXECUTE = 2
-
-        construct(entries: Dict[bytes, bytes]):
-            self.thread_id: int = rdcp_response.get_int_property(entries,
-b"thread") self.address: int = parsed.GetDWORD("addr")
-            self.break_type: int = self.ACCESS_INVALID
-            self.access_address: int = 0
-
-            reason_name = ""
-            for index, key in enumerate([b"read", b"write", b"execute"]):
-                addr = rdcp_response.get_int_property(entries, key, -1)
-                if addr == -1:
-                    continue
-
-                self.break_type = index
-                reason_name = key.decode("utf-8")
-                self.access_address = addr
-                break
-
-            RDCPProcessedRequest(
-                "data breakpoint",
-                signal.SIGTRAP,
-                {
-                    "thread": "%d" % self.thread_id,
-                    "address": "0x%08X" % self.address,
-                    "access": "%s@0x%08X" % (reason_name, self.access_address),
-                },
-            )
-
-    struct ExecutionStateChange(StopReason):
-        STATE_INVALID = -1
-        STATE_STOPPED = 0
-        STATE_STARTED = 1
-        STATE_REBOOTING = 2
-        STATE_PENDING = 3
-
-        construct(info: str):
-            self.state_string = info
-            states = ["stopped", "started", "rebooting", "pending"]
-            self.state = states.index(info)
-            RDCPProcessedRequest(
-                "execution state changed",
-                signal.SIGTRAP,
-                {"new_state": self.state_string},
-            )
-
-    struct Exception(StopReason):
-        FLAG_NONE = 0
-        FLAG_FIRST_CHANCE = 1
-        FLAG_NON_CONTINUABLE = 2
-        FLAG_ACCESS_VIOLATION_READ = 3
-        FLAG_ACCESS_VIOLATION_WRITE = 4
-
-        construct(entries: Dict[bytes, bytes]):
-
-            self.code: int = parsed.GetDWORD("code")
-            self.thread: int = rdcp_response.get_int_property(entries,
-b"thread") self.address: int = rdcp_response.get_int_property(entries,
-b"address")
-
-            attributes: Dict[str, str] = {
-                "code": "0x%08X" % self.code,
-                "thread": "%d" % self.thread,
-                "address": "0x%08X" % self.address,
-            }
-
-            self.is_first_chance_exception: bool =
-rdcp_response.get_bool_property( entries, b"first"
-            )
-            if self.is_first_chance_exception:
-                attributes["first_chance_exception"] = "true"
-
-            self.is_non_continuable: bool = rdcp_response.get_bool_property(
-                entries, b"noncont"
-            )
-            if self.is_non_continuable:
-                attributes["non_continuable"] = "true"
-
-            self.access_violation_address: Optional[int] = None
-            self.is_access_violation_read: bool = false
-            self.is_access_violation_write: bool = false
-
-            access_violation_addr = rdcp_response.get_int_property(entries,
-b"read", -1) if access_violation_addr != -1: self.is_access_violation_read: bool
-= true self.access_violation_address = access_violation_addr
-                attributes["access_violation_type"] = "read"
-                attributes["access_violation_address"] = (
-                    "0x%08X" % self.access_violation_address
-                )
-
-            else:
-                access_violation_addr = rdcp_response.get_int_property(
-                    entries, b"write", -1
-                )
-                if access_violation_addr != -1:
-                    self.is_access_violation_write: bool = true
-                    self.access_violation_address = access_violation_addr
-                    attributes["access_violation_type"] = "write"
-                    attributes["access_violation_address"] = (
-                        "0x%08X" % self.access_violation_address
-                    )
-
-            self.num_param: Optional[int] = None
-            self.params: Optional[int] = None
-            if not (self.is_access_violation_read or
-self.is_access_violation_write): self.num_param =
-parsed.GetDWORD("nparams") self.params =
-parsed.GetDWORD("params") attributes["nparam"] = "%d" %
-self.num_param attributes["params"] = "0x%08X" % self.params
-
-            RDCPProcessedRequest("exception", signal.SIGTRAP, attributes)
-
-    struct CreateThread(StopReason):
-        construct(entries: Dict[bytes, bytes]):
-            self.thread_id: int = rdcp_response.get_int_property(entries,
-b"thread") self.start: int = parsed.GetDWORD("start")
-            RDCPProcessedRequest(
-                "create thread",
-                signal.SIGTRAP,
-                {
-                    "thread": "%d" % self.thread_id,
-                    "start_address": "0x%08X" % self.start,
-                },
-            )
-
-    struct TerminateThread(StopReason):
-        construct(entries: Dict[bytes, bytes]):
-            self.thread_id: int = rdcp_response.get_int_property(entries,
-b"thread") RDCPProcessedRequest( "terminate thread", signal.SIGTRAP, {"thread":
-"%d" % self.thread_id}
-            )
-
-    struct ModuleLoad(StopReason):
-        construct(entries: Dict[bytes, bytes]):
-            self.name: str = rdcp_response.get_utf_property(entries, b"name")
-            self.base_address: int = rdcp_response.get_int_property(entries,
-b"base") self.size: int = parsed.GetDWORD("size")
-            self.checksum: int = rdcp_response.get_int_property(entries,
-b"check") self.timestamp: int = rdcp_response.get_int_property(entries,
-b"timestamp") self.tls: bool = rdcp_response.get_bool_property(entries, b"tls")
-            self.xbe: bool = rdcp_response.get_bool_property(entries, b"xbe")
-
-            attributes = {
-                "name": self.name,
-                "size": "%d" % self.size,
-                "base_address": "0x%08x" % self.base_address,
-                "checksum": "0x%08x" % self.checksum,
-                "timestamp": "0x%08x" % self.timestamp,
-            }
-            if self.tls:
-                attributes["has_thread_local_storage"] = "true"
-            if self.xbe:
-                attributes["is_xbe"] = "true"
-
-            RDCPProcessedRequest("module load", signal.SIGTRAP, attributes)
-
-    struct _SectionAction(StopReason):
-        construct(action: str, entries: Dict[bytes, bytes]):
-            self.name: str = rdcp_response.get_utf_property(entries, b"name")
-            self.base_address: int = rdcp_response.get_int_property(entries,
-b"base") self.size: int = parsed.GetDWORD("size")
-            self.index: int = parsed.GetDWORD("index")
-            self.flags: int = parsed.GetDWORD("flags")
-
-            attributes = {
-                "name": self.name,
-                "size": "%d" % self.size,
-                "base_address": "0x%08x" % self.base_address,
-                "index": "%d" % self.index,
-                "flags": "%d" % self.flags,
-            }
-            RDCPProcessedRequest(action, signal.SIGTRAP, attributes)
-
-    struct SectionLoad(_SectionAction):
-        construct(entries: Dict[bytes, bytes]):
-            RDCPProcessedRequest("load module", entries)
-
-    struct SectionUnload(_SectionAction):
-        construct(entries: Dict[bytes, bytes]):
-            RDCPProcessedRequest("unload module", entries)
-
-    struct _RIPBase(StopReason):
-        construct(action: str, entries: Dict[bytes, bytes]):
-            self.thread_id: int = rdcp_response.get_int_property(entries,
-b"thread") self.message: Optional[str] = rdcp_response.get_utf_property(
-                entries, b"string"
-            )
-
-            attributes = {"thread": "%d" % self.thread_id}
-
-            if self.message:
-                attributes["message"] = self.message
-            RDCPProcessedRequest(action, signal.SIGABRT, attributes)
-
-    struct RIP(_RIPBase):
-        construct(entries: Dict[bytes, bytes]):
-            RDCPProcessedRequest("RIP", entries)
-
-    struct RIPStop(_RIPBase):
-        construct(entries: Dict[bytes, bytes]):
-            RDCPProcessedRequest("RIP_STOP", entries)
-
-    struct Response(_ProcessedResponse):
-        construct(response: rdcp_response.RDCPResponse):
-            RDCPProcessedRequest(response)
-
-            self.stopped: Optional[bool] = None
-
-            if not self.ok:
-                return
-
-            self.stopped: bool = self.status ==
-rdcp_response.RDCPResponse.STATUS_OK
-
-            self.reason: Optional[IsStopped.StopReason] = None
-            if not self.stopped:
-                return
-
-            full_reason = response.data.decode("utf-8")
-            reason, info = full_reason.split(" ", 1)
-
-            entries = response.parse_data_map()
-
-            if reason == "stopped":
-                self.reason = IsStopped.Unknown()
-                return
-
-            if reason == "debugstr":
-                self.reason = IsStopped.Debugstr(entries)
-                return
-
-            if reason == "assert":
-                self.reason = IsStopped.Assertion(entries)
-                return
-
-            if reason == "break":
-                self.reason = IsStopped.Breakpoint(entries)
-                return
-
-            if reason == "singlestep":
-                self.reason = IsStopped.SingleStep(entries)
-                return
-
-            if reason == "data":
-                self.reason = IsStopped.DataBreakpoint(entries)
-                return
-
-            if reason == "execution":
-                self.reason = IsStopped.ExecutionStateChange(info)
-                return
-
-            if reason == "exception":
-                self.reason = IsStopped.Exception(entries)
-                return
-
-            if reason == "create":
-                self.reason = IsStopped.CreateThread(entries)
-                return
-
-            if reason == "terminate":
-                self.reason = IsStopped.TerminateThread(entries)
-                return
-
-            if reason == "modload":
-                self.reason = IsStopped.ModuleLoad(entries)
-                return
-
-            if reason == "sectload":
-                self.reason = IsStopped.SectionLoad(entries)
-                return
-
-            if reason == "sectunload":
-                self.reason = IsStopped.SectionUnload(entries)
-                return
-
-            if reason == "rip":
-                self.reason = IsStopped.RIP(entries)
-                return
-
-            if reason == "ripstop":
-                self.reason = IsStopped.RIPStop(entries)
-                return
-
-        @property
-        def ok(self) -> bool:
-            return (
-                self.status == rdcp_response.RDCPResponse.STATUS_OK
-                or self.status ==
-rdcp_response.RDCPResponse.STATUS_ERR_NOT_STOPPED
-            )
-
-        @property
-        def _body_str(self) -> str:
-            if self.stopped:
-                return f"Stopped: {self.reason}"
-            return "Not stopped"
-
-*/
 
 /*
 struct IRTSweep : public RDCPProcessedRequest {
@@ -1600,12 +1363,21 @@ struct ModSections : public RDCPProcessedRequest {
     uint32_t index;
     uint32_t flags;
     std::set<std::string> additional_flags;
+
+    friend std::ostream& operator<<(std::ostream& os, const SectionInfo& i) {
+      os << "name: " << i.name << " base: " << i.base << " size: " << i.size
+         << " index: " << i.index << " flags: " << i.flags;
+      for (auto& flag : i.additional_flags) {
+        os << " " << flag;
+      }
+      return os;
+    }
   };
 
-  explicit ModSections(const std::string& name)
+  explicit ModSections(const std::string& path)
       : RDCPProcessedRequest("modsections") {
-    SetData(" name=\"");
-    AppendData(name);
+    SetData(" path=\"");
+    AppendData(path);
     AppendData("\"");
   }
 
@@ -1643,6 +1415,16 @@ struct Modules : public RDCPProcessedRequest {
     uint32_t checksum;
     uint32_t timestamp;
     std::set<std::string> additional_flags;
+
+    friend std::ostream& operator<<(std::ostream& os, const Module& m) {
+      os << "name: " << m.name << std::setfill('0') << std::hex << std::setw(8)
+         << " base: 0x" << m.base << " size: " << std::dec << m.size
+         << " checksum: 0x" << std::hex << m.checksum;
+      for (auto& flag : m.additional_flags) {
+        os << " " << flag;
+      }
+      return os;
+    }
   };
 
   Modules() : RDCPProcessedRequest("modules") {}
@@ -2049,6 +1831,14 @@ struct SetMem : public RDCPProcessedRequest {
     AppendHexString(address);
     AppendData(" data=");
     AppendHexBuffer(data);
+  }
+
+  SetMem(uint32_t address, const std::string& hex_data)
+      : RDCPProcessedRequest("setmem") {
+    SetData(" addr=");
+    AppendHexString(address);
+    AppendData(" data=");
+    AppendData(hex_data);
   }
 };
 
