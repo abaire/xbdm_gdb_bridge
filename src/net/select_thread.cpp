@@ -61,7 +61,13 @@ void SelectThread::ThreadMain() {
       auto it_end = connections_.end();
 
       while (it != it_end) {
-        bool keep = (*it)->Process(recv_fds, send_fds, except_fds);
+        auto &conn = *it;
+        if (!conn) {
+          it = connections_.erase(it);
+          continue;
+        }
+
+        bool keep = conn->Process(recv_fds, send_fds, except_fds);
         if (!keep) {
           it = connections_.erase(it);
         } else {

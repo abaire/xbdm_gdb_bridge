@@ -56,7 +56,9 @@ bool XBDMDebugger::Attach() {
 
 void XBDMDebugger::Shutdown() {
   context_->SendCommand(std::make_shared<Debugger>(false));
+  // TODO: Request a notifyat drop as well.
   context_->UnregisterNotificationHandler(notification_handler_id_);
+  notification_handler_id_ = 0;
 }
 
 bool XBDMDebugger::DebugXBE(const std::string &path) {

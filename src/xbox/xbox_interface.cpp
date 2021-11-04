@@ -51,6 +51,15 @@ bool XBOXInterface::AttachDebugger() {
   return xbdm_debugger_->Attach();
 }
 
+void XBOXInterface::DetachDebugger() {
+  if (!xbdm_debugger_) {
+    return;
+  }
+
+  xbdm_debugger_->Shutdown();
+  xbdm_debugger_.reset();
+}
+
 void XBOXInterface::StartGDBServer(const IPAddress& address) {
   if (gdb_server_) {
     gdb_server_->Close();

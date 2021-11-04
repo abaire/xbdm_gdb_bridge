@@ -57,8 +57,8 @@ struct DebuggerCommandDetach : Command {
             "Detach the debugger from the currently running process.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
-    // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    interface.DetachDebugger();
+    return Result::HANDLED;
   }
 };
 

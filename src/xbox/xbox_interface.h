@@ -27,6 +27,7 @@ class XBOXInterface {
   bool ReconnectXBDM();
 
   bool AttachDebugger();
+  void DetachDebugger();
 
   void StartGDBServer(const IPAddress &address);
   void StopGDBServer();
