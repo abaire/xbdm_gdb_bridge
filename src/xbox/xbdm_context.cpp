@@ -2,9 +2,11 @@
 
 #include <boost/asio/dispatch.hpp>
 #include <boost/log/trivial.hpp>
+#include <utility>
 
 #include "net/delegating_server.h"
 #include "net/select_thread.h"
+#include "notification/xbdm_notification_transport.h"
 #include "rdcp/rdcp_processed_request.h"
 #include "rdcp/xbdm_transport.h"
 
@@ -48,6 +50,15 @@ bool XBDMContext::StartNotificationListener(const IPAddress& address) {
   }
 
   return notification_server_->Listen(address);
+}
+
+bool XBDMContext::GetNotificationServerAddress(IPAddress& address) const {
+  if (!notification_server_ || !notification_server_->IsConnected()) {
+    return false;
+  }
+
+  address = notification_server_->Address();
+  return true;
 }
 
 void XBDMContext::OnNotificationChannelConnected(int sock, IPAddress& address) {
@@ -131,4 +142,19 @@ bool XBDMContext::XBDMConnect(int max_wait_millis) {
   }
 
   return false;
+}
+int XBDMContext::RegisterNotificationHandler(
+    XBDMContext::NotificationHandler handler) {
+  const std::lock_guard<std::recursive_mutex> lock(notification_handler_lock_);
+  int id = next_notification_handler_id_++;
+  notification_handlers_[id] = std::move(handler);
+  return id;
+}
+void XBDMContext::UnregisterNotificationHandler(int id) {
+  if (id <= 0) {
+    return;
+  }
+
+  const std::lock_guard<std::recursive_mutex> lock(notification_handler_lock_);
+  notification_handlers_.erase(id);
 }

@@ -17,7 +17,7 @@ bool XBDMTransport::Connect(const IPAddress &address) {
   }
 
   address_ = address;
-  const struct sockaddr_in &addr = address.address();
+  const struct sockaddr_in &addr = address.Address();
   if (connect(socket_, reinterpret_cast<struct sockaddr const *>(&addr),
               sizeof(addr))) {
     BOOST_LOG_TRIVIAL(error) << "connect failed " << errno;

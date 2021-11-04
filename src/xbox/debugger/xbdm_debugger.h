@@ -10,6 +10,7 @@
 #include "thread.h"
 
 class XBDMContext;
+class XBDMNotification;
 
 class XBDMDebugger {
  public:
@@ -55,12 +56,18 @@ class XBDMDebugger {
   }
 
  private:
-  std::shared_ptr<XBDMContext> xbdm_context_;
+  void OnNotification(const XBDMNotification &);
+
+ private:
+  std::shared_ptr<XBDMContext> context_;
 
   int active_thread_;
   std::vector<std::shared_ptr<Thread>> threads_;
   std::vector<std::shared_ptr<Module>> modules_;
   std::vector<std::shared_ptr<Section>> sections_;
+
+  bool target_not_debuggable_{false};
+  int notification_handler_id_{0};
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_XBOX_DEBUGGER_DEBUGGER_H_

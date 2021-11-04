@@ -43,8 +43,10 @@ struct DebuggerCommandAttach : Command {
             "Attach the debugger to the currently running process.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
-    // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    if (!interface.AttachDebugger()) {
+      std::cout << "Failed to attach debugger." << std::endl;
+    }
+    return Result::HANDLED;
   }
 };
 

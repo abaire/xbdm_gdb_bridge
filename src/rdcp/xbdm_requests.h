@@ -225,6 +225,20 @@ struct Debugger : public RDCPProcessedRequest {
       SetData(" disconnect");
     }
   }
+
+  [[nodiscard]] bool IsOK() const override {
+    return status == StatusCode::OK || status == StatusCode::ERR_NOT_DEBUGGABLE;
+  }
+
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
+    if (!IsOK()) {
+      return;
+    }
+
+    debuggable = status != ERR_NOT_DEBUGGABLE;
+  }
+
+  bool debuggable;
 };
 
 struct DebugMode : public RDCPProcessedRequest {
@@ -1315,7 +1329,7 @@ struct NotifyAt : public RDCPProcessedRequest {
   explicit NotifyAt(uint16_t port, bool drop_flag = false,
                     bool debug_flag = false)
       : RDCPProcessedRequest("notifyat"), port(port) {
-    SetData(" port=");
+    SetData(" Port=");
     AppendHexString(port);
     if (drop_flag) {
       AppendData(" drop");
@@ -1330,7 +1344,7 @@ struct NotifyAt : public RDCPProcessedRequest {
       : RDCPProcessedRequest("notifyat"),
         port(port),
         address(std::move(address)) {
-    SetData(" port=");
+    SetData(" Port=");
     AppendHexString(port);
     AppendData(" addr=");
     AppendData(address);

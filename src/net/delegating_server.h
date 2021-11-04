@@ -1,11 +1,10 @@
-#ifndef XBDM_GDB_BRIDGE_SRC_XBOX_NOTIFICATION_SERVER_H_
-#define XBDM_GDB_BRIDGE_SRC_XBOX_NOTIFICATION_SERVER_H_
+#ifndef XBDM_GDB_BRIDGE_SRC_NET_DELEGATING_SERVER_H_
+#define XBDM_GDB_BRIDGE_SRC_NET_DELEGATING_SERVER_H_
 
 #include <functional>
 #include <utility>
 
 #include "net/tcp_server.h"
-#include "notification/xbdm_notification_transport.h"
 
 class DelegatingServer : public TCPServer {
  public:
@@ -26,4 +25,4 @@ class DelegatingServer : public TCPServer {
   ConnectionAcceptedHandler connection_accepted_;
 };
 
-#endif  // XBDM_GDB_BRIDGE_SRC_XBOX_NOTIFICATION_SERVER_H_
+#endif  // XBDM_GDB_BRIDGE_SRC_NET_DELEGATING_SERVER_H_

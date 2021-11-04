@@ -17,7 +17,7 @@ bool TCPServer::Listen(const IPAddress &address) {
     return false;
   }
 
-  const struct sockaddr_in &addr = address.address();
+  const struct sockaddr_in &addr = address.Address();
   struct sockaddr_in bind_addr {};
   socklen_t bind_addr_len = sizeof(bind_addr);
 
@@ -37,6 +37,8 @@ bool TCPServer::Listen(const IPAddress &address) {
     BOOST_LOG_TRIVIAL(error) << "listen failed" << errno;
     goto close_and_fail;
   }
+
+  BOOST_LOG_TRIVIAL(trace) << "Notification listener started at " << address_;
 
   return true;
 

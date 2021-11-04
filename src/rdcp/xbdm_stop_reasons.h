@@ -62,7 +62,7 @@ struct StopReasonThreadAndAddressBase_ : StopReasonTrapBase_ {
                                            RDCPMapResponse &parsed)
       : StopReasonTrapBase_(), name(std::move(name)) {
     thread_id = parsed.GetDWORD("thread");
-    address = parsed.GetUInt32("address");
+    address = parsed.GetUInt32("Address");
   }
 
   std::ostream &write_stream(std::ostream &os) const override {
@@ -95,7 +95,7 @@ struct StopReasonDataBreakpoint : StopReasonTrapBase_ {
   explicit StopReasonDataBreakpoint(RDCPMapResponse &parsed)
       : StopReasonTrapBase_() {
     thread_id = parsed.GetDWORD("thread");
-    address = parsed.GetUInt32("address");
+    address = parsed.GetUInt32("Address");
 
     auto value = parsed.GetOptionalDWORD("read");
     if (value.has_value()) {
@@ -200,7 +200,7 @@ struct StopReasonException : StopReasonTrapBase_ {
       : StopReasonTrapBase_() {
     exception = parsed.GetUInt32("code");
     thread_id = parsed.GetDWORD("thread");
-    address = parsed.GetUInt32("address");
+    address = parsed.GetUInt32("Address");
     is_first_chance_exception = parsed.HasKey("first");
     is_non_continuable = parsed.HasKey("noncont");
 
@@ -261,7 +261,7 @@ struct StopReasonCreateThread : StopReasonTrapBase_ {
   }
 
   std::ostream &write_stream(std::ostream &os) const override {
-    return os << "create thread " << thread_id << " start address 0x"
+    return os << "create thread " << thread_id << " start Address 0x"
               << std::hex << std::setfill('0') << std::setw(8) << start_address;
   }
 

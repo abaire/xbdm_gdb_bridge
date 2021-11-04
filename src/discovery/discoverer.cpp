@@ -112,7 +112,7 @@ bool Discoverer::BindSocket() {
   }
 
   int enabled = 1;
-  const struct sockaddr_in &addr = bind_address_.address();
+  const struct sockaddr_in &addr = bind_address_.Address();
 
   if (setsockopt(socket_, SOL_SOCKET, SO_BROADCAST, &enabled,
                  sizeof(enabled))) {

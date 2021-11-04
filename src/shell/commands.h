@@ -13,7 +13,7 @@ struct CommandAltAddr : Command {
     auto request = std::make_shared<AltAddr>();
     interface.SendCommandSync(request);
     if (request->IsOK()) {
-      std::cout << "Alternate IP address: " << request->address_string
+      std::cout << "Alternate IP Address: " << request->address_string
                 << std::endl;
     }
 
@@ -32,13 +32,13 @@ struct CommandBreak : Command {
             "  clearall - Clears all breakpoints\n"
             "  start - Sets a breakpoint at program entry. Only valid if "
             "the remote is in state \"execution pending\".\n"
-            "  [-]addr <address> - Breaks on execution at the given "
-            "address.\n"
-            "  [-]read <address> <length> - Breaks on read access to the "
+            "  [-]addr <Address> - Breaks on execution at the given "
+            "Address.\n"
+            "  [-]read <Address> <length> - Breaks on read access to the "
             "given memory range.\n"
-            "  [-]write <address> <length> - Breaks on write access to the "
+            "  [-]write <Address> <length> - Breaks on write access to the "
             "given memory range.\n"
-            "  [-]execute <address> <length> - Breaks on execution within "
+            "  [-]execute <Address> <length> - Breaks on execution within "
             "the given memory range.\n"
             "\n"
             "Subcommands with [-] can be prefixed with '-' to disable a "
@@ -151,7 +151,7 @@ struct CommandDriveList : Command {
 struct CommandGetChecksum : Command {
   CommandGetChecksum()
       : Command(
-            "<address> <length> <blocksize>\n"
+            "<Address> <length> <blocksize>\n"
             "\n"
             "Calculates a checksum for the given memory region.") {}
   Result operator()(XBOXInterface &interface,
@@ -198,7 +198,7 @@ struct CommandGetFileAttributes : Command {
 struct CommandGetMem : Command {
   CommandGetMem()
       : Command(
-            "<address> <size>\n"
+            "<Address> <size>\n"
             "\n"
             "Fetches the context of the given block of memory.") {}
   Result operator()(XBOXInterface &interface,
@@ -241,9 +241,9 @@ struct CommandHalt : Command {
 struct CommandIsBreak : Command {
   CommandIsBreak()
       : Command(
-            "<address>\n"
+            "<Address>\n"
             "\n"
-            "Checks to see if a breakpoint is set at `address`.") {}
+            "Checks to see if a breakpoint is set at `Address`.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
@@ -330,10 +330,10 @@ struct CommandNoStopOn : Command {
 struct CommandNotifyAt : Command {
   CommandNotifyAt()
       : Command(
-            "<port> [drop] [debug]\n"
+            "<Port> [drop] [debug]\n"
             "\n"
             "Instructs the target to open a notification connection on the "
-            "given port.\n"
+            "given Port.\n"
             "drop - Instructs the target to close an existing connection "
             "instead of connecting.\n"
             "debug - Sets the notification channel to debug mode.") {}
@@ -380,9 +380,9 @@ struct CommandResume : Command {
 struct CommandSetMem : Command {
   CommandSetMem()
       : Command(
-            "<address> <hex_string>\n"
+            "<Address> <hex_string>\n"
             "\n"
-            "Sets the content of memory starting at `address` to the given "
+            "Sets the content of memory starting at `Address` to the given "
             "`hex_string`.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;

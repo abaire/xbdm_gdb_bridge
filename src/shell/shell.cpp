@@ -1,6 +1,7 @@
 #include "shell.h"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/log/trivial.hpp>
 #include <boost/tokenizer.hpp>
 #include <iostream>
 #include <string>
@@ -105,6 +106,15 @@ void Shell::Run() {
 
     boost::algorithm::trim(line);
     if (line.empty()) {
+      if (std::cin.eof()) {
+        BOOST_LOG_TRIVIAL(error) << "stdin closed.";
+        break;
+      }
+      if (std::cin.fail()) {
+        BOOST_LOG_TRIVIAL(error) << "Failure on std::cin.";
+        // TODO: Determine if this is recoverable or not.
+        break;
+      }
       continue;
     }
 

@@ -137,10 +137,10 @@ Command::Result CommandBreak::operator()(XBOXInterface &interface,
 
   bool clear = parser.ShiftPrefixModifier('-');
 
-  if (parser.IsCommand("a", "addr", "address")) {
+  if (parser.IsCommand("a", "addr", "Address")) {
     uint32_t address;
     if (!parser.Parse(0, address)) {
-      std::cout << "Missing required address argument." << std::endl;
+      std::cout << "Missing required Address argument." << std::endl;
       PrintUsage();
       return HANDLED;
     }
@@ -152,7 +152,7 @@ Command::Result CommandBreak::operator()(XBOXInterface &interface,
   if (parser.IsCommand("r", "read")) {
     uint32_t address;
     if (!parser.Parse(0, address)) {
-      std::cout << "Missing required address argument." << std::endl;
+      std::cout << "Missing required Address argument." << std::endl;
       PrintUsage();
       return HANDLED;
     }
@@ -166,7 +166,7 @@ Command::Result CommandBreak::operator()(XBOXInterface &interface,
   if (parser.IsCommand("w", "write")) {
     uint32_t address;
     if (!parser.Parse(0, address)) {
-      std::cout << "Missing required address argument." << std::endl;
+      std::cout << "Missing required Address argument." << std::endl;
       PrintUsage();
       return HANDLED;
     }
@@ -180,7 +180,7 @@ Command::Result CommandBreak::operator()(XBOXInterface &interface,
   if (parser.IsCommand("e", "exec", "execute")) {
     uint32_t address;
     if (!parser.Parse(0, address)) {
-      std::cout << "Missing required address argument." << std::endl;
+      std::cout << "Missing required Address argument." << std::endl;
       PrintUsage();
       return HANDLED;
     }
@@ -367,7 +367,7 @@ Command::Result CommandGetChecksum::operator()(
   int length;
   int block_size;
   if (!parser.Parse(0, address)) {
-    std::cout << "Missing required address argument." << std::endl;
+    std::cout << "Missing required Address argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
@@ -382,7 +382,7 @@ Command::Result CommandGetChecksum::operator()(
     return HANDLED;
   }
   if (address & 0x07) {
-    std::cout << "address must be evenly divisible by 8." << std::endl;
+    std::cout << "Address must be evenly divisible by 8." << std::endl;
     return HANDLED;
   }
   if (length & 0x07) {
@@ -489,7 +489,7 @@ Command::Result CommandGetMem::operator()(
   uint32_t address;
   uint32_t size;
   if (!parser.Parse(0, address)) {
-    std::cout << "Missing required address argument." << std::endl;
+    std::cout << "Missing required Address argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
@@ -572,7 +572,7 @@ Command::Result CommandIsBreak::operator()(
   ArgParser parser(args);
   int address;
   if (!parser.Parse(0, address)) {
-    std::cout << "Missing required address argument." << std::endl;
+    std::cout << "Missing required Address argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
@@ -765,19 +765,19 @@ Command::Result CommandNotifyAt::operator()(
   ArgParser parser(args);
   uint32_t port;
   if (!parser.Parse(0, port)) {
-    std::cout << "Missing required port argument." << std::endl;
+    std::cout << "Missing required Port argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
   if (port < 1024 || port > 65535) {
-    std::cout << "Invalid port argument, must be between 1024 and 65535."
+    std::cout << "Invalid Port argument, must be between 1024 and 65535."
               << std::endl;
     return HANDLED;
   }
 
   IPAddress address(port);
   if (!interface.StartNotificationListener(address)) {
-    std::cout << "Failed to start notification listener on port " << port
+    std::cout << "Failed to start notification listener on Port " << port
               << std::endl;
     return HANDLED;
   }
@@ -848,7 +848,7 @@ Command::Result CommandSetMem::operator()(
   ArgParser parser(args);
   uint32_t address;
   if (!parser.Parse(0, address)) {
-    std::cout << "Missing required address argument." << std::endl;
+    std::cout << "Missing required Address argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
@@ -961,7 +961,7 @@ Command::Result CommandWalkMem::operator()(
     std::cout << *request << std::endl;
   } else {
     for (auto &region : request->regions) {
-      std::cout << "Base address: 0x" << std::hex << std::setw(8)
+      std::cout << "Base Address: 0x" << std::hex << std::setw(8)
                 << std::setfill('0') << region.base << std::dec
                 << " size: " << region.size << " protection: 0x" << std::hex
                 << region.protect;

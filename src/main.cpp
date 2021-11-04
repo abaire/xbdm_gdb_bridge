@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
   // clang-format off
   opts.add_options()
       ("help,?", po::bool_switch(), "Print this help message.")
-      ("xbox", po::value<IPAddress>()->value_name("<ip[:port]>"), "IP (and optionally port) of the XBOX to connect to.")
+      ("xbox", po::value<IPAddress>()->value_name("<IP[:Port]>"), "IP (and optionally Port) of the XBOX to connect to.")
       ("color,c", po::bool_switch(&colorize), "Colorize output.")
       ("verbosity,v", po::value<uint32_t>()->value_name("<level>")->default_value(0), "Sets logging verbosity.")
       ;

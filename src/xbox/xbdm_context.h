@@ -8,14 +8,17 @@
 #include <mutex>
 
 #include "net/ip_address.h"
+#include "notification/xbdm_notification.h"
 
 class DelegatingServer;
 class RDCPProcessedRequest;
 class SelectThread;
-class XBDMNotification;
 class XBDMTransport;
 
 class XBDMContext {
+ public:
+  typedef std::function<void(const XBDMNotification &)> NotificationHandler;
+
  public:
   XBDMContext(std::string name, IPAddress xbox_address,
               std::shared_ptr<SelectThread> select_thread);
@@ -25,9 +28,10 @@ class XBDMContext {
   bool Reconnect();
 
   bool StartNotificationListener(const IPAddress &address);
+  bool GetNotificationServerAddress(IPAddress &address) const;
 
-  void OnNotificationChannelConnected(int sock, IPAddress &address);
-  void OnNotificationReceived(XBDMNotification &notification);
+  int RegisterNotificationHandler(NotificationHandler);
+  void UnregisterNotificationHandler(int);
 
   std::shared_ptr<RDCPProcessedRequest> SendCommandSync(
       std::shared_ptr<RDCPProcessedRequest> command);
@@ -35,6 +39,9 @@ class XBDMContext {
       std::shared_ptr<RDCPProcessedRequest> command);
 
  private:
+  void OnNotificationChannelConnected(int sock, IPAddress &address);
+  void OnNotificationReceived(XBDMNotification &notification);
+
   void ExecuteXBDMPromise(
       std::promise<std::shared_ptr<RDCPProcessedRequest>> &promise,
       std::shared_ptr<RDCPProcessedRequest> &request);
@@ -47,9 +54,16 @@ class XBDMContext {
   std::shared_ptr<SelectThread> select_thread_;
   std::shared_ptr<XBDMTransport> xbdm_transport_;
   std::shared_ptr<DelegatingServer> notification_server_;
+
   std::recursive_mutex notification_queue_lock_;
   std::list<XBDMNotification> notification_queue_;
+
   std::shared_ptr<boost::asio::thread_pool> xbdm_control_executor_;
+  std::shared_ptr<boost::asio::thread_pool> notification_executor_;
+
+  std::recursive_mutex notification_handler_lock_;
+  int next_notification_handler_id_{1};
+  std::map<int, NotificationHandler> notification_handlers_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_XBDM_CONTEXT_H

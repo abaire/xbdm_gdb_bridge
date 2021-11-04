@@ -13,10 +13,10 @@ class IPAddress {
   IPAddress(const std::string &addr, uint16_t default_port);
   explicit IPAddress(const struct sockaddr_in &addr);
 
-  [[nodiscard]] const std::string &hostname() const { return hostname_; }
-  [[nodiscard]] const struct sockaddr_in &address() const { return addr_; }
-  [[nodiscard]] struct in_addr ip() const { return addr_.sin_addr; }
-  [[nodiscard]] uint16_t port() const { return addr_.sin_port; }
+  [[nodiscard]] const std::string &Hostname() const { return hostname_; }
+  [[nodiscard]] const struct sockaddr_in &Address() const { return addr_; }
+  [[nodiscard]] struct in_addr IP() const { return addr_.sin_addr; }
+  [[nodiscard]] uint16_t Port() const { return ntohs(addr_.sin_port); }
 
   explicit operator struct sockaddr const *() const {
     return reinterpret_cast<struct sockaddr const *>(&addr_);
