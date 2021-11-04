@@ -15,6 +15,7 @@
 #include "rdcp/rdcp_response.h"
 #include "rdcp/rdcp_status_code.h"
 #include "rdcp/thread_context.h"
+#include "rdcp/types/module.h"
 #include "rdcp/xbdm_stop_reasons.h"
 #include "util/parsing.h"
 
@@ -1229,25 +1230,6 @@ struct ModSections : public RDCPProcessedRequest {
 };
 
 struct Modules : public RDCPProcessedRequest {
-  struct Module {
-    std::string name;
-    uint32_t base;
-    uint32_t size;
-    uint32_t checksum;
-    uint32_t timestamp;
-    std::set<std::string> additional_flags;
-
-    friend std::ostream& operator<<(std::ostream& os, const Module& m) {
-      os << "name: " << m.name << std::setfill('0') << std::hex << std::setw(8)
-         << " base: 0x" << m.base << " size: " << std::dec << m.size
-         << " checksum: 0x" << std::hex << m.checksum;
-      for (auto& flag : m.additional_flags) {
-        os << " " << flag;
-      }
-      return os;
-    }
-  };
-
   Modules() : RDCPProcessedRequest("modules") {}
 
   [[nodiscard]] bool IsOK() const override {
@@ -1263,11 +1245,12 @@ struct Modules : public RDCPProcessedRequest {
     for (auto& it : parsed.maps) {
       Module module{
           .name = it.GetString("name"),
-          .base = static_cast<uint32_t>(it.GetDWORD("base")),
+          .base_address = static_cast<uint32_t>(it.GetDWORD("base")),
           .size = static_cast<uint32_t>(it.GetDWORD("size")),
           .checksum = static_cast<uint32_t>(it.GetDWORD("check")),
           .timestamp = static_cast<uint32_t>(it.GetDWORD("timestamp")),
-          .additional_flags = it.valueless_keys,
+          .is_tls = it.HasKey("tls"),
+          .is_xbe = it.HasKey("xbe"),
       };
       modules.emplace_back(module);
     }

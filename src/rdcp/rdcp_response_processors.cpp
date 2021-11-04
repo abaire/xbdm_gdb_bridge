@@ -1,13 +1,10 @@
 #include "rdcp_response_processors.h"
 
 #include <algorithm>
-#include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string_regex.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/regex.hpp>
-#include <boost/tokenizer.hpp>
 
-#include "rdcp_response.h"
 #include "util/parsing.h"
 
 static std::vector<std::vector<char>> SplitMultiline(
@@ -31,39 +28,6 @@ RDCPMultilineResponse::RDCPMultilineResponse(const std::vector<char> &data) {
 
 RDCPMapResponse::RDCPMapResponse(const std::vector<char> &data)
     : RDCPMapResponse(data.begin(), data.end()) {}
-
-RDCPMapResponse::RDCPMapResponse(std::vector<char>::const_iterator start,
-                                 std::vector<char>::const_iterator end) {
-  if (start == end) {
-    return;
-  }
-
-  std::string sanitized_data(start, end);
-  boost::algorithm::replace_all(sanitized_data, RDCPResponse::kTerminator, " ");
-
-  boost::escaped_list_separator<char> separator('\\', ' ', '\"');
-  typedef boost::tokenizer<boost::escaped_list_separator<char>> SpaceTokenizer;
-  SpaceTokenizer keyvals(sanitized_data, separator);
-  for (auto it = keyvals.begin(); it != keyvals.end(); ++it) {
-    const std::string &token = *it;
-    // See if this is a key=value pair or just a key[=true].
-    auto delimiter = token.find('=');
-    if (delimiter == std::string::npos) {
-      map[token] = "";
-      valueless_keys.insert(token);
-      continue;
-    }
-
-    if (token[delimiter + 1] == '\"') {
-      // Insert the unescaped contents of the string.
-      std::string value = token.substr(delimiter + 2, token.size() - 1);
-      boost::replace_all(value, "\\\"", "\"");
-      map[token.substr(0, delimiter)] = value;
-    } else {
-      map[token.substr(0, delimiter)] = token.substr(delimiter + 1);
-    }
-  }
-}
 
 bool RDCPMapResponse::HasKey(const std::string &key) const {
   return map.find(key) != map.end();

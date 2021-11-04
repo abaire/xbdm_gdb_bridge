@@ -7,13 +7,15 @@
 #include "rdcp/rdcp_processed_request.h"
 
 struct Section {
-  Section(const RDCPMapResponse &parsed) {
+  explicit Section(const RDCPMapResponse &parsed) {
     name = parsed.GetString("name");
     base_address = parsed.GetUInt32("base");
     size = parsed.GetUInt32("size");
     index = parsed.GetUInt32("index");
     flags = parsed.GetUInt32("flags");
   }
+
+  friend std::ostream &operator<<(std::ostream &os, const Section &loaded);
 
   std::string action;
   std::string name;

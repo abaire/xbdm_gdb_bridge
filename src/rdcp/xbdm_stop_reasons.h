@@ -13,13 +13,13 @@ struct StopReasonBase_ {
 
   friend std::ostream &operator<<(std::ostream &os,
                                   const StopReasonBase_ &base) {
-    return base.write_stream(os);
+    return base.WriteStream(os);
   }
 
   int signal;
 
  protected:
-  virtual std::ostream &write_stream(std::ostream &os) const = 0;
+  virtual std::ostream &WriteStream(std::ostream &os) const = 0;
 };
 
 struct StopReasonTrapBase_ : StopReasonBase_ {
@@ -27,7 +27,7 @@ struct StopReasonTrapBase_ : StopReasonBase_ {
 };
 
 struct StopReasonUnknown : StopReasonTrapBase_ {
-  std::ostream &write_stream(std::ostream &os) const override {
+  std::ostream &WriteStream(std::ostream &os) const override {
     return os << "Unknown reason";
   }
 };
@@ -39,7 +39,7 @@ struct StopReasonThreadContextBase_ : StopReasonTrapBase_ {
     thread_id = parsed.GetDWORD("thread");
   }
 
-  std::ostream &write_stream(std::ostream &os) const override {
+  std::ostream &WriteStream(std::ostream &os) const override {
     return os << name << " on thread " << thread_id;
   }
 
@@ -65,7 +65,7 @@ struct StopReasonThreadAndAddressBase_ : StopReasonTrapBase_ {
     address = parsed.GetUInt32("Address");
   }
 
-  std::ostream &write_stream(std::ostream &os) const override {
+  std::ostream &WriteStream(std::ostream &os) const override {
     return os << name << " on thread " << thread_id << " at 0x" << std::hex
               << std::setfill('0') << std::setw(8) << address;
   }
@@ -87,10 +87,10 @@ struct StopReasonSingleStep : StopReasonThreadAndAddressBase_ {
 
 struct StopReasonDataBreakpoint : StopReasonTrapBase_ {
   enum AccessType {
-    UNKNOWN = -1,
-    READ,
-    WRITE,
-    EXECUTE,
+    AT_UNKNOWN = -1,
+    AT_READ,
+    AT_WRITE,
+    AT_EXECUTE,
   };
   explicit StopReasonDataBreakpoint(RDCPMapResponse &parsed)
       : StopReasonTrapBase_() {
@@ -99,40 +99,40 @@ struct StopReasonDataBreakpoint : StopReasonTrapBase_ {
 
     auto value = parsed.GetOptionalDWORD("read");
     if (value.has_value()) {
-      access_type = READ;
+      access_type = AT_READ;
       access_address = value.value();
       return;
     }
 
     value = parsed.GetOptionalDWORD("write");
     if (value.has_value()) {
-      access_type = WRITE;
+      access_type = AT_WRITE;
       access_address = value.value();
       return;
     }
     value = parsed.GetOptionalDWORD("execute");
     if (value.has_value()) {
-      access_type = EXECUTE;
+      access_type = AT_EXECUTE;
       access_address = value.value();
       return;
     }
 
-    access_type = UNKNOWN;
+    access_type = AT_UNKNOWN;
     access_address = 0;
   }
 
-  std::ostream &write_stream(std::ostream &os) const override {
+  std::ostream &WriteStream(std::ostream &os) const override {
     std::string access;
     switch (access_type) {
-      case READ:
+      case AT_READ:
         access = "read";
         break;
 
-      case WRITE:
+      case AT_WRITE:
         access = "write";
         break;
 
-      case EXECUTE:
+      case AT_EXECUTE:
         access = "execute";
         break;
 
@@ -180,7 +180,7 @@ struct StopReasonExecutionStateChange : StopReasonTrapBase_ {
     }
   }
 
-  std::ostream &write_stream(std::ostream &os) const override {
+  std::ostream &WriteStream(std::ostream &os) const override {
     return os << "execution state changed to " << state_name;
   }
 
@@ -217,7 +217,7 @@ struct StopReasonException : StopReasonTrapBase_ {
     }
   }
 
-  std::ostream &write_stream(std::ostream &os) const override {
+  std::ostream &WriteStream(std::ostream &os) const override {
     os << "exception on thread " << thread_id << " at 0x" << std::hex
        << std::setfill('0') << std::setw(8) << address;
     switch (type) {
@@ -260,7 +260,7 @@ struct StopReasonCreateThread : StopReasonTrapBase_ {
     start_address = parsed.GetDWORD("start");
   }
 
-  std::ostream &write_stream(std::ostream &os) const override {
+  std::ostream &WriteStream(std::ostream &os) const override {
     return os << "create thread " << thread_id << " start Address 0x"
               << std::hex << std::setfill('0') << std::setw(8) << start_address;
   }
@@ -286,7 +286,7 @@ struct StopReasonModuleLoad : StopReasonTrapBase_ {
     is_xbe = parsed.HasKey("xbe");
   }
 
-  std::ostream &write_stream(std::ostream &os) const override {
+  std::ostream &WriteStream(std::ostream &os) const override {
     return os << "Module load: name: " << name << " base_address: 0x"
               << std::hex << std::setfill('0') << std::setw(8) << base_address
               << " size: " << std::dec << size << " checksum: 0x" << std::hex
@@ -314,7 +314,7 @@ struct StopReasonSectionActionBase_ : StopReasonTrapBase_ {
     flags = parsed.GetUInt32("flags");
   }
 
-  std::ostream &write_stream(std::ostream &os) const override {
+  std::ostream &WriteStream(std::ostream &os) const override {
     return os << action << ": name: " << name << " base_address: 0x" << std::hex
               << std::setfill('0') << std::setw(8) << base_address
               << " size: " << std::dec << size << " index: " << index
@@ -346,7 +346,7 @@ struct StopReasonRIPBase_ : StopReasonBase_ {
     message = parsed.GetString("message");
   }
 
-  std::ostream &write_stream(std::ostream &os) const override {
+  std::ostream &WriteStream(std::ostream &os) const override {
     os << name << " on thread " << thread_id;
     if (!message.empty()) {
       os << " \"" << message << "\"";

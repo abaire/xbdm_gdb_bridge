@@ -12,8 +12,9 @@ static constexpr long kTerminatorLen =
 static const char *ParseMessage(const char *buffer, const char *buffer_end);
 
 XBDMNotificationTransport::XBDMNotificationTransport(
-    std::string name, XBDMNotificationTransport::NotificationHandler handler)
-    : TCPConnection(std::move(name)),
+    std::string name, int sock, const IPAddress &address,
+    NotificationHandler handler)
+    : TCPConnection(std::move(name), sock, address),
       notification_handler_(std::move(handler)),
       hello_received_(false) {}
 
@@ -47,8 +48,8 @@ void XBDMNotificationTransport::HandleNotification(const char *message,
     return;
   }
 
-  XBDMNotification notification(message, message_len);
-  if (notification.Type() == XBDMNotification::INVALID) {
+  auto notification = ParseXBDMNotification(message, message_len);
+  if (!notification) {
     std::string dbg_message(message, message + message_len);
     BOOST_LOG_TRIVIAL(warning)
         << "Unhandled notification '" << dbg_message << "'" << std::endl;

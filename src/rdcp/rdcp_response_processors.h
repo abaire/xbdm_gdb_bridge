@@ -1,11 +1,15 @@
 #ifndef XBDM_GDB_BRIDGE_RDCP_RESPONSE_PROCESSORS_H
 #define XBDM_GDB_BRIDGE_RDCP_RESPONSE_PROCESSORS_H
 
+#include <boost/algorithm/string.hpp>
+#include <boost/tokenizer.hpp>
 #include <map>
 #include <optional>
 #include <set>
 #include <string>
 #include <vector>
+
+#include "rdcp_response.h"
 
 struct RDCPMultilineResponse {
   explicit RDCPMultilineResponse(const std::vector<char> &data);
@@ -15,10 +19,60 @@ struct RDCPMultilineResponse {
 
 struct RDCPMapResponse {
   explicit RDCPMapResponse(const std::vector<char> &data);
-  RDCPMapResponse(std::vector<char>::const_iterator start,
-                  std::vector<char>::const_iterator end);
+
+  template <typename ConstIterator>
+  RDCPMapResponse(ConstIterator start, ConstIterator end) {
+    if (start == end) {
+      return;
+    }
+
+    std::string sanitized_data(start, end);
+    boost::algorithm::replace_all(sanitized_data, RDCPResponse::kTerminator,
+                                  " ");
+
+    boost::escaped_list_separator<char> separator('\\', ' ', '\"');
+    typedef boost::tokenizer<boost::escaped_list_separator<char>>
+        SpaceTokenizer;
+    SpaceTokenizer keyvals(sanitized_data, separator);
+    for (auto it = keyvals.begin(); it != keyvals.end(); ++it) {
+      const std::string &token = *it;
+      // See if this is a key=value pair or just a key[=true].
+      auto delimiter = token.find('=');
+      if (delimiter == std::string::npos) {
+        map[token] = "";
+        valueless_keys.insert(token);
+        continue;
+      }
+
+      if (token[delimiter + 1] == '\"') {
+        // Insert the unescaped contents of the string.
+        std::string value = token.substr(delimiter + 2, token.size() - 1);
+        boost::replace_all(value, "\\\"", "\"");
+        map[token.substr(0, delimiter)] = value;
+      } else {
+        map[token.substr(0, delimiter)] = token.substr(delimiter + 1);
+      }
+    }
+  }
 
   [[nodiscard]] bool HasKey(const std::string &key) const;
+
+  template <typename T, typename... Ts>
+  using are_same_type = std::conjunction<std::is_same<T, Ts>...>;
+
+  template <typename T>
+  [[nodiscard]] bool HasAnyOf(const T &key) const {
+    return map.find(key) != map.end();
+  }
+
+  template <typename T, typename... Ts, typename = are_same_type<T, Ts...>>
+  [[nodiscard]] bool HasAnyOf(const T &key, const Ts &...rest) const {
+    if (map.find(key) != map.end()) {
+      return true;
+    }
+
+    return HasAnyOf(rest...);
+  }
 
   [[nodiscard]] std::string GetString(const std::string &key) const {
     return GetString(key, "");

@@ -2,12 +2,16 @@
 #define XBDM_GDB_BRIDGE_SRC_XBOX_DEBUGGER_MODULE_H_
 
 #include <cinttypes>
+#include <ostream>
 #include <string>
 
 #include "rdcp/rdcp_processed_request.h"
 
 struct Module {
- public:
+  Module() = default;
+  Module(std::string name, uint32_t baseAddress, uint32_t size,
+         uint32_t checksum, uint32_t timestamp, bool isTls, bool isXbe);
+
   explicit Module(const RDCPMapResponse &parsed) {
     name = parsed.GetString("name");
     base_address = parsed.GetUInt32("base");
@@ -17,6 +21,8 @@ struct Module {
     is_tls = parsed.HasKey("tls");
     is_xbe = parsed.HasKey("xbe");
   }
+
+  friend std::ostream &operator<<(std::ostream &os, const Module &loaded);
 
   std::string name;
   uint32_t base_address{0};

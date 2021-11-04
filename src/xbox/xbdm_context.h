@@ -8,16 +8,17 @@
 #include <mutex>
 
 #include "net/ip_address.h"
-#include "notification/xbdm_notification.h"
 
 class DelegatingServer;
 class RDCPProcessedRequest;
 class SelectThread;
+class XBDMNotification;
 class XBDMTransport;
 
 class XBDMContext {
  public:
-  typedef std::function<void(const XBDMNotification &)> NotificationHandler;
+  typedef std::function<void(const std::shared_ptr<XBDMNotification> &)>
+      NotificationHandler;
 
  public:
   XBDMContext(std::string name, IPAddress xbox_address,
@@ -40,12 +41,14 @@ class XBDMContext {
 
  private:
   void OnNotificationChannelConnected(int sock, IPAddress &address);
-  void OnNotificationReceived(XBDMNotification &notification);
+  void OnNotificationReceived(std::shared_ptr<XBDMNotification> notification);
 
   void ExecuteXBDMPromise(
       std::promise<std::shared_ptr<RDCPProcessedRequest>> &promise,
       std::shared_ptr<RDCPProcessedRequest> &request);
   bool XBDMConnect(int max_wait_millis = 5000);
+
+  void DispatchNotification(std::shared_ptr<XBDMNotification> notification);
 
  private:
   std::string name_;
@@ -54,9 +57,6 @@ class XBDMContext {
   std::shared_ptr<SelectThread> select_thread_;
   std::shared_ptr<XBDMTransport> xbdm_transport_;
   std::shared_ptr<DelegatingServer> notification_server_;
-
-  std::recursive_mutex notification_queue_lock_;
-  std::list<XBDMNotification> notification_queue_;
 
   std::shared_ptr<boost::asio::thread_pool> xbdm_control_executor_;
   std::shared_ptr<boost::asio::thread_pool> notification_executor_;

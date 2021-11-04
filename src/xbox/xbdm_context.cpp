@@ -25,6 +25,7 @@ XBDMContext::XBDMContext(std::string name, IPAddress xbox_address,
   select_thread_->AddConnection(notification_server_);
 
   xbdm_control_executor_ = std::make_shared<boost::asio::thread_pool>(1);
+  notification_executor_ = std::make_shared<boost::asio::thread_pool>(1);
 }
 
 void XBDMContext::Shutdown() {
@@ -40,6 +41,11 @@ void XBDMContext::Shutdown() {
   if (notification_server_) {
     notification_server_->Close();
     notification_server_.reset();
+  }
+  if (notification_executor_) {
+    notification_executor_->stop();
+    notification_executor_->join();
+    notification_executor_.reset();
   }
 }
 
@@ -62,19 +68,24 @@ bool XBDMContext::GetNotificationServerAddress(IPAddress& address) const {
 }
 
 void XBDMContext::OnNotificationChannelConnected(int sock, IPAddress& address) {
+  BOOST_LOG_TRIVIAL(trace) << "Notification channel established from "
+                           << address;
   auto transport = std::make_shared<XBDMNotificationTransport>(
-      name_, [this](XBDMNotification& notification) {
+      name_, sock, address,
+      [this](std::shared_ptr<XBDMNotification> notification) {
         this->OnNotificationReceived(notification);
       });
 
   select_thread_->AddConnection(transport);
 }
 
-void XBDMContext::OnNotificationReceived(XBDMNotification& notification) {
-  const std::lock_guard<std::recursive_mutex> lock(notification_queue_lock_);
-  notification_queue_.push_back(notification);
-
-  // TODO: Add condition variable and notify it that new data can be processed.
+void XBDMContext::OnNotificationReceived(
+    std::shared_ptr<XBDMNotification> notification) {
+  assert(notification_executor_);
+  boost::asio::dispatch(*notification_executor_,
+                        [this, notification]() mutable {
+                          this->DispatchNotification(notification);
+                        });
 }
 
 bool XBDMContext::Reconnect() {
@@ -157,4 +168,12 @@ void XBDMContext::UnregisterNotificationHandler(int id) {
 
   const std::lock_guard<std::recursive_mutex> lock(notification_handler_lock_);
   notification_handlers_.erase(id);
+}
+
+void XBDMContext::DispatchNotification(
+    std::shared_ptr<XBDMNotification> notification) {
+  const std::lock_guard<std::recursive_mutex> lock(notification_handler_lock_);
+  for (auto& handler : notification_handlers_) {
+    handler.second(notification);
+  }
 }
