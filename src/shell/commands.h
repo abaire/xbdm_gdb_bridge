@@ -94,10 +94,20 @@ struct CommandDebugger : Command {
 struct CommandDelete : Command {
   CommandDelete()
       : Command(
-            "path [-r]\n"
+            "<path> [-r]\n"
             "\n"
             "Deletes the given path.\n"
             "If -r is given, deletes a the given directory recursively.") {}
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &args) override;
+};
+
+struct CommandDirList : Command {
+  CommandDirList()
+      : Command(
+            "<path>\n"
+            "\n"
+            "Returns a list of items in `path`.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };

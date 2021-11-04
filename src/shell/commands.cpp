@@ -27,7 +27,7 @@ struct ArgParser {
     }
   }
 
-  [[nodiscard]] bool HasCommand() const { return !arguments.empty(); }
+  [[nodiscard]] bool HasCommand() const { return !command.empty(); }
   [[nodiscard]] bool ShiftPrefixModifier(char modifier) {
     if (command.empty() || command[0] != modifier) {
       return false;
@@ -254,5 +254,54 @@ Command::Result CommandDelete::operator()(
   }
   bool recursive = parser.ArgExists("-r");
   SendAndPrintMessage(interface, std::make_shared<Delete>(path, recursive));
+  return HANDLED;
+}
+
+Command::Result CommandDirList::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &args) {
+  ArgParser parser(args);
+  std::string path;
+  if (!parser.Parse(0, path)) {
+    std::cout << "Missing required path argument." << std::endl;
+    PrintUsage();
+    return HANDLED;
+  }
+
+  // Prevent access denied errors when trying to list the base of a drive path.
+  if (path.back() == ':') {
+    path.push_back('\\');
+  }
+
+  auto request = std::make_shared<DirList>(path);
+  interface.SendCommandSync(request);
+  if (request->IsOK()) {
+    std::list<const DirList::Entry *> directories;
+    std::list<const DirList::Entry *> files;
+    for (const auto &entry : request->entries) {
+      if (entry.is_directory) {
+        directories.push_back(&entry);
+      } else {
+        files.push_back(&entry);
+      }
+    }
+
+    auto comparator = [](const DirList::Entry *a, const DirList::Entry *b) {
+      return boost::algorithm::to_lower_copy(a->name) <
+             boost::algorithm::to_lower_copy(b->name);
+    };
+    directories.sort(comparator);
+    files.sort(comparator);
+
+    for (auto entry : directories) {
+      std::cout << "           " << entry->name << std::endl;
+    }
+    for (auto entry : files) {
+      std::cout << std::setw(10) << entry->filesize << " " << entry->name
+                << std::endl;
+    }
+
+  } else {
+    std::cout << *request << std::endl;
+  }
   return HANDLED;
 }

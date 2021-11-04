@@ -16,7 +16,7 @@ static std::vector<std::vector<char>> SplitMultiline(
     return ret;
   }
 
-  char delimiter[RDCPResponse::kTerminatorLen] = {0};
+  char delimiter[RDCPResponse::kTerminatorLen + 1] = {0};
   memcpy(delimiter, RDCPResponse::kTerminator, RDCPResponse::kTerminatorLen);
 
   auto delimiter_regex = boost::regex(delimiter);

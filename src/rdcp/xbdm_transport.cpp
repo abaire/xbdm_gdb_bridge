@@ -74,7 +74,10 @@ void XBDMTransport::OnBytesRead() {
   const std::lock_guard<std::recursive_mutex> read_lock(read_lock_);
   char const *char_buffer = reinterpret_cast<char *>(read_buffer_.data());
 
-  auto request = request_queue_.front();
+  std::shared_ptr<RDCPRequest> request;
+  if (!request_queue_.empty()) {
+    request = request_queue_.front();
+  }
   std::shared_ptr<RDCPResponse> response;
   long binary_response_size = 0;
   if (request) {
