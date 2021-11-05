@@ -57,6 +57,7 @@ add_executable(
         src/shell/command.h
         src/shell/commands.cpp
         src/shell/commands.h
+        src/shell/debugger_commands.cpp
         src/shell/debugger_commands.h
         src/shell/shell.cpp
         src/shell/shell.h

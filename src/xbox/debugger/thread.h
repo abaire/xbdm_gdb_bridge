@@ -37,6 +37,8 @@ struct Thread {
     create_timestamp = parsed.GetQWORD("createlo", "createhi");
   }
 
+  friend std::ostream &operator<<(std::ostream &os, const Thread &t);
+
  public:
   int thread_id;
   std::optional<int32_t> suspend_count;

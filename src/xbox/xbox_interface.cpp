@@ -3,11 +3,11 @@
 #include <unistd.h>
 
 #include <boost/asio/dispatch.hpp>
-#include <boost/log/trivial.hpp>
 #include <cassert>
 #include <utility>
 
 #include "gdb/gdb_transport.h"
+#include "net/delegating_server.h"
 #include "net/select_thread.h"
 #include "xbox/debugger/xbdm_debugger.h"
 #include "xbox/xbdm_context.h"
@@ -80,6 +80,15 @@ void XBOXInterface::StopGDBServer() {
 
   gdb_server_->Close();
   gdb_server_.reset();
+}
+
+bool XBOXInterface::GetGDBListenAddress(IPAddress& ret) const {
+  if (!gdb_server_) {
+    return false;
+  }
+
+  ret = gdb_server_->Address();
+  return true;
 }
 
 bool XBOXInterface::StartNotificationListener(const IPAddress& address) {

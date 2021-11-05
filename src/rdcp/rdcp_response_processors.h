@@ -30,7 +30,7 @@ struct RDCPMapResponse {
     boost::algorithm::replace_all(sanitized_data, RDCPResponse::kTerminator,
                                   " ");
 
-    boost::escaped_list_separator<char> separator('\\', ' ', '\"');
+    boost::escaped_list_separator<char> separator(0, ' ', '\"');
     typedef boost::tokenizer<boost::escaped_list_separator<char>>
         SpaceTokenizer;
     SpaceTokenizer keyvals(sanitized_data, separator);

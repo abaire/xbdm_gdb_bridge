@@ -31,10 +31,8 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   REGISTER("/switch", DebuggerCommandSetActiveThread);
   REGISTER("/threads", DebuggerCommandGetThreads);
   REGISTER("/info", DebuggerCommandGetThreadInfo);
-  REGISTER("/stepi", DebuggerCommandStepInstruction);
+  //  REGISTER("/stepi", DebuggerCommandStepInstruction);
   REGISTER("/info", DebuggerCommandGetThreadInfo);
-  REGISTER("/context", DebuggerCommandGetContext);
-  REGISTER("/fullcontext", DebuggerCommandGetFullContext);
   REGISTER("/haltall", DebuggerCommandHaltAll);
   REGISTER("/halt", DebuggerCommandHalt);
   REGISTER("/continueall", DebuggerCommandContinueAll);
@@ -119,7 +117,7 @@ void Shell::Run() {
     }
 
     std::vector<std::string> args;
-    boost::escaped_list_separator<char> separator('\\', ' ', '\"');
+    boost::escaped_list_separator<char> separator('~', ' ', '\"');
     typedef boost::tokenizer<boost::escaped_list_separator<char>>
         SpaceTokenizer;
     SpaceTokenizer keyvals(line, separator);

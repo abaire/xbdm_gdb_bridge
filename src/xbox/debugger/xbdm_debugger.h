@@ -32,21 +32,28 @@ class XBDMDebugger {
   bool Attach();
   void Shutdown();
 
-  bool DebugXBE(const std::string &path);
-  bool DebugXBE(const std::string &path, const std::string &command_line);
+  bool DebugXBE(const std::string &path, bool wait_forever = false);
+  bool DebugXBE(const std::string &path, const std::string &command_line,
+                bool wait_forever = false);
 
   [[nodiscard]] const std::list<std::shared_ptr<Thread>> &Threads() const {
     return threads_;
   }
 
-  [[nodiscard]] int ActiveThreadID() const { return active_thread_id_; }
+  [[nodiscard]] int ActiveThreadID() const {
+    auto thread = ActiveThread();
+    if (thread) {
+      return thread->thread_id;
+    }
+    return -1;
+  }
 
   [[nodiscard]] std::shared_ptr<Thread> ActiveThread() const {
-    if (active_thread_id_ < 0 || active_thread_id_ > threads_.size()) {
+    if (active_thread_index_ < 0 || active_thread_index_ > threads_.size()) {
       return {};
     }
 
-    return *std::next(threads_.begin(), active_thread_id_);
+    return *std::next(threads_.begin(), active_thread_index_);
   }
 
   //! Returns an arbitrary thread ID, preferring the active thread.
@@ -78,6 +85,8 @@ class XBDMDebugger {
   bool FetchThreads();
   bool RestartAndAttach(int flags = Reboot::kStop);
 
+  bool StepFunction();
+
  private:
   [[nodiscard]] bool Stop() const;
   [[nodiscard]] bool Go() const;
@@ -103,7 +112,7 @@ class XBDMDebugger {
  private:
   std::shared_ptr<XBDMContext> context_;
 
-  int active_thread_id_{-1};
+  int active_thread_index_{-1};
   std::recursive_mutex thread_lock_;
   std::list<std::shared_ptr<Thread>> threads_;
   std::list<std::shared_ptr<Module>> modules_;

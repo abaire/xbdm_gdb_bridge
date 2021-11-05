@@ -55,14 +55,13 @@ void XBDMDebugger::Shutdown() {
   notification_handler_id_ = 0;
 }
 
-bool XBDMDebugger::DebugXBE(const std::string &path) {
-  return DebugXBE(path, "");
+bool XBDMDebugger::DebugXBE(const std::string &path, bool wait_forever) {
+  return DebugXBE(path, "", wait_forever);
 }
 
 bool XBDMDebugger::DebugXBE(const std::string &path,
-                            const std::string &command_line) {
-  uint32_t flags = 0;
-
+                            const std::string &command_line,
+                            bool wait_forever) {
   std::string xbe_dir;
   std::string xbe_name;
   if (!SplitXBEPath(path, xbe_dir, xbe_name)) {
@@ -70,19 +69,22 @@ bool XBDMDebugger::DebugXBE(const std::string &path,
     return false;
   }
 
+  uint32_t flags = Reboot::kWait | Reboot::kWarm;
+  if (wait_forever) {
+    flags |= Reboot::kStop;
+  }
+  RestartAndReconnect(flags);
+
   auto request =
       std::make_shared<LoadOnBootTitle>(xbe_name, xbe_dir, command_line);
-  /*
-    context_->SendCommandSync(request);
-    if (!request->IsOK()) {
-      BOOST_LOG_TRIVIAL(error) << "Failed to request break at start "
-                               << request->status << " " << request->message;
-      return false;
-    }
+  context_->SendCommandSync(request);
+  if (!request->IsOK()) {
+    BOOST_LOG_TRIVIAL(error) << "Failed to set load on boot title "
+                             << request->status << " " << request->message;
+    return false;
+  }
 
-   */
-
-  return false;
+  return true;
 }
 
 std::shared_ptr<Thread> XBDMDebugger::GetThread(int thread_id) {
@@ -97,7 +99,7 @@ std::shared_ptr<Thread> XBDMDebugger::GetThread(int thread_id) {
 
 bool XBDMDebugger::SetActiveThread(int thread_id) {
   if (GetThread(thread_id)) {
-    active_thread_id_ = thread_id;
+    active_thread_index_ = thread_id;
     return true;
   }
   return false;
@@ -360,6 +362,7 @@ bool XBDMDebugger::FetchThreads() {
 }
 
 bool XBDMDebugger::RestartAndReconnect(int reboot_flags) {
+  assert(context_);
   auto request = std::make_shared<::Reboot>(reboot_flags);
   context_->SendCommandSync(request);
   if (!request->IsOK()) {
@@ -378,4 +381,21 @@ bool XBDMDebugger::RestartAndReconnect(int reboot_flags) {
 
   SetDebugger(true);
   return FetchThreads();
+}
+
+bool XBDMDebugger::StepFunction() {
+  int thread_id = ActiveThreadID();
+  if (thread_id < 0) {
+    return false;
+  }
+
+  if (!Stop()) {
+    return false;
+  }
+
+  bool ret = true;
+  auto request = std::make_shared<::FuncCall>(thread_id);
+  context_->SendCommandSync(request);
+  ret = request->IsOK();
+  return Go() && ret;
 }

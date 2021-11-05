@@ -7,9 +7,9 @@
 #include <string>
 
 #include "gdb/gdb_packet.h"
-#include "net/delegating_server.h"
 #include "net/ip_address.h"
 
+class DelegatingServer;
 class GDBPacket;
 class GDBTransport;
 class RDCPProcessedRequest;
@@ -32,16 +32,13 @@ class XBOXInterface {
     return xbdm_debugger_;
   }
 
+  [[nodiscard]] std::shared_ptr<XBDMContext> Context() const {
+    return xbdm_context_;
+  }
+
   void StartGDBServer(const IPAddress &address);
   void StopGDBServer();
-  bool GetGDBListenAddress(IPAddress &ret) const {
-    if (!gdb_server_) {
-      return false;
-    }
-
-    ret = gdb_server_->Address();
-    return true;
-  }
+  bool GetGDBListenAddress(IPAddress &ret) const;
 
   bool StartNotificationListener(const IPAddress &address);
 
