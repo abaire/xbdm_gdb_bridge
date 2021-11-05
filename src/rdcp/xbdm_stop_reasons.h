@@ -8,14 +8,34 @@
 
 #include "rdcp/rdcp_processed_request.h"
 
+enum StopReasonType {
+  SRT_UNKNOWN,
+  SRT_DEBUGSTR,
+  SRT_ASSERTION,
+  SRT_BREAKPOINT,
+  SRT_SINGLE_STEP,
+  SRT_WATCHPOINT,
+  SRT_EXECUTION_STATE_CHANGED,
+  SRT_EXCEPTION,
+  SRT_THREAD_CREATED,
+  SRT_THREAD_TERMINATED,
+  SRT_MODULE_LOADED,
+  SRT_SECTION_LOADED,
+  SRT_SECTION_UNLOADED,
+  SRT_RIP,
+  SRT_RIP_STOP,
+};
+
 struct StopReasonBase_ {
-  explicit StopReasonBase_(int signal) : signal(signal) {}
+  explicit StopReasonBase_(StopReasonType type, int signal)
+      : type(type), signal(signal) {}
 
   friend std::ostream &operator<<(std::ostream &os,
                                   const StopReasonBase_ &base) {
     return base.WriteStream(os);
   }
 
+  StopReasonType type;
   int signal;
 
  protected:
@@ -23,19 +43,21 @@ struct StopReasonBase_ {
 };
 
 struct StopReasonTrapBase_ : StopReasonBase_ {
-  StopReasonTrapBase_() : StopReasonBase_(SIGTRAP) {}
+  explicit StopReasonTrapBase_(StopReasonType type)
+      : StopReasonBase_(type, SIGTRAP) {}
 };
 
 struct StopReasonUnknown : StopReasonTrapBase_ {
+  StopReasonUnknown() : StopReasonTrapBase_(SRT_UNKNOWN) {}
   std::ostream &WriteStream(std::ostream &os) const override {
     return os << "Unknown reason";
   }
 };
 
 struct StopReasonThreadContextBase_ : StopReasonTrapBase_ {
-  explicit StopReasonThreadContextBase_(std::string name,
+  explicit StopReasonThreadContextBase_(StopReasonType type, std::string name,
                                         RDCPMapResponse &parsed)
-      : StopReasonTrapBase_(), name(std::move(name)) {
+      : StopReasonTrapBase_(type), name(std::move(name)) {
     thread_id = parsed.GetDWORD("thread");
   }
 
@@ -49,18 +71,19 @@ struct StopReasonThreadContextBase_ : StopReasonTrapBase_ {
 
 struct StopReasonDebugstr : StopReasonThreadContextBase_ {
   explicit StopReasonDebugstr(RDCPMapResponse &parsed)
-      : StopReasonThreadContextBase_("debugstr", parsed) {}
+      : StopReasonThreadContextBase_(SRT_DEBUGSTR, "debugstr", parsed) {}
 };
 
 struct StopReasonAssertion : StopReasonThreadContextBase_ {
   explicit StopReasonAssertion(RDCPMapResponse &parsed)
-      : StopReasonThreadContextBase_("assert prompt", parsed) {}
+      : StopReasonThreadContextBase_(SRT_ASSERTION, "assert prompt", parsed) {}
 };
 
 struct StopReasonThreadAndAddressBase_ : StopReasonTrapBase_ {
-  explicit StopReasonThreadAndAddressBase_(std::string name,
+  explicit StopReasonThreadAndAddressBase_(StopReasonType type,
+                                           std::string name,
                                            RDCPMapResponse &parsed)
-      : StopReasonTrapBase_(), name(std::move(name)) {
+      : StopReasonTrapBase_(type), name(std::move(name)) {
     thread_id = parsed.GetDWORD("thread");
     address = parsed.GetUInt32("Address");
   }
@@ -77,12 +100,13 @@ struct StopReasonThreadAndAddressBase_ : StopReasonTrapBase_ {
 
 struct StopReasonBreakpoint : StopReasonThreadAndAddressBase_ {
   explicit StopReasonBreakpoint(RDCPMapResponse &parsed)
-      : StopReasonThreadAndAddressBase_("breakpoint", parsed) {}
+      : StopReasonThreadAndAddressBase_(SRT_BREAKPOINT, "breakpoint", parsed) {}
 };
 
 struct StopReasonSingleStep : StopReasonThreadAndAddressBase_ {
   explicit StopReasonSingleStep(RDCPMapResponse &parsed)
-      : StopReasonThreadAndAddressBase_("single step", parsed) {}
+      : StopReasonThreadAndAddressBase_(SRT_SINGLE_STEP, "single step",
+                                        parsed) {}
 };
 
 struct StopReasonDataBreakpoint : StopReasonTrapBase_ {
@@ -93,7 +117,7 @@ struct StopReasonDataBreakpoint : StopReasonTrapBase_ {
     AT_EXECUTE,
   };
   explicit StopReasonDataBreakpoint(RDCPMapResponse &parsed)
-      : StopReasonTrapBase_() {
+      : StopReasonTrapBase_(SRT_WATCHPOINT) {
     thread_id = parsed.GetDWORD("thread");
     address = parsed.GetUInt32("Address");
 
@@ -161,7 +185,7 @@ struct StopReasonExecutionStateChange : StopReasonTrapBase_ {
     PENDING,
   };
   explicit StopReasonExecutionStateChange(RDCPMapResponse &parsed)
-      : StopReasonTrapBase_() {
+      : StopReasonTrapBase_(SRT_EXECUTION_STATE_CHANGED) {
     if (parsed.HasKey("stopped")) {
       state = STOPPED;
       state_name = "stopped";
@@ -197,7 +221,7 @@ struct StopReasonException : StopReasonTrapBase_ {
   };
 
   explicit StopReasonException(RDCPMapResponse &parsed)
-      : StopReasonTrapBase_() {
+      : StopReasonTrapBase_(SRT_EXCEPTION) {
     exception = parsed.GetUInt32("code");
     thread_id = parsed.GetDWORD("thread");
     address = parsed.GetUInt32("Address");
@@ -255,7 +279,7 @@ struct StopReasonException : StopReasonTrapBase_ {
 
 struct StopReasonCreateThread : StopReasonTrapBase_ {
   explicit StopReasonCreateThread(RDCPMapResponse &parsed)
-      : StopReasonTrapBase_() {
+      : StopReasonTrapBase_(SRT_THREAD_CREATED) {
     thread_id = parsed.GetDWORD("thread");
     start_address = parsed.GetDWORD("start");
   }
@@ -271,12 +295,13 @@ struct StopReasonCreateThread : StopReasonTrapBase_ {
 
 struct StopReasonTerminateThread : StopReasonThreadContextBase_ {
   explicit StopReasonTerminateThread(RDCPMapResponse &parsed)
-      : StopReasonThreadContextBase_("terminate thread", parsed) {}
+      : StopReasonThreadContextBase_(SRT_THREAD_TERMINATED, "terminate thread",
+                                     parsed) {}
 };
 
 struct StopReasonModuleLoad : StopReasonTrapBase_ {
   explicit StopReasonModuleLoad(RDCPMapResponse &parsed)
-      : StopReasonTrapBase_() {
+      : StopReasonTrapBase_(SRT_MODULE_LOADED) {
     name = parsed.GetString("name");
     base_address = parsed.GetUInt32("base");
     size = parsed.GetUInt32("size");
@@ -304,9 +329,9 @@ struct StopReasonModuleLoad : StopReasonTrapBase_ {
 };
 
 struct StopReasonSectionActionBase_ : StopReasonTrapBase_ {
-  explicit StopReasonSectionActionBase_(std::string action,
+  explicit StopReasonSectionActionBase_(StopReasonType type, std::string action,
                                         RDCPMapResponse &parsed)
-      : StopReasonTrapBase_(), action(std::move(action)) {
+      : StopReasonTrapBase_(type), action(std::move(action)) {
     name = parsed.GetString("name");
     base_address = parsed.GetUInt32("base");
     size = parsed.GetUInt32("size");
@@ -331,17 +356,20 @@ struct StopReasonSectionActionBase_ : StopReasonTrapBase_ {
 
 struct StopReasonSectionLoad : StopReasonSectionActionBase_ {
   explicit StopReasonSectionLoad(RDCPMapResponse &parsed)
-      : StopReasonSectionActionBase_("section load", parsed) {}
+      : StopReasonSectionActionBase_(SRT_SECTION_LOADED, "section load",
+                                     parsed) {}
 };
 
 struct StopReasonSectionUnload : StopReasonSectionActionBase_ {
   explicit StopReasonSectionUnload(RDCPMapResponse &parsed)
-      : StopReasonSectionActionBase_("section unload", parsed) {}
+      : StopReasonSectionActionBase_(SRT_SECTION_UNLOADED, "section unload",
+                                     parsed) {}
 };
 
 struct StopReasonRIPBase_ : StopReasonBase_ {
-  explicit StopReasonRIPBase_(std::string name, RDCPMapResponse &parsed)
-      : StopReasonBase_(SIGABRT), name(std::move(name)) {
+  explicit StopReasonRIPBase_(StopReasonType type, std::string name,
+                              RDCPMapResponse &parsed)
+      : StopReasonBase_(type, SIGABRT), name(std::move(name)) {
     thread_id = parsed.GetDWORD("thread");
     message = parsed.GetString("message");
   }
@@ -361,12 +389,12 @@ struct StopReasonRIPBase_ : StopReasonBase_ {
 
 struct StopReasonRIP : StopReasonRIPBase_ {
   explicit StopReasonRIP(RDCPMapResponse &parsed)
-      : StopReasonRIPBase_("RIP", parsed) {}
+      : StopReasonRIPBase_(SRT_RIP, "RIP", parsed) {}
 };
 
 struct StopReasonRIPStop : StopReasonRIPBase_ {
   explicit StopReasonRIPStop(RDCPMapResponse &parsed)
-      : StopReasonRIPBase_("RIPStop", parsed) {}
+      : StopReasonRIPBase_(SRT_RIP_STOP, "RIPStop", parsed) {}
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_RDCP_XBDM_STOP_REASONS_H_

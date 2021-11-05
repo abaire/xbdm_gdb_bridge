@@ -62,7 +62,7 @@ class GDBBridge {
   void SendEmpty() const;
   void SendError(uint8_t error) const;
 
-  bool SendThreadStopPacket(std::shared_ptr<Thread> thread);
+  bool SendThreadStopPacket(const std::shared_ptr<Thread> &thread);
 
  private:
   std::shared_ptr<GDBTransport> gdb_;
