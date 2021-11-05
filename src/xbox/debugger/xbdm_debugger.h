@@ -47,6 +47,8 @@ class XBDMDebugger {
   [[nodiscard]] std::list<std::shared_ptr<Module>> Modules();
   [[nodiscard]] std::list<std::shared_ptr<Section>> Sections();
 
+  std::vector<int32_t> GetThreadIDs();
+
   [[nodiscard]] int ActiveThreadID() const {
     auto thread = ActiveThread();
     if (thread) {
@@ -77,6 +79,8 @@ class XBDMDebugger {
     return threads_.front()->thread_id;
   }
 
+  [[nodiscard]] std::shared_ptr<Thread> GetAnyThread();
+
   [[nodiscard]] std::shared_ptr<Thread> GetThread(int thread_id);
 
   bool SetActiveThread(int thread_id);
@@ -95,15 +99,28 @@ class XBDMDebugger {
   //! Halts the active thread.
   bool Halt();
 
+  [[nodiscard]] bool Stop() const;
+  [[nodiscard]] bool Go() const;
+
   bool FetchThreads();
   bool FetchModules();
   bool RestartAndAttach(int flags = Reboot::kStop);
 
+  bool StepInstruction();
   bool StepFunction();
 
+  std::optional<std::vector<uint8_t>> GetMemory(uint32_t address,
+                                                uint32_t length);
+  bool SetMemory(uint32_t address, const std::vector<uint8_t> &data);
+
+  bool AddBreakpoint(uint32_t address);
+  bool AddReadWatch(uint32_t address, uint32_t length);
+  bool AddWriteWatch(uint32_t address, uint32_t length);
+  bool RemoveBreakpoint(uint32_t address);
+  bool RemoveReadWatch(uint32_t address, uint32_t length);
+  bool RemoveWriteWatch(uint32_t address, uint32_t length);
+
  private:
-  [[nodiscard]] bool Stop() const;
-  [[nodiscard]] bool Go() const;
   [[nodiscard]] bool BreakAtStart() const;
   bool SetDebugger(bool enabled);
   bool RestartAndReconnect(uint32_t reboot_flags);

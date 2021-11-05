@@ -39,6 +39,8 @@ class GDBPacket {
     return std::move(ret);
   }
 
+  [[nodiscard]] std::vector<uint8_t>::const_iterator FindFirst(char item) const;
+
   [[nodiscard]] uint8_t Checksum() const { return checksum_; }
   [[nodiscard]] bool ChecksumOK() const { return checksum_ok_; }
 

@@ -47,8 +47,8 @@ struct ShellCommandGDB : Command {
       address = IPAddress(args.front());
     }
 
-    interface.StartGDBServer(address);
-    if (!interface.GetGDBListenAddress(address)) {
+    if (!interface.StartGDBServer(address) ||
+        !interface.GetGDBListenAddress(address)) {
       std::cout << "Failed to start GDB server." << std::endl;
     } else {
       std::cout << "GDB server listening at Address " << address << std::endl;

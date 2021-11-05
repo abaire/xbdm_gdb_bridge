@@ -121,3 +121,5 @@ bool Thread::Resume(XBDMContext &ctx) {
   ctx.SendCommandSync(request);
   return request->IsOK();
 }
+
+bool Thread::StepInstruction(XBDMContext &ctx) { return false; }

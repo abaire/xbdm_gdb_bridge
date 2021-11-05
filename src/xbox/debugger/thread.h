@@ -6,7 +6,7 @@
 #include <optional>
 
 #include "rdcp/rdcp_response_processors.h"
-#include "rdcp/thread_context.h"
+#include "rdcp/types/thread_context.h"
 #include "rdcp/xbdm_stop_reasons.h"
 
 class XBDMContext;
@@ -25,6 +25,8 @@ struct Thread {
   bool Continue(XBDMContext &ctx, bool break_on_exceptions = true);
   bool Suspend(XBDMContext &ctx);
   bool Resume(XBDMContext &ctx);
+
+  bool StepInstruction(XBDMContext &ctx);
 
  private:
   void Parse(const RDCPMapResponse &parsed) {

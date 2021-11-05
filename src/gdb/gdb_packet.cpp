@@ -1,5 +1,6 @@
 #include "gdb_packet.h"
 
+#include <algorithm>
 #include <boost/algorithm/string.hpp>
 #include <boost/log/trivial.hpp>
 #include <cstdint>
@@ -20,7 +21,8 @@ struct GDBPacketEscaper {
 
   template <typename FindResultT>
   std::vector<char> operator()(const FindResultT &match) const {
-    std::vector<char> ret(match.size() * 2);
+    std::vector<char> ret;
+    ret.reserve(match.size() * 2);
     for (auto it = match.begin(); it != match.end(); ++it) {
       ret.push_back(kPacketEscapeChar);
       ret.push_back(*it ^ 0x20);
@@ -45,6 +47,10 @@ static uint8_t Mod256Checksum(const uint8_t *buffer, long buffer_len) {
 
 void GDBPacket::CalculateChecksum() {
   checksum_ = Mod256Checksum(data_.data(), static_cast<long>(data_.size()));
+}
+
+std::vector<uint8_t>::const_iterator GDBPacket::FindFirst(char item) const {
+  return std::find(data_.cbegin(), data_.cend(), static_cast<uint8_t>(item));
 }
 
 long GDBPacket::Parse(const uint8_t *buffer, size_t buffer_length) {
@@ -97,7 +103,8 @@ long GDBPacket::Parse(const uint8_t *buffer, size_t buffer_length) {
 std::vector<uint8_t> GDBPacket::Serialize() const {
   std::vector<uint8_t> escaped_body = GDBPacketEscaper::EscapeBuffer(data_);
 
-  std::vector<uint8_t> ret(escaped_body.size() + 4);
+  std::vector<uint8_t> ret;
+  ret.reserve(escaped_body.size() + 4);
   ret.push_back(kPacketLeader);
   ret.insert(ret.end(), escaped_body.begin(), escaped_body.end());
   ret.push_back(kPacketTrailer);

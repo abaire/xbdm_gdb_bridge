@@ -129,6 +129,11 @@ void TCPConnection::DoSend() {
     return;
   }
 
+#if 1
+  std::string data(write_buffer_.begin(), write_buffer_.begin() + bytes_sent);
+  BOOST_LOG_TRIVIAL(trace) << "Sent " << bytes_sent << " bytes " << data;
+#endif
+
   write_buffer_.erase(write_buffer_.begin(),
                       std::next(write_buffer_.begin(), bytes_sent));
 }

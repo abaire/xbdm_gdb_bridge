@@ -3,11 +3,15 @@
 
 #include "gdb_bridge.h"
 
+#include <boost/algorithm/hex.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/log/trivial.hpp>
 #include <cstdio>
 
 #include "gdb/gdb_packet.h"
 #include "gdb/gdb_transport.h"
+#include "gdb_registers.h"
+#include "util/parsing.h"
 #include "xbox/debugger/xbdm_debugger.h"
 
 GDBBridge::GDBBridge(std::shared_ptr<XBDMContext> xbdm_context,
@@ -32,6 +36,8 @@ void GDBBridge::Stop() {
 bool GDBBridge::HasGDBClient() const { return gdb_ && gdb_->IsConnected(); }
 
 bool GDBBridge::HandlePacket(const GDBPacket& packet) {
+  BOOST_LOG_TRIVIAL(trace) << "HANDLE PACKET: " << packet.DataString();
+
   switch (packet.Command()) {
     case 0x03:
       HandleInterruptRequest(packet);
@@ -284,36 +290,33 @@ void GDBBridge::HandleFileIO(const GDBPacket& packet) {
 }
 
 void GDBBridge::HandleReadGeneralRegisters(const GDBPacket& packet) {
-#if 0
-  def _handle_read_general_registers(self, pkt: GDBPacket):
-        thread_id = self._get_thread_context_for_command("g")
-        if thread_id == self.TID_ALL_THREADS:
-            logger.error(f"Unsupported 'g' query for all threads.")
-            self._send_empty()
-            return
+  char command;
+  assert(packet.GetFirstDataChar(command));
 
-        if thread_id == self.TID_ANY_THREAD:
-            thread_id = self._debugger.any_thread_id
+  int32_t thread_id = GetThreadIDForCommand(command);
+  if (thread_id < 0) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Unsupported read general registers query for all threads: "
+        << packet.DataString();
+    SendEmpty();
+    return;
+  }
 
-        thread = self._debugger.get_thread(thread_id)
+  if (!thread_id) {
+    thread_id = debugger_->AnyThreadID();
+  }
+  auto thread = debugger_->GetThread(thread_id);
+  if (!thread->FetchContextSync(*xbdm_)) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Failed to retrieve registers for thread " << thread_id;
+    SendError(EBUSY);
+    return;
+  }
+  thread->FetchFloatContextSync(*xbdm_);
 
-        context: debugger.Thread.FullContext = thread.get_full_context()
-        if not context:
-            self._send_error(self.ERR_RETRIEVAL_FAILED)
-
-        reg_info = {k: "0x%08X" % v for k, v in context.registers.items()}
-        logger.info(f"Registers:\n{reg_info}\n")
-
-        body = []
-        for register in resources.ORDERED_REGISTERS:
-            value: Optional[int] = context.registers.get(register, None)
-            str_value = resources.format_register_str(register, value)
-
-#logger.gdb(f "{register}: {str_value}")
-            body.append(str_value)
-
-        self.send_packet(GDBPacket("".join(body)))
-#endif
+  std::string response;
+  SerializeRegisters(thread->context, thread->float_context);
+  gdb_->Send(GDBPacket(response));
 }
 
 void GDBBridge::HandleWriteGeneralRegisters(const GDBPacket& packet) {
@@ -322,17 +325,23 @@ void GDBBridge::HandleWriteGeneralRegisters(const GDBPacket& packet) {
 }
 
 void GDBBridge::HandleSelectThreadForCommandGroup(const GDBPacket& packet) {
-#if 0
-  if len(pkt.data) < 3:
-            logger.error(f"Command missing parameters: {pkt.data}")
-            self.send_packet(GDBPacket("E"))
-            return
+  if (packet.Data().size() < 3) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Command missing parameters: " << packet.DataString();
+    SendError(EBADMSG);
+    return;
+  }
 
-        op = pkt.data[1]
-        thread_id = int(pkt.data[2:], 16)
-        self._command_thread_id_context[op] = thread_id
-        self._send_ok()
-#endif
+  char operation = static_cast<char>(packet.Data()[1]);
+  int32_t thread_id;
+  if (!MaybeParseHexInt(thread_id, packet.Data(), 2)) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Invalid thread_id parameter: " << packet.DataString();
+    SendError(EBADMSG);
+    return;
+  }
+  thread_id_for_command_[operation] = thread_id;
+  SendOK();
 }
 
 void GDBBridge::HandleStepInstruction(const GDBPacket& packet) {
@@ -351,35 +360,78 @@ void GDBBridge::HandleKill(const GDBPacket& packet) {
 }
 
 void GDBBridge::HandleReadMemory(const GDBPacket& packet) {
-#if 0
-  addr, length = pkt.data[1:].split(",")
-        addr = int(addr, 16)
-        length = int(length, 16)
-        mem: Optional[bytes] = self._debugger.get_memory(addr, length)
-        if mem:
-            self.send_packet(GDBPacket(mem.hex()))
-        else:
-            self._send_error(errno.EFAULT)
-#endif
+  auto split = packet.FindFirst(',');
+
+  std::string address_str(packet.Data().begin() + 1, split);
+  std::string length_str(split + 1, packet.Data().end());
+
+  uint32_t address;
+  if (!MaybeParseHexInt(address, address_str)) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Invalid address parameter: " << packet.DataString();
+    SendError(EBADMSG);
+    return;
+  }
+
+  uint32_t length;
+  if (!MaybeParseHexInt(length, length_str)) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Invalid address parameter: " << packet.DataString();
+    SendError(EBADMSG);
+    return;
+  }
+
+  auto memory = debugger_->GetMemory(address, length);
+  if (memory.has_value()) {
+    gdb_->Send(GDBPacket(*memory));
+  } else {
+    SendError(EFAULT);
+  }
 }
 
 void GDBBridge::HandleWriteMemory(const GDBPacket& packet) {
-#if 0
-  place, data = pkt.data[1:].split(":")
-        addr, length = place.split(",")
-        addr = int(addr, 16)
-        length = int(length, 16)
+  auto place_data_split = packet.FindFirst(':');
+  auto address_length_split = packet.FindFirst(',');
 
-        if not length:
-            self._send_ok()
-            return
+  std::string length_str(address_length_split + 1, place_data_split);
 
-        data = binascii.unhexlify(data)
-        if length != len(data):
-            self._send_error(errno.EBADMSG)
-            return
-        self._set_memory(addr, data)
-#endif
+  uint32_t length;
+  if (!MaybeParseHexInt(length, length_str)) {
+    // GDB sometimes sends 0-length writes, possibly to see if writes are
+    // allowed?
+    // TODO: Verify that the address is writable and return an error?
+    SendOK();
+    return;
+  }
+
+  std::string address_str(packet.Data().begin() + 1, address_length_split);
+  uint32_t address;
+  if (!MaybeParseHexInt(address, address_str)) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Invalid address parameter: " << packet.DataString();
+    SendError(EBADMSG);
+    return;
+  }
+
+  std::string data_str(place_data_split + 1, packet.Data().end());
+  std::vector<uint8_t> data;
+  boost::algorithm::unhex(place_data_split + 1, packet.Data().end(),
+                          data.begin());
+
+  if (data.size() != length) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Failed to unpack " << length << " bytes from hex data. Got "
+        << data.size() << " bytes. " << packet.DataString();
+    SendError(EBADMSG);
+    return;
+  }
+
+  if (!debugger_->SetMemory(address, data)) {
+    SendError(EFAULT);
+    return;
+  }
+
+  SendOK();
 }
 
 void GDBBridge::HandleReadRegister(const GDBPacket& packet) {
@@ -393,55 +445,62 @@ void GDBBridge::HandleWriteRegister(const GDBPacket& packet) {
 }
 
 void GDBBridge::HandleReadQuery(const GDBPacket& packet) {
-#if 0
-  query = pkt.data[1:]
+  std::string query(packet.Data().begin() + 1, packet.Data().end());
 
-        if query.startswith("Attached"):
-            self._handle_query_attached(pkt)
-            return
+  if (boost::algorithm::starts_with(query, "Attached")) {
+    HandleQueryAttached(packet);
+    return;
+  }
 
-        if query.startswith("Supported"):
-            self._handle_query_supported(pkt)
-            return
+  if (boost::algorithm::starts_with(query, "Supported")) {
+    HandleQuerySupported(packet);
+    return;
+  }
 
-        if query.startswith("ThreadExtraInfo"):
-            self._handle_query_thread_extra_info(pkt)
-            return
+  if (boost::algorithm::starts_with(query, "ThreadExtraInfo")) {
+    HandleQueryThreadExtraInfo(packet);
+    return;
+  }
 
-        if query == "fThreadInfo":
-            self._handle_thread_info_start()
-            return
+  if (query == "fThreadInfo") {
+    HandleThreadInfoStart();
+    return;
+  }
 
-        if query == "sThreadInfo":
-            self._handle_thread_info_continue()
-            return
+  if (query == "sThreadInfo") {
+    HandleThreadInfoContinue();
+    return;
+  }
 
-        if query == "TStatus":
-            self._handle_query_trace_status()
-            return
+  if (query == "TStatus") {
+    HandleQueryTraceStatus();
+    return;
+  }
 
-        if query == "C":
-            self._handle_query_current_thread_id()
-            return
+  if (query == "C") {
+    HandleQueryCurrentThreadID();
+    return;
+  }
 
-        if query.startswith("Xfer:features:read:"):
-            self._handle_features_read(pkt)
-            return
+  if (boost::algorithm::starts_with(query, "Xfer:features:read:")) {
+    HandleFeaturesRead(packet);
+    return;
+  }
 
-        logger.error(f"Unsupported query read packet {pkt.data}")
-        self.send_packet(GDBPacket())
-#endif
+  BOOST_LOG_TRIVIAL(error) << "Unsupported query read packet "
+                           << packet.DataString();
+  SendEmpty();
 }
 
 void GDBBridge::HandleWriteQuery(const GDBPacket& packet) {
-#if 0
-  if pkt.data == "QStartNoAckMode":
-            self._start_no_ack_mode()
-            return
+  if (packet.DataString() == "QStartNoAckMode") {
+    gdb_->SetNoAckMode(true);
+    return;
+  }
 
-        logger.error(f"Unsupported query write packet {pkt.data}")
-        self.send_packet(GDBPacket())
-#endif
+  BOOST_LOG_TRIVIAL(error) << "Unsupported query write packet "
+                           << packet.DataString();
+  SendEmpty();
 }
 
 void GDBBridge::HandleRestartSystem(const GDBPacket& packet) {
@@ -470,365 +529,201 @@ void GDBBridge::HandleCheckThreadAlive(const GDBPacket& packet) {
 }
 
 void GDBBridge::HandleExtendedVCommand(const GDBPacket& packet) {
-#if 0
-  if pkt.data == "vCont?":
-            self._handle_vcont_query()
-            return
+  std::string data = packet.DataString();
+  if (data == "vCont?") {
+    HandleVContQuery();
+    return;
+  }
 
-        if pkt.data.startswith("vCont;"):
-            self._handle_vcont(pkt.data[6:])
-            return
+  if (boost::algorithm::starts_with(data, "vCont;")) {
+    HandleVCont(data.substr(6));
+    return;
+  }
 
-#Suppress error for vMustReplyEmpty, which intentionally follows the same
-#handling as any other unsupported v packet.
-        if pkt.data != "vMustReplyEmpty":
-            logger.error(f"Unsupported v packet {pkt.data}")
-        self._send_empty()
-#endif
+  if (data != "vMustReplyEmpty") {
+    BOOST_LOG_TRIVIAL(error) << "Unsupported v packet: " << data;
+  }
+  SendEmpty();
 }
 
 void GDBBridge::HandleWriteMemoryBinary(const GDBPacket& packet) {
-#if 0
-  place, data = pkt.binary_data[1:].split(b":")
+  auto place_data_split = packet.FindFirst(':');
+  auto address_length_split = packet.FindFirst(',');
 
-        place = place.decode("utf-8")
-        addr, length = place.split(",")
-        addr = int(addr, 16)
-        length = int(length, 16)
+  std::string length_str(address_length_split + 1, place_data_split);
 
-        if not length:
-            self._send_ok()
-            return
+  uint32_t length;
+  if (!MaybeParseHexInt(length, length_str)) {
+    // GDB sometimes sends 0-length writes, possibly to see if writes are
+    // allowed?
+    // TODO: Verify that the address is writable and return an error?
+    SendOK();
+    return;
+  }
 
-        if length != len(data):
-            self._send_error(errno.EBADMSG)
-            return
-        self._set_memory(addr, data)
+  std::string address_str(packet.Data().begin() + 1, address_length_split);
+  uint32_t address;
+  if (!MaybeParseHexInt(address, address_str)) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Invalid address parameter: " << packet.DataString();
+    SendError(EBADMSG);
+    return;
+  }
 
-    def _set_memory(self, addr: int, data: bytes):
-        result = self._debugger.set_memory(addr, data)
-        if not result:
-            self._send_error(errno.EFAULT)
-            return
-        self._send_ok()
-#endif
+  std::vector<uint8_t> data(place_data_split + 1, packet.Data().end());
+  if (length != data.size()) {
+    BOOST_LOG_TRIVIAL(error) << "Packet size mismatch, got " << data.size()
+                             << " bytes but expected " << length;
+    SendError(EBADMSG);
+    return;
+  }
+
+  if (!debugger_->SetMemory(address, data)) {
+    SendError(EFAULT);
+  } else {
+    SendOK();
+  }
 }
 
-#if 0
-@staticmethod
-    def _extract_breakpoint_command_params(
-        pkt: GDBPacket,
-    ) -> Tuple[int, int, int, Optional[List]]:
-        elements = pkt.data[1:].split(";")
+static bool ExtractBreakpointCommandParams(
+    const GDBPacket& packet, int32_t& type, uint32_t& address, int32_t& kind,
+    std::vector<std::vector<uint8_t>>& args) {
+  {
+    static constexpr uint8_t delim[] = {';'};
+    boost::split(args, packet.Data(), boost::is_any_of(delim));
+    if (args.empty()) {
+      return false;
+    }
+  }
 
-        type, addr, kind = elements[0].split(",")
-        type = int(type)
-        addr = int(addr, 16)
-        kind = int(kind, 16)
+  static constexpr uint8_t delim[] = {','};
+  std::vector<std::vector<uint8_t>> type_address_kind;
+  boost::split(type_address_kind, args.front(), boost::is_any_of(delim));
 
-        args = None
-        if len(elements) > 1:
-            args = elements[1:]
+  if (type_address_kind.size() != 3) {
+    return false;
+  }
 
-        return type, addr, kind, args
-#endif
+  if (!MaybeParseHexInt(type, type_address_kind[0])) {
+    return false;
+  }
+  if (!MaybeParseHexInt(address, type_address_kind[1])) {
+    return false;
+  }
+  if (!MaybeParseHexInt(kind, type_address_kind[2])) {
+    return false;
+  }
+
+  args.erase(args.begin());
+
+  return true;
+}
 
 void GDBBridge::HandleRemoveBreakpointType(const GDBPacket& packet) {
-#if 0
-  type, addr, kind, _args = self._extract_breakpoint_command_params(pkt)
+  int32_t type;
+  uint32_t address;
+  int32_t int_arg;
+  std::vector<std::vector<uint8_t>> args;
+  if (!ExtractBreakpointCommandParams(packet, type, address, int_arg, args)) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Invalid Remove Breakpoint message " << packet.DataString();
+    SendError(EBADMSG);
+    return;
+  }
 
-        if type == self.BP_SOFTWARE:
-            self._handle_remove_software_breakpoint(addr, kind)
-            return
+  switch (type) {
+    case BP_SOFTWARE:
+      if (int_arg != 1) {
+        BOOST_LOG_TRIVIAL(warning)
+            << "Remove swbreak at " << std::hex << std::setw(8)
+            << std::setfill('0') << address << "with kind " << std::dec
+            << int_arg;
+      }
+      debugger_->RemoveBreakpoint(address);
+      SendOK();
+      return;
 
-        if type == self.BP_HARDWARE:
-            self._send_empty()
-            return
+    case BP_HARDWARE:
+      SendEmpty();
+      break;
 
-        if type == self.BP_WRITE:
-            self._handle_remove_write_breakpoint(addr, kind)
-            return
+    case BP_WRITE:
+      debugger_->RemoveWriteWatch(address, int_arg);
+      SendOK();
+      return;
 
-        if type == self.BP_READ:
-            self._handle_remove_read_breakpoint(addr, kind)
-            return
+    case BP_READ:
+      debugger_->RemoveReadWatch(address, int_arg);
+      SendOK();
+      return;
 
-        if type == self.BP_ACCESS:
-            self._handle_remove_access_breakpoint(addr, kind)
-            return
+    case BP_ACCESS:
+      debugger_->RemoveReadWatch(address, int_arg);
+      debugger_->RemoveWriteWatch(address, int_arg);
+      SendOK();
+      return;
 
-        logger.error(f"Unsupported packet {pkt.data}")
-        self.send_packet(GDBPacket())
+    default:
+      BOOST_LOG_TRIVIAL(error)
+          << "Unsupported remove breakpoint type " << packet.DataString();
+      break;
+  }
 
-    def _handle_remove_software_breakpoint(self, addr: int, kind: int):
-        if kind != 1:
-            logger.warning(f"Remove swbreak at 0x%X with kind {kind}" % addr)
-        self._debugger.remove_breakpoint_at_address(addr)
-        self._send_ok()
-
-    def _handle_remove_write_breakpoint(self, addr, length):
-        if not self._debugger.remove_write_watchpoint(addr, length):
-            self._send_error(errno.EBADMSG)
-        else:
-            self._send_ok()
-
-    def _handle_remove_read_breakpoint(self, addr, length):
-        if not self._debugger.remove_read_watchpoint(addr, length):
-            self._send_error(errno.EBADMSG)
-        else:
-            self._send_ok()
-
-    def _handle_remove_access_breakpoint(self, addr, length):
-        ret = self._debugger.remove_read_watchpoint(addr, length)
-        ret = self._debugger.remove_write_watchpoint(addr, length) and ret
-
-        if not ret:
-            self._send_error(errno.EBADMSG)
-        else:
-            self._send_ok()
-#endif
+  SendEmpty();
 }
 
 void GDBBridge::HandleInsertBreakpointType(const GDBPacket& packet) {
-#if 0
-  type, addr, kind, args = self._extract_breakpoint_command_params(pkt)
+  int32_t type;
+  uint32_t address;
+  int32_t int_arg;
+  std::vector<std::vector<uint8_t>> args;
+  if (!ExtractBreakpointCommandParams(packet, type, address, int_arg, args)) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Invalid Add Breakpoint message " << packet.DataString();
+    SendError(EBADMSG);
+    return;
+  }
 
-        if type == self.BP_SOFTWARE:
-            self._handle_insert_software_breakpoint(addr, kind, args)
-            return
+  switch (type) {
+    case BP_SOFTWARE:
+      if (int_arg != 1 || !args.empty()) {
+        BOOST_LOG_TRIVIAL(warning)
+            << "Partially supported insert swbreak " << std::hex << std::setw(8)
+            << std::setfill('0') << address << "with kind " << std::dec
+            << int_arg;
+      }
+      debugger_->AddBreakpoint(address);
+      SendOK();
+      return;
 
-        if type == self.BP_HARDWARE:
-            self._send_empty()
-            return
+    case BP_HARDWARE:
+      SendEmpty();
+      break;
 
-        if type == self.BP_WRITE:
-            self._handle_insert_write_breakpoint(addr, kind)
-            return
+    case BP_WRITE:
+      debugger_->AddWriteWatch(address, int_arg);
+      SendOK();
+      return;
 
-        if type == self.BP_READ:
-            self._handle_insert_read_breakpoint(addr, kind)
-            return
+    case BP_READ:
+      debugger_->AddReadWatch(address, int_arg);
+      SendOK();
+      return;
 
-        if type == self.BP_ACCESS:
-            self._handle_insert_access_breakpoint(addr, kind)
-            return
+    case BP_ACCESS:
+      debugger_->AddReadWatch(address, int_arg);
+      debugger_->AddWriteWatch(address, int_arg);
+      SendOK();
+      return;
 
-        logger.error(f"Unsupported packet {pkt.data}")
-        self._send_empty()
+    default:
+      BOOST_LOG_TRIVIAL(error)
+          << "Unsupported add breakpoint type " << packet.DataString();
+      break;
+  }
 
-    def _handle_insert_write_breakpoint(self, addr, length):
-        if not self._debugger.add_write_watchpoint(addr, length):
-            self._send_error(errno.EBADMSG)
-        else:
-            self._send_ok()
-
-    def _handle_insert_read_breakpoint(self, addr, length):
-        if not self._debugger.add_read_watchpoint(addr, length):
-            self._send_error(errno.EBADMSG)
-        else:
-            self._send_ok()
-
-    def _handle_insert_access_breakpoint(self, addr, length):
-        if not self._debugger.add_read_watchpoint(addr, length):
-            self._send_error(errno.EBADMSG)
-            return
-
-        if not self._debugger.add_write_watchpoint(addr, length):
-            self._send_error(errno.EBADMSG)
-            if not self._debugger.remove_read_watchpoint(addr, length):
-                logger.warning(
-                    "Failure to add write watchpoint left hanging read watchpoint at 0x%X %d"
-                    % (addr, length)
-                )
-        else:
-            self._send_ok()
-#endif
+  SendEmpty();
 }
-
-#if 0
-def _handle_query_attached(self, _pkt: GDBPacket):
-#If attached to an existing process:
-        self.send_packet(GDBPacket("1"))
-#elif started new process
-#self.send_packet(GDBPacket("0"))
-
-    def _handle_query_supported(self, pkt: GDBPacket):
-        if self._state != self.STATE_INIT:
-            logger.warning("Ignoring assumed qSupported retransmission")
-            return
-
-        request = pkt.data.split(":", 1)
-        if len(request) != 2:
-            logger.error(f"Unsupported qSupported message {pkt.data}")
-            return
-
-        response = []
-        features = request[1].split(";")
-        for feature in features:
-            if feature == "multiprocess+":
-#Do not support multiprocess extensions.
-                response.append("multiprocess-")
-                continue
-            if feature == "swbreak+":
-                self.features["swbreak"] = True
-                response.append("swbreak+")
-                continue
-            if feature == "hwbreak+":
-                response.append("hwbreak-")
-                continue
-            if feature == "qRelocInsn+":
-                response.append("qRelocInsn-")
-                continue
-            if feature == "fork-events+":
-                response.append("fork-events-")
-                continue
-            if feature == "vfork-events+":
-                response.append("vfork-events-")
-                continue
-            if feature == "exec-events+":
-                response.append("exec-events-")
-                continue
-            if feature == "vContSupported+":
-                response.append("vContSupported+")
-                continue
-            if feature == "QThreadEvents+":
-                response.append("QThreadEvents-")
-                continue
-            if feature == "no-resumed+":
-                response.append("no-resumed-")
-                continue
-            if feature == "xmlRegisters=i386":
-#Registers are provided via qXfer : features
-                continue
-
-        response.append("PacketSize=4096")
-
-#Disable acks.
-        response.append("QStartNoAckMode+")
-
-#Instruct GDB to ask us for CPU features since only a subset of i386
-#information is retrievable from XBDM.
-        response.append("qXfer:features:read+")
-
-        pkt = GDBPacket(";".join(response))
-
-        self._state = self.STATE_CONNECTED
-        self.send_packet(pkt)
-
-    def _handle_query_thread_extra_info(self, pkt: GDBPacket):
-        _, thread_id = pkt.data.split(",")
-        thread_id = int(thread_id, 16)
-
-        thread = self._debugger.get_thread(thread_id)
-        info = f"{thread_id} {thread.last_stop_reason or 'Running'}"
-        response = GDBPacket(bytes(info, "utf-8").hex())
-        self.send_packet(response)
-
-    def _handle_thread_info_start(self):
-        self._thread_info_buffer = [thr.thread_id for thr in self._debugger.threads]
-
-#Move the preferred thread to the front of the list.
-        first_id = self._debugger.any_thread_id
-        if first_id:
-            self._thread_info_buffer.remove(first_id)
-            self._thread_info_buffer.insert(0, first_id)
-
-        if not self._thread_info_buffer:
-            self.send_packet(GDBPacket("l"))
-            return
-        self._send_thread_info()
-
-    def _handle_thread_info_continue(self):
-        if not self._thread_info_buffer:
-            self.send_packet(GDBPacket("l"))
-            return
-        self._send_thread_info()
-
-    def _send_thread_info(self, send_all: bool = True):
-        if send_all:
-            threads = ",".join(["%x" % tid for tid in self._thread_info_buffer])
-            self.send_packet(GDBPacket(f"m{threads}"))
-            self._thread_info_buffer.clear()
-            return
-
-        self.send_packet(GDBPacket("m%x" % self._thread_info_buffer.pop()))
-
-    def _handle_query_trace_status(self):
-#TODO : Actually support trace experiments.
-#GDBPacket("T0")
-        self._send_empty()
-
-    def _handle_query_current_thread_id(self):
-        thread = self._debugger.active_thread
-        if not thread:
-            self._send_empty()
-            return
-
-        self.send_packet(GDBPacket("QC%x" % thread.thread_id))
-
-    def _handle_features_read(self, pkt: GDBPacket):
-        target_file, region = pkt.data[pkt.data.index("read:") + 5 :].split(":")
-        start, length = region.split(",")
-        start = int(start, 16)
-        length = int(length, 16)
-        end = start + length
-
-        body = resources.RESOURCES.get(target_file)
-        if not body:
-            self._send_error(0)
-            return
-
-        logger.gdb(f"Read requested from {target_file} {start} - {end}")
-        self._send_xfer_response(body, start, end)
-
-    def _send_xfer_response(self, body: bytes, start: int, end: int):
-        body_size = len(body)
-
-        if start >= body_size:
-            self.send_packet(GDBPacket("l"))
-            return
-
-        prefix = b"l" if end >= body_size else b"m"
-        if end > body_size:
-            end = body_size
-        body = body[start:end]
-
-        self.send_packet(GDBBinaryPacket(prefix + body))
-
-    def _handle_vcont_query(self):
-#Support
-#c - continue
-#C - continue with signal
-#s - step
-#S - step with signal
-        self.send_packet(GDBPacket("vcont;c;s"))
-
-    def _handle_vcont(self, args: str):
-        if not args:
-            logger.error("Unexpected empty vcont packet.")
-            self._send_error(1)
-            return
-
-        for command in args.split(";"):
-            if command == "c":
-                self._debugger.continue_all()
-                self._debugger.go()
-                self._send_ok()
-                continue
-
-            if command[0] == "s":
-                if ":" in command:
-                    thread_id = command.split(":", 1)[1]
-                    thread_id = int(thread_id, 16)
-                    self._debugger.set_active_thread(thread_id)
-                self._debugger.step_instruction()
-                self._send_ok()
-                continue
-
-            logger.error(f"TODO: IMPLEMENT _handle_vcont {args} - subcommand {command}")
-            self._send_error(errno.EBADMSG)
-            break
-#endif
 
 bool GDBBridge::SendThreadStopPacket(const std::shared_ptr<Thread>& thread) {
   if (!gdb_ || !gdb_->IsConnected()) {
@@ -904,4 +799,379 @@ bool GDBBridge::SendThreadStopPacket(const std::shared_ptr<Thread>& thread) {
 
   gdb_->Send(GDBPacket(buffer));
   return true;
+}
+
+int32_t GDBBridge::GetThreadIDForCommand(char command) const {
+  auto registered = thread_id_for_command_.find(command);
+  int32_t thread_id;
+  if (registered == thread_id_for_command_.end()) {
+    BOOST_LOG_TRIVIAL(warning) << "Request for registered thread with command '"
+                               << command << "' but no thread is set!";
+    thread_id = 0;
+  } else {
+    thread_id = registered->second;
+  }
+
+  return thread_id;
+}
+
+std::shared_ptr<Thread> GDBBridge::GetThreadForCommand(char command) const {
+  int32_t thread_id = GetThreadIDForCommand(command);
+  if (thread_id > 0) {
+    return debugger_->GetThread(thread_id);
+  }
+
+  return debugger_->GetAnyThread();
+}
+
+void GDBBridge::HandleQueryAttached(const GDBPacket& packet) {
+  // TODO: Check to see if the debugger is still attached.
+  gdb_->Send(GDBPacket("1"));
+}
+
+void GDBBridge::HandleQuerySupported(const GDBPacket& packet) {
+  // TODO: Disallow multiple qSupported queries on the same connection.
+
+  auto split = packet.FindFirst(':');
+  if (split == packet.Data().end()) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Invalid qSupported message " << packet.DataString();
+    SendEmpty();
+    return;
+  }
+
+  std::vector<std::string> features;
+  {
+    std::string feature_str(split + 1, packet.Data().end());
+    static constexpr uint8_t delim[] = {';'};
+    boost::split(features, feature_str, boost::is_any_of(delim));
+  }
+
+  std::string response =
+      "PacketSize=4096;QStartNoAckMode+;qXfer:features:read+;";
+  for (auto& feature : features) {
+    if (feature == "multiprocess+") {
+      response += "multiprocess-;";
+      continue;
+    }
+    if (feature == "swbreak+") {
+      response += "swbreak+;";
+      continue;
+    }
+    if (feature == "hwbreak+") {
+      response += "hwbreak-;";
+      continue;
+    }
+    if (feature == "qRelocInsn+") {
+      response += "qRelocInsn-;";
+      continue;
+    }
+    if (feature == "fork-events+") {
+      response += "fork-events-;";
+      continue;
+    }
+    if (feature == "vfork-events+") {
+      response += "vfork-events-;";
+      continue;
+    }
+    if (feature == "exec-events+") {
+      response += "exec-events-;";
+      continue;
+    }
+    if (feature == "vContSupported+") {
+      response += "vContSupported+;";
+      continue;
+    }
+    if (feature == "QThreadEvents+") {
+      response += "QThreadEvents-;";
+      continue;
+    }
+    if (feature == "no-resumed+") {
+      response += "no-resumed-;";
+      continue;
+    }
+    if (feature == "xmlRegisters=i386") {
+      continue;
+    }
+
+    BOOST_LOG_TRIVIAL(trace) << "Unknown feature " << feature;
+  }
+
+  gdb_->Send(GDBPacket(response));
+}
+
+void GDBBridge::HandleQueryThreadExtraInfo(const GDBPacket& packet) {
+  auto split = packet.FindFirst(',');
+  int32_t thread_id;
+  if (!MaybeParseHexInt(thread_id, packet.Data(),
+                        split - packet.Data().begin())) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Invalid thread_id parameter: " << packet.DataString();
+    SendError(EBADMSG);
+    return;
+  }
+
+  auto thread = debugger_->GetThread(thread_id);
+  if (!thread) {
+    BOOST_LOG_TRIVIAL(error)
+        << "TheradExtraInfo query for non-existent thread id: " << thread_id;
+    SendError(EBADMSG);
+    return;
+  }
+
+  char buffer[128] = {0};
+  std::string stop_reason;
+  if (!thread->stopped) {
+    stop_reason = "Running";
+  } else {
+    switch (thread->last_stop_reason->type) {
+      case SRT_DEBUGSTR:
+        stop_reason = "debugstr";
+        break;
+
+      case SRT_ASSERTION:
+        stop_reason = "assert";
+        break;
+
+      case SRT_BREAKPOINT:
+        stop_reason = "breakpoint";
+        break;
+
+      case SRT_SINGLE_STEP:
+        stop_reason = "single_step";
+        break;
+
+      case SRT_WATCHPOINT:
+        stop_reason = "watchpoint";
+        break;
+
+      case SRT_EXECUTION_STATE_CHANGED:
+        stop_reason = "execution_state_changed";
+        break;
+
+      case SRT_EXCEPTION:
+        stop_reason = "exception";
+        break;
+
+      case SRT_THREAD_CREATED:
+        stop_reason = "thread_created";
+        break;
+
+      case SRT_THREAD_TERMINATED:
+        stop_reason = "thread_terminated";
+        break;
+
+      case SRT_MODULE_LOADED:
+        stop_reason = "module_loaded";
+        break;
+
+      case SRT_SECTION_LOADED:
+        stop_reason = "section_loaded";
+        break;
+
+      case SRT_SECTION_UNLOADED:
+        stop_reason = "section_unloaded";
+        break;
+
+      case SRT_RIP:
+        stop_reason = "RIP";
+        break;
+
+      case SRT_RIP_STOP:
+        stop_reason = "RIP_Stop";
+        break;
+
+      case SRT_UNKNOWN:
+        stop_reason = "UNKNOWN_STATE";
+        break;
+    }
+  }
+  snprintf(buffer, 127, "%d %s", thread_id, stop_reason.c_str());
+
+  std::vector<uint8_t> data;
+  boost::algorithm::hex(buffer, data.begin());
+  gdb_->Send(GDBPacket(data));
+}
+
+void GDBBridge::HandleThreadInfoStart() {
+  thread_info_buffer_ = debugger_->GetThreadIDs();
+  SendThreadInfoBuffer();
+}
+
+void GDBBridge::HandleThreadInfoContinue() { SendThreadInfoBuffer(false); }
+
+void GDBBridge::SendThreadInfoBuffer(bool send_all) {
+  if (thread_info_buffer_.empty()) {
+    gdb_->Send(GDBPacket("l"));
+    return;
+  }
+
+  std::string send_buffer = "m";
+
+  char buffer[16] = {0};
+  auto it = thread_info_buffer_.begin();
+  snprintf(buffer, 15, "%x", *it++);
+  send_buffer += "buffer";
+
+  if (send_all) {
+    for (; it != thread_info_buffer_.end(); ++it) {
+      snprintf(buffer, 15, ",%x", *it);
+      send_buffer += "buffer";
+    }
+  }
+
+  if (it == thread_info_buffer_.end()) {
+    thread_info_buffer_.clear();
+    send_buffer[0] = 'l';
+  } else {
+    thread_info_buffer_.erase(thread_info_buffer_.begin(), it);
+  }
+}
+
+void GDBBridge::HandleQueryTraceStatus() { SendEmpty(); }
+
+void GDBBridge::HandleQueryCurrentThreadID() {
+  int32_t thread_id = debugger_->ActiveThreadID();
+  if (thread_id >= 0) {
+    char buffer[32] = {0};
+    snprintf(buffer, 31, "QC%x", thread_id);
+    gdb_->Send(GDBPacket(buffer));
+  } else {
+    SendEmpty();
+  }
+}
+
+void GDBBridge::HandleFeaturesRead(const GDBPacket& packet) {
+  std::string command = packet.DataString();
+
+  size_t body_start = command.find("read:");
+  if (body_start == std::string::npos) {
+    BOOST_LOG_TRIVIAL(error) << "Invalid feature read packet " << command;
+    SendError(EBADMSG);
+    return;
+  }
+  body_start += 5;
+
+  size_t target_region_delim = command.find(':', body_start);
+  if (target_region_delim == std::string::npos) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Invalid feature read packet, missing region " << command;
+    SendError(EBADMSG);
+    return;
+  }
+
+  std::string target_file =
+      command.substr(body_start, target_region_delim - body_start);
+  if (target_file != "target.xml") {
+    BOOST_LOG_TRIVIAL(error) << "Request for unknown resource " << target_file;
+    SendError(EBADMSG);
+    return;
+  }
+
+  size_t start_length_delim = command.find(',', target_region_delim + 1);
+  if (start_length_delim == std::string::npos) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Invalid feature read packet, missing offset,length " << command;
+    SendError(EBADMSG);
+    return;
+  }
+
+  std::string start_str(
+      std::next(command.begin(), static_cast<long>(target_region_delim) + 1),
+      std::next(command.begin(), static_cast<long>(start_length_delim)));
+  uint32_t start;
+  if (!MaybeParseHexInt(start, start_str)) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Invalid feature read packet, bad offset " << command;
+    SendError(EBADMSG);
+    return;
+  }
+
+  std::string length_str(
+      std::next(command.begin(), static_cast<long>(start_length_delim) + 1),
+      command.end());
+  uint32_t length;
+  if (!MaybeParseHexInt(length, length_str)) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Invalid feature read packet, bad length " << command;
+    SendError(EBADMSG);
+    return;
+  }
+
+  uint32_t end = start + length;
+
+  BOOST_LOG_TRIVIAL(trace) << "Feature read " << target_file << " [" << start
+                           << " - " << end << "]";
+
+  uint32_t available = kTargetXML.size();
+  if (start >= available) {
+    gdb_->Send(GDBPacket("l"));
+    return;
+  }
+
+  std::string buffer;
+  if (end >= available) {
+    buffer = "l";
+    length = available - start;
+  } else {
+    buffer = "m";
+  }
+
+  buffer += kTargetXML.substr(start, length);
+
+  gdb_->Send(GDBPacket(buffer));
+}
+
+void GDBBridge::HandleVContQuery() {
+  // c - continue
+  // s - step
+  gdb_->Send(GDBPacket("vcont;c;s"));
+}
+
+void GDBBridge::HandleVCont(const std::string& args) {
+  if (args.empty()) {
+    BOOST_LOG_TRIVIAL(error) << "Unexpected empty vcont packet.";
+    SendError(EBADMSG);
+  }
+
+  std::vector<std::string> commands;
+  {
+    static constexpr char delim[] = {';'};
+    boost::split(commands, args, boost::is_any_of(delim));
+  }
+
+  for (auto& command : commands) {
+    if (command == "c") {
+      if (!debugger_->ContinueAll() || !debugger_->Go()) {
+        BOOST_LOG_TRIVIAL(warning) << "Failed to continue after vcont;c";
+      }
+      SendOK();
+      continue;
+    }
+
+    if (command.front() == 's') {
+      std::vector<std::string> step_commands;
+      {
+        static constexpr char delim[] = {':'};
+        boost::split(commands, args, boost::is_any_of(delim));
+      }
+      if (step_commands.size() > 1) {
+        int thread_id;
+        if (!MaybeParseHexInt(thread_id, step_commands[1])) {
+          BOOST_LOG_TRIVIAL(error)
+              << "Failed to extract thread id from  vcont;s " << command;
+          SendError(EBADMSG);
+          continue;
+        }
+
+        debugger_->SetActiveThread(thread_id);
+      }
+      debugger_->StepInstruction();
+      SendOK();
+      continue;
+    }
+
+    BOOST_LOG_TRIVIAL(error) << "TODO: Implement vcont subcommand " << command;
+    SendEmpty();
+  }
 }

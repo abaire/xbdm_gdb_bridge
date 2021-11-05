@@ -2,7 +2,9 @@
 #define XBDM_GDB_BRIDGE_GDB_BRIDGE_H
 
 #include <cstdint>
+#include <map>
 #include <memory>
+#include <vector>
 
 class GDBPacket;
 class GDBTransport;
@@ -11,6 +13,16 @@ class XBDMContext;
 class XBDMDebugger;
 
 class GDBBridge {
+ public:
+  enum BreakpointType {
+    BP_INVALID = -1,
+    BP_SOFTWARE = 0,
+    BP_HARDWARE,
+    BP_WRITE,
+    BP_READ,
+    BP_ACCESS,
+  };
+
  public:
   explicit GDBBridge(std::shared_ptr<XBDMContext> xbdm_context,
                      std::shared_ptr<XBDMDebugger> debugger);
@@ -63,11 +75,30 @@ class GDBBridge {
   void SendError(uint8_t error) const;
 
   bool SendThreadStopPacket(const std::shared_ptr<Thread> &thread);
+  [[nodiscard]] int32_t GetThreadIDForCommand(char command) const;
+  [[nodiscard]] std::shared_ptr<Thread> GetThreadForCommand(char command) const;
+
+  void HandleQueryAttached(const GDBPacket &packet);
+  void HandleQuerySupported(const GDBPacket &packet);
+  void HandleQueryThreadExtraInfo(const GDBPacket &packet);
+  void HandleThreadInfoStart();
+  void HandleThreadInfoContinue();
+  void SendThreadInfoBuffer(bool send_all = true);
+  void HandleQueryTraceStatus();
+  void HandleQueryCurrentThreadID();
+  void HandleFeaturesRead(const GDBPacket &packet);
+
+  void HandleVContQuery();
+  void HandleVCont(const std::string &args);
 
  private:
   std::shared_ptr<GDBTransport> gdb_;
   std::shared_ptr<XBDMDebugger> debugger_;
   std::shared_ptr<XBDMContext> xbdm_;
+
+  std::map<char, int> thread_id_for_command_;
+
+  std::vector<int32_t> thread_info_buffer_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_GDB_BRIDGE_H

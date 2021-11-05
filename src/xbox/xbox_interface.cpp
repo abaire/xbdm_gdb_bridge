@@ -155,14 +155,20 @@ void XBOXInterface::OnGDBClientConnected(int sock, IPAddress& address) {
     return;
   }
 
-  xbdm_debugger_->Attach();
   BOOST_LOG_TRIVIAL(trace) << "GDB channel established from " << address;
   auto transport = std::make_shared<GDBTransport>(
       name_, sock, address, [this](const std::shared_ptr<GDBPacket>& packet) {
         this->OnGDBPacketReceived(packet);
       });
-  select_thread_->AddConnection(transport);
-  gdb_bridge_->AddTransport(transport);
+
+  // Bounce to the executor so the select thread is not blocked by any attempt
+  // to communicate with XBDM.
+  assert(gdb_executor_);
+  boost::asio::dispatch(*gdb_executor_, [this, transport]() mutable {
+    this->xbdm_debugger_->Attach();
+    this->select_thread_->AddConnection(transport);
+    this->gdb_bridge_->AddTransport(transport);
+  });
 }
 
 void XBOXInterface::OnGDBPacketReceived(

@@ -14,8 +14,8 @@
 #include "rdcp/rdcp_request.h"
 #include "rdcp/rdcp_response.h"
 #include "rdcp/rdcp_status_code.h"
-#include "rdcp/thread_context.h"
 #include "rdcp/types/module.h"
+#include "rdcp/types/thread_context.h"
 #include "rdcp/xbdm_stop_reasons.h"
 #include "util/parsing.h"
 

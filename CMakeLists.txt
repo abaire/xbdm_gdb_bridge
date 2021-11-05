@@ -50,7 +50,7 @@ add_executable(
         src/rdcp/rdcp_response_processors.h
         src/rdcp/xbdm_requests.h
         src/rdcp/xbdm_stop_reasons.h
-        src/rdcp/thread_context.h
+        src/rdcp/types/thread_context.h
         src/rdcp/xbdm_transport.cpp
         src/rdcp/xbdm_transport.h
         src/shell/command.cpp
@@ -75,6 +75,8 @@ add_executable(
         src/xbox/xbox_interface.h
         src/xbox/bridge/gdb_bridge.cpp
         src/xbox/bridge/gdb_bridge.h
+        src/xbox/bridge/gdb_registers.cpp
+        src/xbox/bridge/gdb_registers.h
         src/xbox/debugger/memory_region.cpp
         src/xbox/debugger/memory_region.h
         src/rdcp/types/execution_state.h

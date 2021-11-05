@@ -1,11 +1,7 @@
 #ifndef XBDM_GDB_BRIDGE_GDB_TRANSPORT_H
 #define XBDM_GDB_BRIDGE_GDB_TRANSPORT_H
 
-#include <any>
-#include <deque>
 #include <functional>
-#include <list>
-#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -15,14 +11,6 @@
 
 class GDBTransport : public TCPConnection {
  public:
-  enum BreakpointType {
-    SOFTWARE = 0,
-    HARDWARE,
-    WRITE,
-    READ,
-    ACCESS,
-  };
-
   typedef std::function<void(const std::shared_ptr<GDBPacket> &)>
       PacketReceivedHandler;
 
@@ -42,9 +30,6 @@ class GDBTransport : public TCPConnection {
 
  private:
   bool no_ack_mode_{false};
-
-  std::recursive_mutex packet_queue_lock_;
-  std::deque<GDBPacket> packet_queue_;
 
   std::recursive_mutex unescaped_read_lock_;
   std::vector<uint8_t> unescaped_read_buffer_;

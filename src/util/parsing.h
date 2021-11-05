@@ -10,6 +10,23 @@ int32_t ParseInt32(const std::vector<uint8_t> &value);
 int32_t ParseInt32(const std::vector<char> &data);
 int32_t ParseInt32(const std::string &value);
 
+template <typename T>
+bool MaybeParseHexInt(T &ret, const std::vector<uint8_t> &data,
+                      size_t offset = 0) {
+  const char *start = reinterpret_cast<const char *>(data.data()) + offset;
+  char *end = nullptr;
+
+  ret = static_cast<T>(strtol(start, &end, 16));
+  return end != start;
+}
+
+template <typename T>
+bool MaybeParseHexInt(T &ret, const std::string &data) {
+  char *end = nullptr;
+  ret = static_cast<T>(strtol(data.c_str(), &end, 16));
+  return end != data.c_str();
+}
+
 struct ArgParser {
   explicit ArgParser(const std::vector<std::string> &args,
                      bool extract_command = false)

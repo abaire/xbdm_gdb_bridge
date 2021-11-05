@@ -129,6 +129,27 @@ std::list<std::shared_ptr<Section>> XBDMDebugger::Sections() {
   return sections_;
 }
 
+std::vector<int32_t> XBDMDebugger::GetThreadIDs() {
+  std::unique_lock<std::recursive_mutex> lock(threads_lock_);
+  std::vector<int32_t> ret;
+  ret.reserve(threads_.size());
+
+  int32_t active_thread_id = ActiveThreadID();
+  ret.push_back(active_thread_id);
+
+  for (auto &thread : threads_) {
+    if (thread->thread_id == active_thread_id) {
+      continue;
+    }
+    ret.push_back(thread->thread_id);
+  }
+  return std::move(ret);
+}
+
+std::shared_ptr<Thread> XBDMDebugger::GetAnyThread() {
+  return GetThread(AnyThreadID());
+}
+
 std::shared_ptr<Thread> XBDMDebugger::GetThread(int thread_id) {
   const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
   for (auto &it : threads_) {
@@ -490,6 +511,24 @@ bool XBDMDebugger::WaitForState(ExecutionState s,
       [this, s] { return this->state_ == s; });
 }
 
+bool XBDMDebugger::StepInstruction() {
+  auto thread = ActiveThread();
+  if (!thread) {
+    BOOST_LOG_TRIVIAL(error) << "StepInstruction called with no active thread.";
+    return false;
+  }
+
+  if (!Stop()) {
+    return false;
+  }
+
+  if (!thread->StepInstruction(*context_)) {
+    return false;
+  }
+
+  return Go();
+}
+
 bool XBDMDebugger::StepFunction() {
   int thread_id = ActiveThreadID();
   if (thread_id < 0) {
@@ -587,4 +626,36 @@ bool XBDMDebugger::Halt() {
   }
 
   return thread->Halt(*context_);
+}
+
+std::optional<std::vector<uint8_t>> XBDMDebugger::GetMemory(uint32_t address,
+                                                            uint32_t length) {
+  // TODO: IMPLEMENT ME;
+  BOOST_LOG_TRIVIAL(error) << "TODO: IMPLEMENT ME";
+  return {};
+}
+
+bool XBDMDebugger::SetMemory(uint32_t address,
+                             const std::vector<uint8_t> &data) {
+  return false;
+}
+
+bool XBDMDebugger::AddBreakpoint(uint32_t address) { return false; }
+
+bool XBDMDebugger::AddReadWatch(uint32_t address, uint32_t length) {
+  return false;
+}
+
+bool XBDMDebugger::AddWriteWatch(uint32_t address, uint32_t length) {
+  return false;
+}
+
+bool XBDMDebugger::RemoveBreakpoint(uint32_t address) { return false; }
+
+bool XBDMDebugger::RemoveReadWatch(uint32_t address, uint32_t length) {
+  return false;
+}
+
+bool XBDMDebugger::RemoveWriteWatch(uint32_t address, uint32_t length) {
+  return false;
 }

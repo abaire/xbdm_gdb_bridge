@@ -12,21 +12,7 @@ GDBTransport::GDBTransport(std::string name, int sock, IPAddress address,
       packet_received_handler_(std::move(handler)) {}
 
 void GDBTransport::Send(const GDBPacket &packet) {
-  const std::lock_guard<std::recursive_mutex> lock(packet_queue_lock_);
-  packet_queue_.push_back(packet);
-  WriteNextPacket();
-}
-
-void GDBTransport::WriteNextPacket() {
-  const std::lock_guard<std::recursive_mutex> lock(packet_queue_lock_);
-  if (packet_queue_.empty()) {
-    return;
-  }
-
-  auto buffer = packet_queue_.front().Serialize();
-  packet_queue_.pop_front();
-
-  TCPConnection::Send(buffer);
+  TCPConnection::Send(packet.Serialize());
 }
 
 void GDBTransport::OnBytesRead() {
@@ -44,11 +30,11 @@ void GDBTransport::OnBytesRead() {
       for (; it != read_buffer_.end(); ++it) {
         switch (*it) {
           case '+':
+            BOOST_LOG_TRIVIAL(trace) << "Ack received";
             continue;
 
           case '-':
-            BOOST_LOG_TRIVIAL(warning)
-                << "Remote requested resend." << std::endl;
+            BOOST_LOG_TRIVIAL(warning) << "Remote requested resend.";
             continue;
 
           case 0x03:
@@ -104,6 +90,9 @@ void GDBTransport::ProcessUnescapedReadBuffer() {
       }
       packets.push_back(std::make_shared<GDBPacket>(packet));
       it += bytes_consumed;
+      if (!no_ack_mode_) {
+        TCPConnection::Send(kAck, 1);
+      }
     }
 
     unescaped_read_buffer_.erase(unescaped_read_buffer_.begin(), it);
