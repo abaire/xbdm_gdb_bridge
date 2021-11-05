@@ -4,6 +4,7 @@
 
 #include "notification/xbdm_notification.h"
 #include "util/path.h"
+#include "util/timer.h"
 #include "xbox/xbdm_context.h"
 
 static constexpr uint32_t kRestartRebootingMaxWaitMilliseconds = 5 * 1000;
@@ -312,8 +313,8 @@ void XBDMDebugger::OnBreakpoint(
     return;
   }
 
-  // TODO: Consider fetching the full stop reason.
   thread->last_known_address = msg->address;
+  thread->FetchStopReasonSync(*context_);
 }
 
 void XBDMDebugger::OnWatchpoint(
@@ -519,14 +520,71 @@ bool XBDMDebugger::ContinueAll(bool no_break_on_exception) {
   return ret;
 }
 
-bool XBDMDebugger::HaltAll() {
+bool XBDMDebugger::HaltAll(uint32_t optimistic_max_wait) {
   std::list<std::shared_ptr<Thread>> threads = Threads();
-  bool ret = true;
-  for (auto &thread : threads) {
-    if (!thread->Halt(*context_)) {
-      BOOST_LOG_TRIVIAL(error) << "Failed to halt thread " << thread->thread_id;
-      ret = false;
+  if (threads.empty()) {
+    BOOST_LOG_TRIVIAL(warning) << "HaltAll called with no threads.";
+    return true;
+  }
+
+  {
+    auto request = std::make_shared<::Halt>();
+    context_->SendCommandSync(request);
+    if (!request->IsOK()) {
+      BOOST_LOG_TRIVIAL(error) << "Failed to request halt " << request->status
+                               << " " << request->message;
+      return false;
     }
   }
-  return ret;
+
+  if (!WaitForState(S_STOPPED, optimistic_max_wait)) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Failed to reach 'stopped' state. Current state is " << state_;
+    return false;
+  }
+
+  auto active_thread = ActiveThread();
+  if (active_thread) {
+    active_thread->FetchStopReasonSync(*context_);
+  } else {
+    for (auto &thread : threads) {
+      if (!thread->FetchStopReasonSync(*context_)) {
+        continue;
+      }
+      if (thread->stopped) {
+        SetActiveThread(thread->thread_id);
+        active_thread = thread;
+        break;
+      }
+    }
+    if (!active_thread) {
+      active_thread = threads.front();
+    }
+  }
+
+  // TODO: Verify that this state is possible.
+  // If the active_thread is not stopped, poll until it stops.
+  // It is likely that this case can never happen in practice, as the execution
+  // state is already guaranteed to be S_STOPPED at this point.
+  constexpr uint32_t kDelayPerLoopMilliseconds = 10;
+  while (!active_thread->stopped && optimistic_max_wait) {
+    WaitMilliseconds(kDelayPerLoopMilliseconds);
+    active_thread->FetchStopReasonSync(*context_);
+
+    if (kDelayPerLoopMilliseconds > optimistic_max_wait) {
+      break;
+    }
+    optimistic_max_wait -= kDelayPerLoopMilliseconds;
+  }
+
+  return active_thread->stopped;
+}
+
+bool XBDMDebugger::Halt() {
+  auto thread = ActiveThread();
+  if (!thread) {
+    return false;
+  }
+
+  return thread->Halt(*context_);
 }

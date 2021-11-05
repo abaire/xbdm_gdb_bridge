@@ -53,6 +53,7 @@ struct Thread {
   std::optional<ThreadFloatContext> float_context;
 
   std::optional<uint32_t> last_known_address;
+  bool stopped{false};
   std::shared_ptr<StopReasonBase_> last_stop_reason;
 };
 

@@ -14,4 +14,6 @@ class Timer {
   std::chrono::steady_clock::time_point start_;
 };
 
+void WaitMilliseconds(uint32_t milliseconds);
+
 #endif  // XBDM_GDB_BRIDGE_SRC_UTIL_TIMER_H_

@@ -93,6 +93,7 @@ bool Thread::FetchStopReasonSync(XBDMContext &ctx) {
     return false;
   }
 
+  stopped = request->stopped;
   last_stop_reason = request->stop_reason;
   return true;
 }

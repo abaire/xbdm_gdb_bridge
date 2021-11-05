@@ -6,6 +6,7 @@
 
 class GDBPacket;
 class GDBTransport;
+class Thread;
 class XBDMContext;
 class XBDMDebugger;
 
@@ -60,6 +61,8 @@ class GDBBridge {
   void SendOK() const;
   void SendEmpty() const;
   void SendError(uint8_t error) const;
+
+  bool SendThreadStopPacket(std::shared_ptr<Thread> thread);
 
  private:
   std::shared_ptr<GDBTransport> gdb_;

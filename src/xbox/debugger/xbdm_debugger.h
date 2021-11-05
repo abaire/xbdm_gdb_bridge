@@ -31,6 +31,9 @@ struct NotificationException;
 
 class XBDMDebugger {
  public:
+  static constexpr uint32_t kDefaultHaltAllMaxWaitMilliseconds = 250;
+
+ public:
   explicit XBDMDebugger(std::shared_ptr<XBDMContext> context);
 
   bool Attach();
@@ -87,7 +90,10 @@ class XBDMDebugger {
   }
 
   bool ContinueAll(bool no_break_on_exception = false);
-  bool HaltAll();
+  bool HaltAll(
+      uint32_t optimistic_max_wait = kDefaultHaltAllMaxWaitMilliseconds);
+  //! Halts the active thread.
+  bool Halt();
 
   bool FetchThreads();
   bool FetchModules();

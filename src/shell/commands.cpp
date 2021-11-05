@@ -681,6 +681,12 @@ Command::Result CommandNotifyAt::operator()(
   bool debug_flag = parser.ArgExists("debug");
   SendAndPrintMessage(interface,
                       std::make_shared<NotifyAt>(port, drop_flag, debug_flag));
+
+  if (!drop_flag) {
+    interface.AttachDebugNotificationHandler();
+  } else {
+    interface.DetachDebugNotificationHandler();
+  }
   return HANDLED;
 }
 

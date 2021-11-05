@@ -42,6 +42,8 @@ class XBOXInterface {
   bool GetGDBListenAddress(IPAddress &ret) const;
 
   bool StartNotificationListener(const IPAddress &address);
+  void AttachDebugNotificationHandler();
+  void DetachDebugNotificationHandler();
 
   std::shared_ptr<RDCPProcessedRequest> SendCommandSync(
       std::shared_ptr<RDCPProcessedRequest> command);
@@ -65,6 +67,8 @@ class XBOXInterface {
   std::shared_ptr<DelegatingServer> gdb_server_;
   std::shared_ptr<GDBBridge> gdb_bridge_;
   std::shared_ptr<boost::asio::thread_pool> gdb_executor_;
+
+  int debug_notification_handler_id_{0};
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_XBOX_XBOX_INTERFACE_H_

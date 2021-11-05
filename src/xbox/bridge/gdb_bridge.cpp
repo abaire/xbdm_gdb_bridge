@@ -5,6 +5,7 @@
 
 #include "gdb/gdb_packet.h"
 #include "gdb/gdb_transport.h"
+#include "xbox/debugger/xbdm_debugger.h"
 
 GDBBridge::GDBBridge(std::shared_ptr<XBDMContext> xbdm_context,
                      std::shared_ptr<XBDMDebugger> debugger)
@@ -189,9 +190,22 @@ void GDBBridge::SendError(uint8_t error) const {
   gdb_->Send(GDBPacket(buffer));
 }
 
-void GDBBridge::HandleDeprecatedCommand(const GDBPacket& packet) {}
+void GDBBridge::HandleDeprecatedCommand(const GDBPacket& packet) {
+  BOOST_LOG_TRIVIAL(info) << "Ignoring deprecated command: "
+                          << packet.DataString();
+  SendEmpty();
+}
 
-void GDBBridge::HandleInterruptRequest(const GDBPacket& packet) {}
+void GDBBridge::HandleInterruptRequest(const GDBPacket& packet) {
+  if (!debugger_->HaltAll()) {
+    SendError(EBADMSG);
+    return;
+  }
+
+  auto thread = debugger_->ActiveThread();
+  assert(thread);
+  SendThreadStopPacket(thread);
+}
 
 void GDBBridge::HandleEnableExtendedMode(const GDBPacket& packet) {}
 
@@ -275,3 +289,27 @@ void GDBBridge::HandleWriteMemoryBinary(const GDBPacket& packet) {}
 void GDBBridge::HandleRemoveBreakpointType(const GDBPacket& packet) {}
 
 void GDBBridge::HandleInsertBreakpointType(const GDBPacket& packet) {}
+
+bool GDBBridge::SendThreadStopPacket(std::shared_ptr<Thread> thread) {
+  if (!gdb_ || !gdb_->IsConnected()) {
+    return false;
+  }
+
+  if (!thread) {
+    return false;
+  }
+
+  auto stop_reason = thread->last_stop_reason;
+  if (not stop_reason) {
+    return false;
+  }
+
+  // TODO: send detailed information.
+  // see
+  // https://sourceware.org/gdb/onlinedocs/gdb/Stop-Reply-Packets.html#Stop-Reply-Packets
+  char buffer[32] = {0};
+  snprintf(buffer, 31, "T%02xthread:%x;", stop_reason->signal,
+           thread->thread_id);
+  gdb_->Send(GDBPacket(buffer));
+  return true;
+}

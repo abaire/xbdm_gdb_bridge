@@ -5,11 +5,13 @@
 #include <boost/asio/dispatch.hpp>
 #include <boost/log/trivial.hpp>
 #include <cassert>
+#include <iostream>
 #include <utility>
 
 #include "gdb/gdb_transport.h"
 #include "net/delegating_server.h"
 #include "net/select_thread.h"
+#include "notification/xbdm_notification.h"
 #include "xbox/bridge/gdb_bridge.h"
 #include "xbox/debugger/xbdm_debugger.h"
 #include "xbox/xbdm_context.h"
@@ -111,6 +113,26 @@ bool XBOXInterface::StartNotificationListener(const IPAddress& address) {
   return xbdm_context_->StartNotificationListener(address);
 }
 
+void XBOXInterface::AttachDebugNotificationHandler() {
+  if (debug_notification_handler_id_ > 0) {
+    return;
+  }
+
+  debug_notification_handler_id_ = xbdm_context_->RegisterNotificationHandler(
+      [](const std::shared_ptr<XBDMNotification>& notification) {
+        std::cout << *notification << std::endl;
+      });
+}
+
+void XBOXInterface::DetachDebugNotificationHandler() {
+  if (debug_notification_handler_id_ <= 0) {
+    return;
+  }
+
+  xbdm_context_->UnregisterNotificationHandler(debug_notification_handler_id_);
+  debug_notification_handler_id_ = 0;
+}
+
 std::shared_ptr<RDCPProcessedRequest> XBOXInterface::SendCommandSync(
     std::shared_ptr<RDCPProcessedRequest> command) {
   assert(xbdm_context_);
@@ -133,6 +155,7 @@ void XBOXInterface::OnGDBClientConnected(int sock, IPAddress& address) {
     return;
   }
 
+  xbdm_debugger_->Attach();
   BOOST_LOG_TRIVIAL(trace) << "GDB channel established from " << address;
   auto transport = std::make_shared<GDBTransport>(
       name_, sock, address, [this](const std::shared_ptr<GDBPacket>& packet) {

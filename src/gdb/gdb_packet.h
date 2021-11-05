@@ -34,6 +34,11 @@ class GDBPacket {
   }
 
   [[nodiscard]] const std::vector<uint8_t> &Data() const { return data_; }
+  [[nodiscard]] std::string DataString() const {
+    std::string ret(data_.begin(), data_.end());
+    return std::move(ret);
+  }
+
   [[nodiscard]] uint8_t Checksum() const { return checksum_; }
   [[nodiscard]] bool ChecksumOK() const { return checksum_ok_; }
 
