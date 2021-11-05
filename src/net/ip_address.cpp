@@ -22,6 +22,11 @@ IPAddress::IPAddress(const std::string &addr) {
   } else {
     addr_.sin_addr.s_addr = htonl(inet_network(hostname_.c_str()));
     if (addr_.sin_addr.s_addr == INADDR_NONE) {
+      // See if the value is actually a valid port number.
+      uint32_t val = strtoul(addr.c_str(), nullptr, 10);
+      if (val > 0 && val < 0xFFFF) {
+        addr_.sin_port = htons(val & 0xFFFF);
+      }
       addr_.sin_addr.s_addr = INADDR_ANY;
     }
   }

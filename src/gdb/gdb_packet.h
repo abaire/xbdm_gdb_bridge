@@ -2,19 +2,29 @@
 #define XBDM_GDB_BRIDGE_SRC_GDB_GDB_PACKET_H_
 
 #include <cstdint>
+#include <string>
 #include <utility>
 #include <vector>
 
 class GDBPacket {
  public:
   GDBPacket() = default;
+
+  explicit GDBPacket(const std::string &data) {
+    data_.assign(data.begin(), data.end());
+    CalculateChecksum();
+  }
+
   explicit GDBPacket(std::vector<uint8_t> data) : data_(std::move(data)) {
     CalculateChecksum();
   }
+
   GDBPacket(const uint8_t *data, size_t data_len) {
     data_.assign(data, data + data_len);
     CalculateChecksum();
   }
+
+  [[nodiscard]] char Command() const { return static_cast<char>(data_[0]); }
 
   [[nodiscard]] const std::vector<uint8_t> &Data() const { return data_; }
   [[nodiscard]] uint8_t Checksum() const { return checksum_; }

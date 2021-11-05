@@ -70,6 +70,7 @@ bool XBDMContext::GetNotificationServerAddress(IPAddress& address) const {
 void XBDMContext::OnNotificationChannelConnected(int sock, IPAddress& address) {
   BOOST_LOG_TRIVIAL(trace) << "Notification channel established from "
                            << address;
+  // TODO: Hold on to the transport so it can be shut down gracefully.
   auto transport = std::make_shared<XBDMNotificationTransport>(
       name_, sock, address,
       [this](std::shared_ptr<XBDMNotification> notification) {

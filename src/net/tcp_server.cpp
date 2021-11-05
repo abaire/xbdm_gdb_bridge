@@ -38,7 +38,7 @@ bool TCPServer::Listen(const IPAddress &address) {
     goto close_and_fail;
   }
 
-  BOOST_LOG_TRIVIAL(trace) << "Notification listener started at " << address_;
+  BOOST_LOG_TRIVIAL(trace) << "Server listening at " << address_;
 
   return true;
 

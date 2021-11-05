@@ -77,7 +77,7 @@ void GDBTransport::OnBytesRead() {
 }
 
 void GDBTransport::ProcessUnescapedReadBuffer() {
-  std::list<GDBPacket> packets;
+  std::list<std::shared_ptr<GDBPacket>> packets;
 
   {
     const std::lock_guard<std::recursive_mutex> unescaped_lock(
@@ -89,7 +89,8 @@ void GDBTransport::ProcessUnescapedReadBuffer() {
     while (it != it_end) {
       if (*it == 0x03) {
         uint8_t interrupt_command = 0x03;
-        packets.emplace_back(&interrupt_command, 1);
+        packets.emplace_back(
+            std::make_shared<GDBPacket>(&interrupt_command, 1));
         ++it;
         if (!no_ack_mode_) {
           TCPConnection::Send(kAck, 1);
@@ -101,14 +102,14 @@ void GDBTransport::ProcessUnescapedReadBuffer() {
       if (!bytes_consumed) {
         break;
       }
-      packets.push_back(packet);
+      packets.push_back(std::make_shared<GDBPacket>(packet));
       it += bytes_consumed;
     }
 
     unescaped_read_buffer_.erase(unescaped_read_buffer_.begin(), it);
   }
 
-  for (auto packet : packets) {
+  for (auto &packet : packets) {
     packet_received_handler_(packet);
   }
 }

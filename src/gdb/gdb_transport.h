@@ -6,6 +6,7 @@
 #include <functional>
 #include <list>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <string>
 
@@ -22,7 +23,8 @@ class GDBTransport : public TCPConnection {
     ACCESS,
   };
 
-  typedef std::function<void(GDBPacket &)> PacketReceivedHandler;
+  typedef std::function<void(const std::shared_ptr<GDBPacket> &)>
+      PacketReceivedHandler;
 
  public:
   GDBTransport(std::string name, int sock, IPAddress address,

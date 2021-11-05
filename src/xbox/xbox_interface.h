@@ -1,6 +1,7 @@
 #ifndef XBDM_GDB_BRIDGE_SRC_XBOX_XBOX_INTERFACE_H_
 #define XBDM_GDB_BRIDGE_SRC_XBOX_XBOX_INTERFACE_H_
 
+#include <boost/asio/thread_pool.hpp>
 #include <future>
 #include <list>
 #include <memory>
@@ -36,7 +37,7 @@ class XBOXInterface {
     return xbdm_context_;
   }
 
-  void StartGDBServer(const IPAddress &address);
+  bool StartGDBServer(const IPAddress &address);
   void StopGDBServer();
   bool GetGDBListenAddress(IPAddress &ret) const;
 
@@ -49,7 +50,13 @@ class XBOXInterface {
 
  private:
   void OnGDBClientConnected(int sock, IPAddress &address);
-  void OnGDBPacketReceived(GDBPacket &packet);
+  void OnGDBPacketReceived(const std::shared_ptr<GDBPacket> &packet);
+
+  void DispatchGDBPacket(const std::shared_ptr<GDBPacket> &packet);
+
+  void SendGDBOK() const;
+  void SendGDBEmpty() const;
+  void SendGDBError(int error) const;
 
  private:
   std::string name_;
@@ -58,10 +65,10 @@ class XBOXInterface {
   std::shared_ptr<SelectThread> select_thread_;
   std::shared_ptr<XBDMContext> xbdm_context_;
   std::shared_ptr<XBDMDebugger> xbdm_debugger_;
-  std::shared_ptr<GDBTransport> gdb_transport_;
+
   std::shared_ptr<DelegatingServer> gdb_server_;
-  std::recursive_mutex gdb_queue_lock_;
-  std::list<GDBPacket> gdb_queue_;
+  std::shared_ptr<GDBTransport> gdb_;
+  std::shared_ptr<boost::asio::thread_pool> gdb_executor_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_XBOX_XBOX_INTERFACE_H_
