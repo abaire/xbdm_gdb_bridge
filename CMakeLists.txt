@@ -75,6 +75,7 @@ add_executable(
         src/xbox/xbox_interface.h
         src/xbox/debugger/memory_region.cpp
         src/xbox/debugger/memory_region.h
+        src/rdcp/types/execution_state.h
         src/rdcp/types/module.cpp
         src/rdcp/types/module.h
         src/rdcp/types/section.cpp

@@ -1,5 +1,6 @@
 #include "xbdm_notification.h"
 
+#include <boost/log/trivial.hpp>
 #include <cassert>
 #include <cstring>
 #include <ostream>
@@ -21,6 +22,7 @@ std::shared_ptr<XBDMNotification> ParseXBDMNotification(const char *buffer,
   SETIF("debugstr ", NotificationDebugStr)
   SETIF("modload ", NotificationModuleLoaded)
   SETIF("sectload ", NotificationSectionLoaded)
+  SETIF("sectunload ", NotificationSectionUnloaded)
   SETIF("create ", NotificationThreadCreated)
   SETIF("terminate ", NotificationThreadTerminated)
   SETIF("execution ", NotificationExecutionStateChanged)
@@ -30,6 +32,8 @@ std::shared_ptr<XBDMNotification> ParseXBDMNotification(const char *buffer,
   SETIF("exception ", NotificationException)
 
 #undef SETIF
+  std::string notification(buffer, buffer_len);
+  BOOST_LOG_TRIVIAL(error) << "Uknown notification " << notification;
   assert(false && "Unknown notification type");
   return {};
 }
@@ -85,6 +89,14 @@ std::ostream &NotificationSectionLoaded::WriteStream(std::ostream &os) const {
   return os;
 }
 
+NotificationSectionUnloaded::NotificationSectionUnloaded(
+    const char *buffer_start, const char *buffer_end)
+    : section(RDCPMapResponse(buffer_start, buffer_end)) {}
+
+std::ostream &NotificationSectionUnloaded::WriteStream(std::ostream &os) const {
+  return os << "SectionUnloaded: " << section;
+}
+
 NotificationThreadCreated::NotificationThreadCreated(const char *buffer_start,
                                                      const char *buffer_end) {
   RDCPMapResponse parsed(buffer_start, buffer_end);
@@ -128,16 +140,16 @@ std::ostream &NotificationExecutionStateChanged::WriteStream(
     std::ostream &os) const {
   os << "Execution state changed: ";
   switch (state) {
-    case NotificationExecutionStateChanged::S_STOPPED:
+    case ExecutionState::S_STOPPED:
       os << "stopped";
       break;
-    case NotificationExecutionStateChanged::S_STARTED:
+    case ExecutionState::S_STARTED:
       os << "started";
       break;
-    case NotificationExecutionStateChanged::S_REBOOTING:
+    case ExecutionState::S_REBOOTING:
       os << "rebooting";
       break;
-    case NotificationExecutionStateChanged::S_PENDING:
+    case ExecutionState::S_PENDING:
       os << "pending";
       break;
     default:

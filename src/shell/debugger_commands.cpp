@@ -172,17 +172,8 @@ Command::Result DebuggerCommandHaltAll::operator()(
     return HANDLED;
   }
 
-  if (!debugger->FetchThreads()) {
-    std::cout << "Failed to fetch threads." << std::endl;
-    return HANDLED;
-  }
+  debugger->HaltAll();
 
-  auto context = interface.Context();
-  for (auto &thread : debugger->Threads()) {
-    if (!thread->Halt(*context)) {
-      std::cout << "Failed to halt thread " << thread->thread_id << std::endl;
-    }
-  }
   return HANDLED;
 }
 
@@ -219,18 +210,7 @@ Command::Result DebuggerCommandContinueAll::operator()(
     return HANDLED;
   }
 
-  if (!debugger->FetchThreads()) {
-    std::cout << "Failed to fetch threads." << std::endl;
-    return HANDLED;
-  }
-
-  auto context = interface.Context();
-  for (auto &thread : debugger->Threads()) {
-    if (!thread->Continue(*context, no_break_on_exception)) {
-      std::cout << "Failed to continue thread " << thread->thread_id
-                << std::endl;
-    }
-  }
+  debugger->ContinueAll(no_break_on_exception);
 
   return HANDLED;
 }

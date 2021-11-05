@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "rdcp/types/execution_state.h"
 #include "rdcp/types/module.h"
 #include "rdcp/types/section.h"
 
@@ -16,6 +17,7 @@ enum NotificationType {
   NT_DEBUGSTR,
   NT_MODULE_LOADED,
   NT_SECTION_LOADED,
+  NT_SECTION_UNLOADED,
   NT_THREAD_CREATED,
   NT_THREAD_TERMINATED,
   NT_EXECUTION_STATE_CHANGED,
@@ -71,6 +73,15 @@ struct NotificationSectionLoaded : XBDMNotification {
   Section section;
 };
 
+struct NotificationSectionUnloaded : XBDMNotification {
+  NotificationSectionUnloaded(const char *buffer_start, const char *buffer_end);
+  [[nodiscard]] NotificationType Type() const override {
+    return NT_SECTION_UNLOADED;
+  }
+  std::ostream &WriteStream(std::ostream &os) const override;
+  Section section;
+};
+
 struct NotificationThreadCreated : XBDMNotification {
   NotificationThreadCreated(const char *buffer_start, const char *buffer_end);
   [[nodiscard]] NotificationType Type() const override {
@@ -91,14 +102,6 @@ struct NotificationThreadTerminated : XBDMNotification {
 };
 
 struct NotificationExecutionStateChanged : XBDMNotification {
-  enum State {
-    S_INVALID = -1,
-    S_STOPPED,
-    S_STARTED,
-    S_REBOOTING,
-    S_PENDING,
-  };
-
   NotificationExecutionStateChanged(const char *buffer_start,
                                     const char *buffer_end);
   [[nodiscard]] NotificationType Type() const override {
@@ -106,7 +109,7 @@ struct NotificationExecutionStateChanged : XBDMNotification {
   }
   std::ostream &WriteStream(std::ostream &os) const override;
 
-  State state;
+  ExecutionState state;
 };
 
 struct NotificationBreakpoint : XBDMNotification {

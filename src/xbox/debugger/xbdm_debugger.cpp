@@ -6,6 +6,10 @@
 #include "util/path.h"
 #include "xbox/xbdm_context.h"
 
+static constexpr uint32_t kRestartRebootingMaxWaitMilliseconds = 5 * 1000;
+static constexpr uint32_t kRestartPendingMaxWaitMilliseconds = 15 * 1000;
+static constexpr uint32_t kRestartStoppedMaxAtStartWaitMilliseconds = 1 * 1000;
+
 XBDMDebugger::XBDMDebugger(std::shared_ptr<XBDMContext> context)
     : context_(std::move(context)) {}
 
@@ -44,8 +48,7 @@ bool XBDMDebugger::Attach() {
     return false;
   }
 
-  FetchThreads();
-  return true;
+  return FetchThreads();
 }
 
 void XBDMDebugger::Shutdown() {
@@ -73,18 +76,43 @@ bool XBDMDebugger::DebugXBE(const std::string &path,
   if (wait_forever) {
     flags |= Reboot::kStop;
   }
-  RestartAndReconnect(flags);
-
-  auto request =
-      std::make_shared<LoadOnBootTitle>(xbe_name, xbe_dir, command_line);
-  context_->SendCommandSync(request);
-  if (!request->IsOK()) {
-    BOOST_LOG_TRIVIAL(error) << "Failed to set load on boot title "
-                             << request->status << " " << request->message;
+  if (!RestartAndReconnect(flags)) {
+    BOOST_LOG_TRIVIAL(error) << "Failed to restart.";
     return false;
   }
 
-  return true;
+  {
+    auto request =
+        std::make_shared<LoadOnBootTitle>(xbe_name, xbe_dir, command_line);
+    context_->SendCommandSync(request);
+    if (!request->IsOK()) {
+      BOOST_LOG_TRIVIAL(error) << "Failed to set load on boot title "
+                               << request->status << " " << request->message;
+      return false;
+    }
+  }
+  if (!BreakAtStart()) {
+    return false;
+  }
+
+  if (!Go()) {
+    return false;
+  }
+
+  if (!WaitForState(S_STOPPED, kRestartStoppedMaxAtStartWaitMilliseconds)) {
+    BOOST_LOG_TRIVIAL(warning) << "Timed out waiting for pending message.";
+  }
+
+  if (!FetchThreads()) {
+    BOOST_LOG_TRIVIAL(warning)
+        << "Failed to fetch threads while at start breakpoint.";
+  }
+  return ContinueAll();
+}
+
+std::list<std::shared_ptr<Thread>> XBDMDebugger::Threads() {
+  std::unique_lock<std::recursive_mutex> lock(thread_lock_);
+  return threads_;
 }
 
 std::shared_ptr<Thread> XBDMDebugger::GetThread(int thread_id) {
@@ -126,6 +154,11 @@ void XBDMDebugger::OnNotification(
           std::dynamic_pointer_cast<NotificationSectionLoaded>(notification));
       break;
 
+    case NT_SECTION_UNLOADED:
+      OnSectionUnloaded(
+          std::dynamic_pointer_cast<NotificationSectionUnloaded>(notification));
+      break;
+
     case NT_THREAD_CREATED:
       OnThreadCreated(
           std::dynamic_pointer_cast<NotificationThreadCreated>(notification));
@@ -162,10 +195,6 @@ void XBDMDebugger::OnNotification(
       OnException(
           std::dynamic_pointer_cast<NotificationException>(notification));
       break;
-
-    default:
-      BOOST_LOG_TRIVIAL(error)
-          << "Unknown notification type received " << notification->Type();
   }
 }
 
@@ -205,6 +234,18 @@ void XBDMDebugger::OnSectionLoaded(
   sections_.push_back(std::make_shared<Section>(msg->section));
 }
 
+void XBDMDebugger::OnSectionUnloaded(
+    const std::shared_ptr<NotificationSectionUnloaded> &msg) {
+  auto &section = msg->section;
+  sections_.remove_if([&section](const std::shared_ptr<Section> &other) {
+    if (!other) {
+      return false;
+    }
+
+    return other->base_address == section.base_address;
+  });
+}
+
 void XBDMDebugger::OnThreadCreated(
     const std::shared_ptr<NotificationThreadCreated> &msg) {
   const std::lock_guard<std::recursive_mutex> lock(thread_lock_);
@@ -230,10 +271,16 @@ void XBDMDebugger::OnThreadTerminated(
 void XBDMDebugger::OnExecutionStateChanged(
     const std::shared_ptr<NotificationExecutionStateChanged> &msg) {
   BOOST_LOG_TRIVIAL(info) << "State changed: " << *msg;
-  if (msg->state == NotificationExecutionStateChanged::S_REBOOTING) {
-    modules_.clear();
-    sections_.clear();
+
+  {
+    const std::lock_guard<std::mutex> lock(state_lock_);
+    state_ = msg->state;
+    if (state_ == ExecutionState::S_REBOOTING) {
+      modules_.clear();
+      sections_.clear();
+    }
   }
+  state_condition_variable_.notify_all();
 }
 
 void XBDMDebugger::OnBreakpoint(
@@ -289,12 +336,7 @@ bool XBDMDebugger::RestartAndAttach(int flags) {
   if (!RestartAndReconnect(flags)) {
     return false;
   }
-
-  auto request = std::make_shared<BreakAtStart>();
-  context_->SendCommandSync(request);
-  if (!request->IsOK()) {
-    BOOST_LOG_TRIVIAL(error) << "Failed to request break at start "
-                             << request->status << " " << request->message;
+  if (!BreakAtStart()) {
     return false;
   }
 
@@ -318,6 +360,17 @@ bool XBDMDebugger::Go() const {
   if (!request->IsOK()) {
     BOOST_LOG_TRIVIAL(error)
         << "'go' failed: " << request->status << " " << request->message;
+    return false;
+  }
+  return true;
+}
+
+bool XBDMDebugger::BreakAtStart() const {
+  auto request = std::make_shared<::BreakAtStart>();
+  context_->SendCommandSync(request);
+  if (!request->IsOK()) {
+    BOOST_LOG_TRIVIAL(error) << "Failed to request break at start "
+                             << request->status << " " << request->message;
     return false;
   }
   return true;
@@ -361,7 +414,7 @@ bool XBDMDebugger::FetchThreads() {
   return true;
 }
 
-bool XBDMDebugger::RestartAndReconnect(int reboot_flags) {
+bool XBDMDebugger::RestartAndReconnect(uint32_t reboot_flags) {
   assert(context_);
   auto request = std::make_shared<::Reboot>(reboot_flags);
   context_->SendCommandSync(request);
@@ -372,6 +425,14 @@ bool XBDMDebugger::RestartAndReconnect(int reboot_flags) {
   }
 
   // Wait for the connection to be dropped.
+  if (!WaitForState(S_REBOOTING, kRestartRebootingMaxWaitMilliseconds)) {
+    BOOST_LOG_TRIVIAL(warning) << "Timed out waiting for rebooting message.";
+  }
+
+  // Then for the connection to be reestablished and a pending state set.
+  if (!WaitForState(S_PENDING, kRestartPendingMaxWaitMilliseconds)) {
+    BOOST_LOG_TRIVIAL(warning) << "Timed out waiting for pending message.";
+  }
 
   // Reconnect the control channel.
   if (!context_->Reconnect()) {
@@ -379,8 +440,15 @@ bool XBDMDebugger::RestartAndReconnect(int reboot_flags) {
     return false;
   }
 
-  SetDebugger(true);
-  return FetchThreads();
+  return SetDebugger(true);
+}
+
+bool XBDMDebugger::WaitForState(ExecutionState s,
+                                uint32_t max_wait_milliseconds) {
+  std::unique_lock<std::mutex> lock(state_lock_);
+  return state_condition_variable_.wait_for(
+      lock, std::chrono::milliseconds(max_wait_milliseconds),
+      [this, s] { return this->state_ == s; });
 }
 
 bool XBDMDebugger::StepFunction() {
@@ -398,4 +466,29 @@ bool XBDMDebugger::StepFunction() {
   context_->SendCommandSync(request);
   ret = request->IsOK();
   return Go() && ret;
+}
+
+bool XBDMDebugger::ContinueAll(bool no_break_on_exception) {
+  std::list<std::shared_ptr<Thread>> threads = Threads();
+  bool ret = true;
+  for (auto &thread : threads) {
+    if (!thread->Continue(*context_, no_break_on_exception)) {
+      BOOST_LOG_TRIVIAL(error)
+          << "Failed to continue thread " << thread->thread_id;
+      ret = false;
+    }
+  }
+  return ret;
+}
+
+bool XBDMDebugger::HaltAll() {
+  std::list<std::shared_ptr<Thread>> threads = Threads();
+  bool ret = true;
+  for (auto &thread : threads) {
+    if (!thread->Halt(*context_)) {
+      BOOST_LOG_TRIVIAL(error) << "Failed to halt thread " << thread->thread_id;
+      ret = false;
+    }
+  }
+  return ret;
 }
