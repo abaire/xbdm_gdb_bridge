@@ -25,6 +25,13 @@ class GDBPacket {
   }
 
   [[nodiscard]] char Command() const { return static_cast<char>(data_[0]); }
+  [[nodiscard]] bool GetFirstDataChar(char &ret) const {
+    if (data_.size() < 2) {
+      return false;
+    }
+    ret = static_cast<char>(data_[1]);
+    return true;
+  }
 
   [[nodiscard]] const std::vector<uint8_t> &Data() const { return data_; }
   [[nodiscard]] uint8_t Checksum() const { return checksum_; }

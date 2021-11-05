@@ -11,8 +11,8 @@
 #include "net/ip_address.h"
 
 class DelegatingServer;
+class GDBBridge;
 class GDBPacket;
-class GDBTransport;
 class RDCPProcessedRequest;
 class SelectThread;
 class XBDMContext;
@@ -54,10 +54,6 @@ class XBOXInterface {
 
   void DispatchGDBPacket(const std::shared_ptr<GDBPacket> &packet);
 
-  void SendGDBOK() const;
-  void SendGDBEmpty() const;
-  void SendGDBError(int error) const;
-
  private:
   std::string name_;
   IPAddress xbox_address_;
@@ -67,7 +63,7 @@ class XBOXInterface {
   std::shared_ptr<XBDMDebugger> xbdm_debugger_;
 
   std::shared_ptr<DelegatingServer> gdb_server_;
-  std::shared_ptr<GDBTransport> gdb_;
+  std::shared_ptr<GDBBridge> gdb_bridge_;
   std::shared_ptr<boost::asio::thread_pool> gdb_executor_;
 };
 

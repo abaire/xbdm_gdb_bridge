@@ -73,6 +73,8 @@ add_executable(
         src/xbox/xbdm_context.h
         src/xbox/xbox_interface.cpp
         src/xbox/xbox_interface.h
+        src/xbox/bridge/gdb_bridge.cpp
+        src/xbox/bridge/gdb_bridge.h
         src/xbox/debugger/memory_region.cpp
         src/xbox/debugger/memory_region.h
         src/rdcp/types/execution_state.h
