@@ -1,6 +1,7 @@
 #include "thread.h"
 
 #include "rdcp/xbdm_requests.h"
+#include "xbox/xbdm_context.h"
 
 std::ostream &operator<<(std::ostream &os, const Thread &t) {
   os << "Thread " << t.thread_id << std::endl;
@@ -38,9 +39,9 @@ std::ostream &operator<<(std::ostream &os, const Thread &t) {
   return os;
 }
 
-bool Thread::FetchInfoSync(XBOXInterface &interface) {
+bool Thread::FetchInfoSync(XBDMContext &ctx) {
   auto request = std::make_shared<ThreadInfo>(thread_id);
-  interface.SendCommandSync(request);
+  ctx.SendCommandSync(request);
   if (!request->IsOK()) {
     suspend_count.reset();
     priority.reset();
@@ -61,9 +62,9 @@ bool Thread::FetchInfoSync(XBOXInterface &interface) {
   return true;
 }
 
-bool Thread::FetchContextSync(XBOXInterface &interface) {
+bool Thread::FetchContextSync(XBDMContext &ctx) {
   auto request = std::make_shared<GetContext>(thread_id);
-  interface.SendCommandSync(request);
+  ctx.SendCommandSync(request);
   if (!request->IsOK()) {
     context.reset();
     return false;
@@ -73,9 +74,9 @@ bool Thread::FetchContextSync(XBOXInterface &interface) {
   return true;
 }
 
-bool Thread::FetchFloatContextSync(XBOXInterface &interface) {
+bool Thread::FetchFloatContextSync(XBDMContext &ctx) {
   auto request = std::make_shared<GetExtContext>(thread_id);
-  interface.SendCommandSync(request);
+  ctx.SendCommandSync(request);
   if (!request->IsOK()) {
     float_context.reset();
     return false;
@@ -84,9 +85,9 @@ bool Thread::FetchFloatContextSync(XBOXInterface &interface) {
   return true;
 }
 
-bool Thread::FetchStopReasonSync(XBOXInterface &interface) {
+bool Thread::FetchStopReasonSync(XBDMContext &ctx) {
   auto request = std::make_shared<IsStopped>(thread_id);
-  interface.SendCommandSync(request);
+  ctx.SendCommandSync(request);
   if (!request->IsOK()) {
     last_stop_reason.reset();
     return false;
@@ -96,26 +97,26 @@ bool Thread::FetchStopReasonSync(XBOXInterface &interface) {
   return true;
 }
 
-bool Thread::Halt(XBOXInterface &interface) {
+bool Thread::Halt(XBDMContext &ctx) {
   auto request = std::make_shared<::Halt>(thread_id);
-  interface.SendCommandSync(request);
+  ctx.SendCommandSync(request);
   return request->IsOK();
 }
 
-bool Thread::Continue(XBOXInterface &interface, bool break_on_exceptions) {
+bool Thread::Continue(XBDMContext &ctx, bool break_on_exceptions) {
   auto request = std::make_shared<::Continue>(thread_id);
-  interface.SendCommandSync(request);
+  ctx.SendCommandSync(request);
   return request->IsOK();
 }
 
-bool Thread::Suspend(XBOXInterface &interface) {
+bool Thread::Suspend(XBDMContext &ctx) {
   auto request = std::make_shared<::Suspend>(thread_id);
-  interface.SendCommandSync(request);
+  ctx.SendCommandSync(request);
   return request->IsOK();
 }
 
-bool Thread::Resume(XBOXInterface &interface) {
+bool Thread::Resume(XBDMContext &ctx) {
   auto request = std::make_shared<::Resume>(thread_id);
-  interface.SendCommandSync(request);
+  ctx.SendCommandSync(request);
   return request->IsOK();
 }

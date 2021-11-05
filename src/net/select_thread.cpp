@@ -58,21 +58,18 @@ void SelectThread::ThreadMain() {
     {
       const std::lock_guard<std::recursive_mutex> lock(connection_lock_);
       auto it = connections_.begin();
-      auto it_end = connections_.end();
-
-      while (it != it_end) {
-        auto &conn = *it;
-        if (!conn) {
+      while (it != connections_.end()) {
+        if (!*it) {
           it = connections_.erase(it);
           continue;
         }
 
-        bool keep = conn->Process(recv_fds, send_fds, except_fds);
-        if (!keep) {
+        if (!(*it)->Process(recv_fds, send_fds, except_fds)) {
           it = connections_.erase(it);
-        } else {
-          ++it;
+          continue;
         }
+
+        ++it;
       }
     }
   }
@@ -90,7 +87,7 @@ void SelectThread::Stop() {
   }
 }
 
-void SelectThread::AddConnection(const std::shared_ptr<TCPSocketBase> &conn) {
+void SelectThread::AddConnection(std::shared_ptr<TCPSocketBase> conn) {
   const std::lock_guard<std::recursive_mutex> lock(connection_lock_);
-  connections_.push_back(conn);
+  connections_.emplace_back(conn);
 }

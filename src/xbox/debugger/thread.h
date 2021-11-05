@@ -8,22 +8,23 @@
 #include "rdcp/rdcp_response_processors.h"
 #include "rdcp/thread_context.h"
 #include "rdcp/xbdm_stop_reasons.h"
-#include "xbox/xbox_interface.h"
+
+class XBDMContext;
 
 struct Thread {
   static constexpr uint32_t kTrapFlag = 0x100;
 
-  Thread(int thread_id) : thread_id(thread_id) {}
+  explicit Thread(int thread_id) : thread_id(thread_id) {}
 
-  bool FetchInfoSync(XBOXInterface &interface);
-  bool FetchContextSync(XBOXInterface &interface);
-  bool FetchFloatContextSync(XBOXInterface &interface);
-  bool FetchStopReasonSync(XBOXInterface &interface);
+  bool FetchInfoSync(XBDMContext &ctx);
+  bool FetchContextSync(XBDMContext &ctx);
+  bool FetchFloatContextSync(XBDMContext &ctx);
+  bool FetchStopReasonSync(XBDMContext &ctx);
 
-  bool Halt(XBOXInterface &interface);
-  bool Continue(XBOXInterface &interface, bool break_on_exceptions = true);
-  bool Suspend(XBOXInterface &interface);
-  bool Resume(XBOXInterface &interface);
+  bool Halt(XBDMContext &ctx);
+  bool Continue(XBDMContext &ctx, bool break_on_exceptions = true);
+  bool Suspend(XBDMContext &ctx);
+  bool Resume(XBDMContext &ctx);
 
  private:
   void Parse(const RDCPMapResponse &parsed) {

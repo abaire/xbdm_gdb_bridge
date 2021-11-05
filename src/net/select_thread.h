@@ -2,10 +2,10 @@
 #define XBDM_GDB_BRIDGE_SELECTTHREAD_H
 
 #include <atomic>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <thread>
-#include <vector>
 
 #include "net/tcp_socket_base.h"
 
@@ -16,7 +16,7 @@ class SelectThread {
 
   [[nodiscard]] bool IsRunning() const { return running_; }
 
-  void AddConnection(const std::shared_ptr<TCPSocketBase>& conn);
+  void AddConnection(std::shared_ptr<TCPSocketBase> conn);
 
  private:
   void ThreadMain();
@@ -27,7 +27,7 @@ class SelectThread {
   std::thread thread_;
 
   std::recursive_mutex connection_lock_;
-  std::vector<std::shared_ptr<TCPSocketBase>> connections_;
+  std::list<std::shared_ptr<TCPSocketBase>> connections_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SELECTTHREAD_H

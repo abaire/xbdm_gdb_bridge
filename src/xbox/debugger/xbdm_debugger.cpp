@@ -39,23 +39,17 @@ bool XBDMDebugger::Attach() {
     }
   }
 
-  {
-    auto request = std::make_shared<Debugger>();
-    context_->SendCommandSync(request);
-    if (!request->IsOK()) {
-      BOOST_LOG_TRIVIAL(error) << "Failed to enable debugger "
-                               << request->status << " " << request->message;
-      context_->UnregisterNotificationHandler(notification_handler_id_);
-      return false;
-    }
-
-    target_not_debuggable_ = !request->debuggable;
+  if (!SetDebugger(true)) {
+    context_->UnregisterNotificationHandler(notification_handler_id_);
+    return false;
   }
+
+  FetchThreads();
   return true;
 }
 
 void XBDMDebugger::Shutdown() {
-  context_->SendCommand(std::make_shared<Debugger>(false));
+  SetDebugger(false);
   // TODO: Request a notifyat drop as well.
   context_->UnregisterNotificationHandler(notification_handler_id_);
   notification_handler_id_ = 0;
@@ -82,13 +76,22 @@ bool XBDMDebugger::DebugXBE(const std::string &path,
   return false;
 }
 
-std::shared_ptr<Thread> XBDMDebugger::GetThread(int thread_id) const {
+std::shared_ptr<Thread> XBDMDebugger::GetThread(int thread_id) {
+  const std::lock_guard<std::recursive_mutex> lock(thread_lock_);
   for (auto &it : threads_) {
     if (it->thread_id == thread_id) {
       return it;
     }
   }
   return {};
+}
+
+bool XBDMDebugger::SetActiveThread(int thread_id) {
+  if (GetThread(thread_id)) {
+    active_thread_id_ = thread_id;
+    return true;
+  }
+  return false;
 }
 
 void XBDMDebugger::OnNotification(
@@ -193,11 +196,13 @@ void XBDMDebugger::OnSectionLoaded(
 
 void XBDMDebugger::OnThreadCreated(
     const std::shared_ptr<NotificationThreadCreated> &msg) {
+  const std::lock_guard<std::recursive_mutex> lock(thread_lock_);
   threads_.push_back(std::make_shared<Thread>(msg->thread_id));
 }
 
 void XBDMDebugger::OnThreadTerminated(
     const std::shared_ptr<NotificationThreadTerminated> &msg) {
+  const std::lock_guard<std::recursive_mutex> lock(thread_lock_);
   for (auto it = threads_.begin(); it != threads_.end(); ++it) {
     auto &thread = *it;
     if (thread->thread_id == msg->thread_id) {
@@ -221,7 +226,7 @@ void XBDMDebugger::OnExecutionStateChanged(
 }
 
 void XBDMDebugger::OnBreakpoint(
-    const std::shared_ptr<NotificationBreakpoint> &msg) const {
+    const std::shared_ptr<NotificationBreakpoint> &msg) {
   auto thread = GetThread(msg->thread_id);
   if (!thread) {
     BOOST_LOG_TRIVIAL(warning)
@@ -234,7 +239,7 @@ void XBDMDebugger::OnBreakpoint(
 }
 
 void XBDMDebugger::OnWatchpoint(
-    const std::shared_ptr<NotificationWatchpoint> &msg) const {
+    const std::shared_ptr<NotificationWatchpoint> &msg) {
   auto thread = GetThread(msg->thread_id);
   if (!thread) {
     BOOST_LOG_TRIVIAL(warning)
@@ -246,7 +251,7 @@ void XBDMDebugger::OnWatchpoint(
 }
 
 void XBDMDebugger::OnSingleStep(
-    const std::shared_ptr<NotificationSingleStep> &msg) const {
+    const std::shared_ptr<NotificationSingleStep> &msg) {
   auto thread = GetThread(msg->thread_id);
   if (!thread) {
     BOOST_LOG_TRIVIAL(warning)
@@ -258,7 +263,7 @@ void XBDMDebugger::OnSingleStep(
 }
 
 void XBDMDebugger::OnException(
-    const std::shared_ptr<NotificationException> &msg) const {
+    const std::shared_ptr<NotificationException> &msg) {
   BOOST_LOG_TRIVIAL(warning) << "Received exception: " << *msg;
   auto thread = GetThread(msg->thread_id);
   if (!thread) {
@@ -267,4 +272,101 @@ void XBDMDebugger::OnException(
     return;
   }
   thread->last_known_address = msg->address;
+}
+
+bool XBDMDebugger::RestartAndAttach(int flags) {
+  if (!RestartAndReconnect(flags)) {
+    return false;
+  }
+
+  auto request = std::make_shared<BreakAtStart>();
+  context_->SendCommandSync(request);
+  if (!request->IsOK()) {
+    BOOST_LOG_TRIVIAL(error) << "Failed to request break at start "
+                             << request->status << " " << request->message;
+    return false;
+  }
+
+  return Go();
+}
+
+bool XBDMDebugger::Stop() const {
+  auto request = std::make_shared<::Stop>();
+  context_->SendCommandSync(request);
+  if (!request->IsOK()) {
+    BOOST_LOG_TRIVIAL(error)
+        << "'stop' failed: " << request->status << " " << request->message;
+    return false;
+  }
+  return true;
+}
+
+bool XBDMDebugger::Go() const {
+  auto request = std::make_shared<::Go>();
+  context_->SendCommandSync(request);
+  if (!request->IsOK()) {
+    BOOST_LOG_TRIVIAL(error)
+        << "'go' failed: " << request->status << " " << request->message;
+    return false;
+  }
+  return true;
+}
+
+bool XBDMDebugger::SetDebugger(bool enabled) {
+  auto request = std::make_shared<Debugger>();
+  context_->SendCommandSync(request);
+  if (!request->IsOK()) {
+    BOOST_LOG_TRIVIAL(error) << "Failed to enable debugger " << request->status
+                             << " " << request->message;
+    return false;
+  }
+  target_not_debuggable_ = !request->debuggable;
+  return true;
+}
+
+bool XBDMDebugger::FetchThreads() {
+  auto request = std::make_shared<::Threads>();
+  context_->SendCommandSync(request);
+  if (!request->IsOK()) {
+    BOOST_LOG_TRIVIAL(error) << "Failed to fetch thread list "
+                             << request->status << " " << request->message;
+    return false;
+  }
+
+  const std::lock_guard<std::recursive_mutex> lock(thread_lock_);
+  threads_.clear();
+  for (auto thread_id : request->threads) {
+    threads_.emplace_back(std::make_shared<Thread>(thread_id));
+  }
+
+  auto &context = *context_;
+  for (auto &thread : threads_) {
+    if (!thread->FetchInfoSync(context)) {
+      BOOST_LOG_TRIVIAL(error)
+          << "Failed to fetch info for thread " << thread->thread_id;
+    }
+  }
+
+  return true;
+}
+
+bool XBDMDebugger::RestartAndReconnect(int reboot_flags) {
+  auto request = std::make_shared<::Reboot>(reboot_flags);
+  context_->SendCommandSync(request);
+  if (!request->IsOK()) {
+    BOOST_LOG_TRIVIAL(error)
+        << "'reboot' failed: " << request->status << " " << request->message;
+    return false;
+  }
+
+  // Wait for the connection to be dropped.
+
+  // Reconnect the control channel.
+  if (!context_->Reconnect()) {
+    BOOST_LOG_TRIVIAL(error) << "Failed to reconnect after reboot.";
+    return false;
+  }
+
+  SetDebugger(true);
+  return FetchThreads();
 }

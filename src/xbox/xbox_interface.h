@@ -28,6 +28,9 @@ class XBOXInterface {
 
   bool AttachDebugger();
   void DetachDebugger();
+  [[nodiscard]] std::shared_ptr<XBDMDebugger> Debugger() const {
+    return xbdm_debugger_;
+  }
 
   void StartGDBServer(const IPAddress &address);
   void StopGDBServer();

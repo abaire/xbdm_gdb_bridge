@@ -5,6 +5,8 @@
 
 #include "rdcp/xbdm_requests.h"
 #include "shell/command.h"
+#include "util/parsing.h"
+#include "xbox/debugger/xbdm_debugger.h"
 
 struct DebuggerCommandLaunch : Command {
   DebuggerCommandLaunch()
@@ -16,7 +18,7 @@ struct DebuggerCommandLaunch : Command {
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
     // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    return HANDLED;
   }
 };
 
@@ -32,7 +34,7 @@ struct DebuggerCommandLaunchWait : Command {
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
     // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    return HANDLED;
   }
 };
 
@@ -46,7 +48,7 @@ struct DebuggerCommandAttach : Command {
     if (!interface.AttachDebugger()) {
       std::cout << "Failed to attach debugger." << std::endl;
     }
-    return Result::HANDLED;
+    return HANDLED;
   }
 };
 
@@ -58,7 +60,7 @@ struct DebuggerCommandDetach : Command {
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
     interface.DetachDebugger();
-    return Result::HANDLED;
+    return HANDLED;
   }
 };
 
@@ -70,8 +72,15 @@ struct DebuggerCommandRestart : Command {
             "entrypoint.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
-    // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    auto debugger = interface.Debugger();
+    if (!debugger) {
+      std::cout << "Debugger not attached." << std::endl;
+      return HANDLED;
+    }
+
+    debugger->RestartAndAttach();
+
+    return HANDLED;
   }
 };
 
@@ -82,9 +91,27 @@ struct DebuggerCommandSetActiveThread : Command {
             "\n"
             "Sets the current thread context for the debugger.") {}
   Result operator()(XBOXInterface &interface,
-                    const std::vector<std::string> &) override {
-    // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+                    const std::vector<std::string> &args) override {
+    auto debugger = interface.Debugger();
+    if (!debugger) {
+      std::cout << "Debugger not attached." << std::endl;
+      return HANDLED;
+    }
+
+    ArgParser parser(args);
+    int thread_id;
+    if (!parser.Parse(0, thread_id)) {
+      std::cout << "Missing required thread_id argument." << std::endl;
+      PrintUsage();
+      return HANDLED;
+    }
+
+    if (!debugger->SetActiveThread(thread_id)) {
+      std::cout << "Invalid thread " << thread_id << std::endl;
+      return HANDLED;
+    }
+
+    return HANDLED;
   }
 };
 
@@ -96,7 +123,7 @@ struct DebuggerCommandStepInstruction : Command {
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
     // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    return HANDLED;
   }
 };
 
@@ -108,7 +135,7 @@ struct DebuggerCommandStepFunction : Command {
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
     // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    return HANDLED;
   }
 };
 
@@ -119,8 +146,18 @@ struct DebuggerCommandGetThreads : Command {
             "Print basic information about all threads.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
-    // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    auto debugger = interface.Debugger();
+    if (!debugger) {
+      std::cout << "Debugger not attached." << std::endl;
+      return HANDLED;
+    }
+
+    if (!debugger->FetchThreads()) {
+      std::cout << "Failed to fetch threads." << std::endl;
+      return HANDLED;
+    }
+
+    return HANDLED;
   }
 };
 
@@ -132,7 +169,7 @@ struct DebuggerCommandGetThreadInfo : Command {
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
     // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    return HANDLED;
   }
 };
 
@@ -144,7 +181,7 @@ struct DebuggerCommandGetContext : Command {
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
     // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    return HANDLED;
   }
 };
 
@@ -156,7 +193,7 @@ struct DebuggerCommandGetFullContext : Command {
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
     // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    return HANDLED;
   }
 };
 
@@ -168,7 +205,7 @@ struct DebuggerCommandHaltAll : Command {
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
     // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    return HANDLED;
   }
 };
 
@@ -180,7 +217,7 @@ struct DebuggerCommandHalt : Command {
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
     // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    return HANDLED;
   }
 };
 
@@ -196,7 +233,7 @@ struct DebuggerCommandContinueAll : Command {
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
     // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    return HANDLED;
   }
 };
 
@@ -212,7 +249,7 @@ struct DebuggerCommandContinue : Command {
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
     // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    return HANDLED;
   }
 };
 
@@ -224,7 +261,7 @@ struct DebuggerCommandSuspend : Command {
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
     // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    return HANDLED;
   }
 };
 
@@ -236,7 +273,7 @@ struct DebuggerCommandResume : Command {
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
     // TODO: Implement me.
-    return Result::EXIT_REQUESTED;
+    return HANDLED;
   }
 };
 

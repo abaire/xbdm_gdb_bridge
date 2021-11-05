@@ -1,10 +1,10 @@
 #ifndef XBDM_GDB_BRIDGE_SRC_XBOX_DEBUGGER_DEBUGGER_H_
 #define XBDM_GDB_BRIDGE_SRC_XBOX_DEBUGGER_DEBUGGER_H_
 
+#include <list>
 #include <map>
 #include <memory>
 #include <string>
-#include <vector>
 
 #include "memory_region.h"
 #include "rdcp/types/module.h"
@@ -35,16 +35,18 @@ class XBDMDebugger {
   bool DebugXBE(const std::string &path);
   bool DebugXBE(const std::string &path, const std::string &command_line);
 
-  [[nodiscard]] const std::vector<std::shared_ptr<Thread>> &Threads() const {
+  [[nodiscard]] const std::list<std::shared_ptr<Thread>> &Threads() const {
     return threads_;
   }
 
+  [[nodiscard]] int ActiveThreadID() const { return active_thread_id_; }
+
   [[nodiscard]] std::shared_ptr<Thread> ActiveThread() const {
-    if (active_thread_ < 0 || active_thread_ > threads_.size()) {
+    if (active_thread_id_ < 0 || active_thread_id_ > threads_.size()) {
       return {};
     }
 
-    return threads_[active_thread_];
+    return *std::next(threads_.begin(), active_thread_id_);
   }
 
   //! Returns an arbitrary thread ID, preferring the active thread.
@@ -61,17 +63,27 @@ class XBDMDebugger {
     return threads_.front()->thread_id;
   }
 
-  [[nodiscard]] std::shared_ptr<Thread> GetThread(int thread_id) const;
+  [[nodiscard]] std::shared_ptr<Thread> GetThread(int thread_id);
 
-  [[nodiscard]] const std::vector<std::shared_ptr<Module>> &Modules() const {
+  bool SetActiveThread(int thread_id);
+
+  [[nodiscard]] const std::list<std::shared_ptr<Module>> &Modules() const {
     return modules_;
   }
 
-  [[nodiscard]] const std::vector<std::shared_ptr<Section>> &Sections() const {
+  [[nodiscard]] const std::list<std::shared_ptr<Section>> &Sections() const {
     return sections_;
   }
 
+  bool FetchThreads();
+  bool RestartAndAttach(int flags = Reboot::kStop);
+
  private:
+  [[nodiscard]] bool Stop() const;
+  [[nodiscard]] bool Go() const;
+  bool SetDebugger(bool enabled);
+  bool RestartAndReconnect(int reboot_flags);
+
   void OnNotification(const std::shared_ptr<XBDMNotification> &);
 
   static void OnVX(const std::shared_ptr<NotificationVX> &);
@@ -83,18 +95,19 @@ class XBDMDebugger {
       const std::shared_ptr<NotificationThreadTerminated> &);
   void OnExecutionStateChanged(
       const std::shared_ptr<NotificationExecutionStateChanged> &);
-  void OnBreakpoint(const std::shared_ptr<NotificationBreakpoint> &) const;
-  void OnWatchpoint(const std::shared_ptr<NotificationWatchpoint> &) const;
-  void OnSingleStep(const std::shared_ptr<NotificationSingleStep> &) const;
-  void OnException(const std::shared_ptr<NotificationException> &) const;
+  void OnBreakpoint(const std::shared_ptr<NotificationBreakpoint> &);
+  void OnWatchpoint(const std::shared_ptr<NotificationWatchpoint> &);
+  void OnSingleStep(const std::shared_ptr<NotificationSingleStep> &);
+  void OnException(const std::shared_ptr<NotificationException> &);
 
  private:
   std::shared_ptr<XBDMContext> context_;
 
-  int active_thread_{-1};
-  std::vector<std::shared_ptr<Thread>> threads_;
-  std::vector<std::shared_ptr<Module>> modules_;
-  std::vector<std::shared_ptr<Section>> sections_;
+  int active_thread_id_{-1};
+  std::recursive_mutex thread_lock_;
+  std::list<std::shared_ptr<Thread>> threads_;
+  std::list<std::shared_ptr<Module>> modules_;
+  std::list<std::shared_ptr<Section>> sections_;
 
   std::map<int, std::string> debugstr_accumulator_;
 
