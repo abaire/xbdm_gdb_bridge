@@ -48,7 +48,11 @@ bool XBDMDebugger::Attach() {
     return false;
   }
 
-  return FetchThreads();
+  if (!FetchThreads()) {
+    return false;
+  }
+
+  return FetchModules();
 }
 
 void XBDMDebugger::Shutdown() {
@@ -111,12 +115,21 @@ bool XBDMDebugger::DebugXBE(const std::string &path,
 }
 
 std::list<std::shared_ptr<Thread>> XBDMDebugger::Threads() {
-  std::unique_lock<std::recursive_mutex> lock(thread_lock_);
+  std::unique_lock<std::recursive_mutex> lock(threads_lock_);
   return threads_;
 }
 
+std::list<std::shared_ptr<Module>> XBDMDebugger::Modules() {
+  std::unique_lock<std::recursive_mutex> lock(modules_lock_);
+  return modules_;
+}
+std::list<std::shared_ptr<Section>> XBDMDebugger::Sections() {
+  std::unique_lock<std::recursive_mutex> lock(sections_lock_);
+  return sections_;
+}
+
 std::shared_ptr<Thread> XBDMDebugger::GetThread(int thread_id) {
-  const std::lock_guard<std::recursive_mutex> lock(thread_lock_);
+  const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
   for (auto &it : threads_) {
     if (it->thread_id == thread_id) {
       return it;
@@ -195,6 +208,10 @@ void XBDMDebugger::OnNotification(
       OnException(
           std::dynamic_pointer_cast<NotificationException>(notification));
       break;
+
+    case NT_INVALID:
+      BOOST_LOG_TRIVIAL(error) << "Received invalid notification type.";
+      break;
   }
 }
 
@@ -226,16 +243,19 @@ void XBDMDebugger::OnDebugStr(
 
 void XBDMDebugger::OnModuleLoaded(
     const std::shared_ptr<NotificationModuleLoaded> &msg) {
+  std::unique_lock<std::recursive_mutex> lock(modules_lock_);
   modules_.push_back(std::make_shared<Module>(msg->module));
 }
 
 void XBDMDebugger::OnSectionLoaded(
     const std::shared_ptr<NotificationSectionLoaded> &msg) {
+  std::unique_lock<std::recursive_mutex> lock(sections_lock_);
   sections_.push_back(std::make_shared<Section>(msg->section));
 }
 
 void XBDMDebugger::OnSectionUnloaded(
     const std::shared_ptr<NotificationSectionUnloaded> &msg) {
+  std::unique_lock<std::recursive_mutex> lock(sections_lock_);
   auto &section = msg->section;
   sections_.remove_if([&section](const std::shared_ptr<Section> &other) {
     if (!other) {
@@ -248,13 +268,13 @@ void XBDMDebugger::OnSectionUnloaded(
 
 void XBDMDebugger::OnThreadCreated(
     const std::shared_ptr<NotificationThreadCreated> &msg) {
-  const std::lock_guard<std::recursive_mutex> lock(thread_lock_);
+  const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
   threads_.push_back(std::make_shared<Thread>(msg->thread_id));
 }
 
 void XBDMDebugger::OnThreadTerminated(
     const std::shared_ptr<NotificationThreadTerminated> &msg) {
-  const std::lock_guard<std::recursive_mutex> lock(thread_lock_);
+  const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
   for (auto it = threads_.begin(); it != threads_.end(); ++it) {
     auto &thread = *it;
     if (thread->thread_id == msg->thread_id) {
@@ -397,7 +417,7 @@ bool XBDMDebugger::FetchThreads() {
     return false;
   }
 
-  const std::lock_guard<std::recursive_mutex> lock(thread_lock_);
+  const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
   threads_.clear();
   for (auto thread_id : request->threads) {
     threads_.emplace_back(std::make_shared<Thread>(thread_id));
@@ -409,6 +429,24 @@ bool XBDMDebugger::FetchThreads() {
       BOOST_LOG_TRIVIAL(error)
           << "Failed to fetch info for thread " << thread->thread_id;
     }
+  }
+
+  return true;
+}
+
+bool XBDMDebugger::FetchModules() {
+  auto request = std::make_shared<::Modules>();
+  context_->SendCommandSync(request);
+  if (!request->IsOK()) {
+    BOOST_LOG_TRIVIAL(error) << "Failed to fetch module list "
+                             << request->status << " " << request->message;
+    return false;
+  }
+
+  const std::lock_guard<std::recursive_mutex> lock(modules_lock_);
+  modules_.clear();
+  for (auto &module : request->modules) {
+    modules_.emplace_back(std::make_shared<Module>(module));
   }
 
   return true;

@@ -170,4 +170,22 @@ struct DebuggerCommandResume : Command {
                     const std::vector<std::string> &) override;
 };
 
+struct DebuggerCommandGetModules : Command {
+  DebuggerCommandGetModules()
+      : Command(
+            "\n"
+            "Print basic information about loaded modules.") {}
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &) override;
+};
+
+struct DebuggerCommandGetSections : Command {
+  DebuggerCommandGetSections()
+      : Command(
+            "\n"
+            "Print basic information about loaded sections.") {}
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &) override;
+};
+
 #endif  // XBDM_GDB_BRIDGE_DEBUGGER_COMMANDS_H

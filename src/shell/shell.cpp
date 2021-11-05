@@ -39,6 +39,8 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   REGISTER("/continue", DebuggerCommandContinue);
   REGISTER("/suspend", DebuggerCommandSuspend);
   REGISTER("/resume", DebuggerCommandResume);
+  REGISTER("/modules", DebuggerCommandGetModules);
+  REGISTER("/sections", DebuggerCommandGetSections);
   auto step_function = std::make_shared<DebuggerCommandStepFunction>();
   commands_["/stepf"] = step_function;
   commands_["/stepfun"] = step_function;

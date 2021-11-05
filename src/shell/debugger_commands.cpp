@@ -283,3 +283,33 @@ Command::Result DebuggerCommandResume::operator()(
 
   return HANDLED;
 }
+
+Command::Result DebuggerCommandGetModules::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &) {
+  auto debugger = interface.Debugger();
+  if (!debugger) {
+    std::cout << "Debugger not attached." << std::endl;
+    return HANDLED;
+  }
+
+  auto modules = debugger->Modules();
+  for (auto &module : modules) {
+    std::cout << *module << std::endl;
+  }
+  return HANDLED;
+}
+
+Command::Result DebuggerCommandGetSections::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &) {
+  auto debugger = interface.Debugger();
+  if (!debugger) {
+    std::cout << "Debugger not attached." << std::endl;
+    return HANDLED;
+  }
+
+  auto sections = debugger->Sections();
+  for (auto &section : sections) {
+    std::cout << *section << std::endl;
+  }
+  return HANDLED;
+}

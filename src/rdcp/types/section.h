@@ -17,7 +17,6 @@ struct Section {
 
   friend std::ostream &operator<<(std::ostream &os, const Section &loaded);
 
-  std::string action;
   std::string name;
   uint32_t base_address;
   uint32_t size;

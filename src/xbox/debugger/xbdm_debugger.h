@@ -41,6 +41,8 @@ class XBDMDebugger {
                 bool wait_forever = false);
 
   [[nodiscard]] std::list<std::shared_ptr<Thread>> Threads();
+  [[nodiscard]] std::list<std::shared_ptr<Module>> Modules();
+  [[nodiscard]] std::list<std::shared_ptr<Section>> Sections();
 
   [[nodiscard]] int ActiveThreadID() const {
     auto thread = ActiveThread();
@@ -88,6 +90,7 @@ class XBDMDebugger {
   bool HaltAll();
 
   bool FetchThreads();
+  bool FetchModules();
   bool RestartAndAttach(int flags = Reboot::kStop);
 
   bool StepFunction();
@@ -126,9 +129,14 @@ class XBDMDebugger {
   ExecutionState state_{S_INVALID};
 
   int active_thread_index_{-1};
-  std::recursive_mutex thread_lock_;
+
+  std::recursive_mutex threads_lock_;
   std::list<std::shared_ptr<Thread>> threads_;
+
+  std::recursive_mutex modules_lock_;
   std::list<std::shared_ptr<Module>> modules_;
+
+  std::recursive_mutex sections_lock_;
   std::list<std::shared_ptr<Section>> sections_;
 
   std::map<int, std::string> debugstr_accumulator_;
