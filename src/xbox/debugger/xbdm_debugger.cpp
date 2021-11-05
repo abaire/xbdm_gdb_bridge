@@ -72,6 +72,15 @@ bool XBDMDebugger::DebugXBE(const std::string &path,
 
   auto request =
       std::make_shared<LoadOnBootTitle>(xbe_name, xbe_dir, command_line);
+  /*
+    context_->SendCommandSync(request);
+    if (!request->IsOK()) {
+      BOOST_LOG_TRIVIAL(error) << "Failed to request break at start "
+                               << request->status << " " << request->message;
+      return false;
+    }
+
+   */
 
   return false;
 }

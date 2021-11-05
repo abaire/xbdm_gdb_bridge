@@ -1243,15 +1243,12 @@ struct Modules : public RDCPProcessedRequest {
 
     auto parsed = RDCPMultiMapResponse(response->Data());
     for (auto& it : parsed.maps) {
-      Module module{
-          .name = it.GetString("name"),
-          .base_address = static_cast<uint32_t>(it.GetDWORD("base")),
-          .size = static_cast<uint32_t>(it.GetDWORD("size")),
-          .checksum = static_cast<uint32_t>(it.GetDWORD("check")),
-          .timestamp = static_cast<uint32_t>(it.GetDWORD("timestamp")),
-          .is_tls = it.HasKey("tls"),
-          .is_xbe = it.HasKey("xbe"),
-      };
+      Module module(it.GetString("name"),
+                    static_cast<uint32_t>(it.GetDWORD("base")),
+                    static_cast<uint32_t>(it.GetDWORD("size")),
+                    static_cast<uint32_t>(it.GetDWORD("check")),
+                    static_cast<uint32_t>(it.GetDWORD("timestamp")),
+                    it.HasKey("tls"), it.HasKey("xbe"));
       modules.emplace_back(module);
     }
   }
