@@ -33,6 +33,9 @@ cmake_push_check_state(RESET)
 check_symbol_exists(be64toh endian.h HAVE_BE64TOH)
 cmake_pop_check_state()
 
+set(CMAKE_CXX_FLAGS_DEBUG "-g -Og")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
 configure_file("src/configure.h.cmake" "${GENERATED_FILES_DIR}/configure.h")
 
 add_executable(
