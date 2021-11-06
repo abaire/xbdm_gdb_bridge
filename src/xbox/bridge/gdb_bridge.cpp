@@ -316,8 +316,8 @@ void GDBBridge::HandleReadGeneralRegisters(const GDBPacket& packet) {
   }
   thread->FetchFloatContextSync(*xbdm_);
 
-  std::string response;
-  SerializeRegisters(thread->context, thread->float_context);
+  std::string response =
+      SerializeRegisters(thread->context, thread->float_context);
   gdb_->Send(GDBPacket(response));
 }
 
