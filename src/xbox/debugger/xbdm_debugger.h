@@ -8,10 +8,11 @@
 #include <mutex>
 #include <string>
 
-#include "memory_region.h"
 #include "rdcp/types/execution_state.h"
+#include "rdcp/types/memory_region.h"
 #include "rdcp/types/module.h"
 #include "rdcp/types/section.h"
+#include "rdcp/xbdm_requests.h"
 #include "thread.h"
 
 class XBDMContext;
@@ -104,6 +105,7 @@ class XBDMDebugger {
 
   bool FetchThreads();
   bool FetchModules();
+  bool FetchMemoryMap();
   bool RestartAndAttach(int flags = Reboot::kStop);
 
   bool StepInstruction();
@@ -161,6 +163,9 @@ class XBDMDebugger {
 
   std::recursive_mutex sections_lock_;
   std::list<std::shared_ptr<Section>> sections_;
+
+  std::recursive_mutex memory_regions_lock_;
+  std::list<std::shared_ptr<MemoryRegion>> memory_regions_;
 
   std::map<int, std::string> debugstr_accumulator_;
 

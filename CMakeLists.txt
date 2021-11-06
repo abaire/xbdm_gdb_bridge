@@ -77,8 +77,8 @@ add_executable(
         src/xbox/bridge/gdb_bridge.h
         src/xbox/bridge/gdb_registers.cpp
         src/xbox/bridge/gdb_registers.h
-        src/xbox/debugger/memory_region.cpp
-        src/xbox/debugger/memory_region.h
+        src/rdcp/types/memory_region.cpp
+        src/rdcp/types/memory_region.h
         src/rdcp/types/execution_state.h
         src/rdcp/types/module.cpp
         src/rdcp/types/module.h

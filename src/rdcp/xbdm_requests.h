@@ -14,6 +14,7 @@
 #include "rdcp/rdcp_request.h"
 #include "rdcp/rdcp_response.h"
 #include "rdcp/rdcp_status_code.h"
+#include "rdcp/types/memory_region.h"
 #include "rdcp/types/module.h"
 #include "rdcp/types/thread_context.h"
 #include "rdcp/xbdm_stop_reasons.h"
@@ -1804,13 +1805,6 @@ struct VSSnap : public RDCPProcessedRequest {
 */
 
 struct WalkMem : public RDCPProcessedRequest {
-  struct Region {
-    uint32_t base;
-    uint32_t size;
-    uint32_t protect;
-    std::set<std::string> flags;
-  };
-
   WalkMem() : RDCPProcessedRequest("walkmem") {}
 
   [[nodiscard]] bool IsOK() const override {
@@ -1824,17 +1818,11 @@ struct WalkMem : public RDCPProcessedRequest {
 
     auto parsed = RDCPMultiMapResponse(response->Data());
     for (auto& it : parsed.maps) {
-      Region r{
-          .base = it.GetUInt32("base"),
-          .size = it.GetUInt32("size"),
-          .protect = it.GetUInt32("protect"),
-          .flags = it.valueless_keys,
-      };
-      regions.emplace_back(r);
+      regions.emplace_back(it);
     }
   }
 
-  std::vector<Region> regions;
+  std::vector<MemoryRegion> regions;
 };
 
 struct XBEInfo : public RDCPProcessedRequest {

@@ -53,7 +53,15 @@ bool XBDMDebugger::Attach() {
     return false;
   }
 
-  return FetchModules();
+  if (!FetchModules()) {
+    return false;
+  }
+
+  if (!FetchMemoryMap()) {
+    return false;
+  }
+
+  return true;
 }
 
 void XBDMDebugger::Shutdown() {
@@ -474,6 +482,24 @@ bool XBDMDebugger::FetchModules() {
   modules_.clear();
   for (auto &module : request->modules) {
     modules_.emplace_back(std::make_shared<Module>(module));
+  }
+
+  return true;
+}
+
+bool XBDMDebugger::FetchMemoryMap() {
+  auto request = std::make_shared<::WalkMem>();
+  context_->SendCommandSync(request);
+  if (!request->IsOK()) {
+    BOOST_LOG_TRIVIAL(error) << "Failed to fetch memory map " << request->status
+                             << " " << request->message;
+    return false;
+  }
+
+  const std::lock_guard<std::recursive_mutex> lock(memory_regions_lock_);
+  memory_regions_.clear();
+  for (auto &region : request->regions) {
+    memory_regions_.emplace_back(std::make_shared<MemoryRegion>(region));
   }
 
   return true;

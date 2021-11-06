@@ -1,5 +1,7 @@
 #include "gdb_registers.h"
 
+#include <arpa/inet.h>
+
 #include "rdcp/types/thread_context.h"
 
 static void AppendRegister(std::string &output,
@@ -11,7 +13,7 @@ static void AppendRegister(std::string &output,
     return;
   }
 
-  snprintf(buffer, 31, "%08x", htobe32(*value));
+  snprintf(buffer, 31, "%08x", htonl(*value));
   output += buffer;
 }
 
@@ -24,7 +26,7 @@ static void Append10ByteRegister(std::string &output,
     return;
   }
 
-  snprintf(buffer, 63, "%020lx", htobe64(*value));
+  snprintf(buffer, 63, "%020llx", htonll(*value));
   // Truncate if the value has digits beyond the first 10 bytes.
   buffer[20] = 0;
   output += buffer;

@@ -863,7 +863,7 @@ Command::Result CommandWalkMem::operator()(
   } else {
     for (auto &region : request->regions) {
       std::cout << "Base Address: 0x" << std::hex << std::setw(8)
-                << std::setfill('0') << region.base << std::dec
+                << std::setfill('0') << region.start << std::dec
                 << " size: " << region.size << " protection: 0x" << std::hex
                 << region.protect;
       for (auto &flag : region.flags) {
