@@ -23,7 +23,7 @@ enable them.
 # Design
 
 * `Shell` performs interactive command processing. 
-* `XBOXInterface` holds the various connections and interaction queues.  
+* `XBOXInterface` holds the various connections and thread pools.
 
 ## Threading model
 
@@ -34,4 +34,4 @@ enable them.
     * `xbdm_control_executor_` is a `thread_pool` instance that sequences XBDM requests.
     * `gdb_control_executor_` is a `thread_pool` instance that sequences GDB requests. Generally a GDB request will 
       spawn one or more XBDM requests that will be processed by the `xbdm_control_executor_`.
-
+    * During a debugging session, a `notification_executor_` `thread_pool` is created to handle push notifications from XBDM.
