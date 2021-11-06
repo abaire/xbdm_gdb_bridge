@@ -9,6 +9,7 @@
 #include "notification/xbdm_notification_transport.h"
 #include "rdcp/rdcp_processed_request.h"
 #include "rdcp/xbdm_transport.h"
+#include "util/timer.h"
 
 XBDMContext::XBDMContext(std::string name, IPAddress xbox_address,
                          std::shared_ptr<SelectThread> select_thread)

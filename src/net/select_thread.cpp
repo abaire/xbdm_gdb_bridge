@@ -7,8 +7,6 @@
 
 #include "util/timer.h"
 
-static int kMaxWaitMilliseconds = 100;
-
 void SelectThread::ThreadMainBootstrap(SelectThread *instance) {
   instance->ThreadMain();
 }
@@ -19,8 +17,7 @@ void SelectThread::ThreadMain() {
   fd_set except_fds;
 
   static constexpr int kMinSleepMilliseconds = 5;
-  struct timeval timeout = {.tv_sec = 0,
-                            .tv_usec = 1000 * kMaxWaitMilliseconds};
+  struct timeval timeout = {.tv_sec = 0, .tv_usec = 0};
 
   while (running_) {
     FD_ZERO(&recv_fds);
