@@ -158,7 +158,10 @@ add_test(NAME rdcp_tests COMMAND rdcp_tests)
 add_executable(
         util_tests
         test/util/test_main.cpp
+        test/util/test_parsing.cpp
         test/util/test_path.cpp
+        src/util/parsing.cpp
+        src/util/parsing.h
         src/util/path.cpp
         src/util/path.h
 )

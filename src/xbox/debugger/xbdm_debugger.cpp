@@ -688,32 +688,83 @@ bool XBDMDebugger::Halt() {
 
 std::optional<std::vector<uint8_t>> XBDMDebugger::GetMemory(uint32_t address,
                                                             uint32_t length) {
-  // TODO: IMPLEMENT ME;
-  BOOST_LOG_TRIVIAL(error) << "TODO: IMPLEMENT ME";
-  return {};
+  if (!ValidateMemoryAccess(address, length)) {
+    return std::nullopt;
+  }
+
+  auto request = std::make_shared<GetMemBinary>(address, length);
+  context_->SendCommandSync(request);
+  if (!request->IsOK()) {
+    BOOST_LOG_TRIVIAL(error) << "Failed to read memory " << request->status
+                             << " " << request->message;
+    return std::nullopt;
+  }
+
+  return request->data;
 }
 
 bool XBDMDebugger::SetMemory(uint32_t address,
                              const std::vector<uint8_t> &data) {
-  return false;
+  if (!ValidateMemoryAccess(address, data.size(), true)) {
+    return false;
+  }
+
+  auto request = std::make_shared<SetMem>(address, data);
+  context_->SendCommandSync(request);
+  return request->IsOK();
 }
 
-bool XBDMDebugger::AddBreakpoint(uint32_t address) { return false; }
+bool XBDMDebugger::AddBreakpoint(uint32_t address) {
+  auto request = std::make_shared<BreakAddress>(address);
+  context_->SendCommandSync(request);
+  return request->IsOK();
+}
 
 bool XBDMDebugger::AddReadWatch(uint32_t address, uint32_t length) {
-  return false;
+  auto request = std::make_shared<BreakOnRead>(address, length);
+  context_->SendCommandSync(request);
+  return request->IsOK();
 }
 
 bool XBDMDebugger::AddWriteWatch(uint32_t address, uint32_t length) {
-  return false;
+  auto request = std::make_shared<BreakOnWrite>(address, length);
+  context_->SendCommandSync(request);
+  return request->IsOK();
 }
 
-bool XBDMDebugger::RemoveBreakpoint(uint32_t address) { return false; }
+bool XBDMDebugger::RemoveBreakpoint(uint32_t address) {
+  auto request = std::make_shared<BreakAddress>(address, true);
+  context_->SendCommandSync(request);
+  return request->IsOK();
+}
 
 bool XBDMDebugger::RemoveReadWatch(uint32_t address, uint32_t length) {
-  return false;
+  auto request = std::make_shared<BreakOnRead>(address, length, true);
+  context_->SendCommandSync(request);
+  return request->IsOK();
 }
 
 bool XBDMDebugger::RemoveWriteWatch(uint32_t address, uint32_t length) {
+  auto request = std::make_shared<BreakOnWrite>(address, length, true);
+  context_->SendCommandSync(request);
+  return request->IsOK();
+}
+
+bool XBDMDebugger::ValidateMemoryAccess(uint32_t address, uint32_t length,
+                                        bool is_write) {
+  std::lock_guard<std::recursive_mutex> lock(memory_regions_lock_);
+  if (memory_regions_.empty()) {
+    BOOST_LOG_TRIVIAL(warning)
+        << "No memory regions mapped, assuming access is OK.";
+    return true;
+  }
+
+  for (auto &region : memory_regions_) {
+    // TODO: Validate that the region is writable.
+    if (region->Contains(address, length)) {
+      return true;
+    }
+  }
+
   return false;
 }

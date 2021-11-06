@@ -120,6 +120,10 @@ struct Continue : public RDCPProcessedRequest {
       AppendData(" exception");
     }
   }
+
+  [[nodiscard]] bool IsOK() const override {
+    return status == StatusCode::OK || status == StatusCode::ERR_NOT_STOPPED;
+  }
 };
 
 /*

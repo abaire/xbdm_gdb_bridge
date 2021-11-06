@@ -122,6 +122,9 @@ class XBDMDebugger {
   bool RemoveReadWatch(uint32_t address, uint32_t length);
   bool RemoveWriteWatch(uint32_t address, uint32_t length);
 
+  bool ValidateMemoryAccess(uint32_t address, uint32_t length,
+                            bool is_write = false);
+
  private:
   [[nodiscard]] bool BreakAtStart() const;
   bool SetDebugger(bool enabled);

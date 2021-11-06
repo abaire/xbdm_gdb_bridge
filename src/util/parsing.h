@@ -13,11 +13,14 @@ int32_t ParseInt32(const std::string &value);
 template <typename T>
 bool MaybeParseHexInt(T &ret, const std::vector<uint8_t> &data,
                       size_t offset = 0) {
-  const char *start = reinterpret_cast<const char *>(data.data()) + offset;
+  auto data_start = data.data() + offset;
+  auto data_end = data_start + (data.size() - offset);
+  std::string to_parse(data_start, data_end);
+
   char *end = nullptr;
 
-  ret = static_cast<T>(strtol(start, &end, 16));
-  return end != start;
+  ret = static_cast<T>(strtol(to_parse.c_str(), &end, 16));
+  return end != to_parse.c_str();
 }
 
 template <typename T>
