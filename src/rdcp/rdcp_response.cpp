@@ -43,7 +43,7 @@ static const char *ParseBinaryResponse(std::vector<char> &data,
       return nullptr;
     }
 
-    binary_response_size = ntohl(*reinterpret_cast<int32_t const *>(buffer));
+    binary_response_size = *reinterpret_cast<uint32_t const *>(buffer);
     bytes_available -= 4;
     buffer += 4;
   }

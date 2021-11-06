@@ -12,9 +12,9 @@ class RDCPResponse {
  public:
   //! Indicates that a binary response is expected and that the size of the
   //! binary will be provided as the first 4 bytes in the response.
-  static constexpr long kBinaryInt32SizePrefix = -1;
+  static constexpr long kBinaryInt32SizePrefix = -2;
   //! Indicates that a response cannot contain binary data.
-  static constexpr long kBinaryNotAllowed = 0;
+  static constexpr long kBinaryNotAllowed = -1;
 
   static constexpr uint8_t kTerminator[] = {'\r', '\n'};
   static constexpr long kTerminatorLen =
