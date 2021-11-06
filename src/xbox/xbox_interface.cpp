@@ -157,7 +157,7 @@ void XBOXInterface::OnGDBClientConnected(int sock, IPAddress& address) {
 
   BOOST_LOG_TRIVIAL(trace) << "GDB channel established from " << address;
   auto transport = std::make_shared<GDBTransport>(
-      name_, sock, address, [this](const std::shared_ptr<GDBPacket>& packet) {
+      "GDB", sock, address, [this](const std::shared_ptr<GDBPacket>& packet) {
         this->OnGDBPacketReceived(packet);
       });
 

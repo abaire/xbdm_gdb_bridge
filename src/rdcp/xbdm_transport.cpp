@@ -65,7 +65,7 @@ void XBDMTransport::WriteNextRequest() {
   }
 
   const auto &request = request_queue_.front();
-  BOOST_LOG_TRIVIAL(trace) << "Sending " << *request;
+  BOOST_LOG_TRIVIAL(trace) << "XBDM request: " << *request;
   std::vector<uint8_t> buffer = static_cast<std::vector<uint8_t>>(*request);
   TCPConnection::Send(buffer);
 }
@@ -99,7 +99,7 @@ void XBDMTransport::OnBytesRead() {
 
   ShiftReadBuffer(bytes_consumed);
 
-  BOOST_LOG_TRIVIAL(trace) << "Received response " << *response;
+  BOOST_LOG_TRIVIAL(trace) << "XBDM response: " << *response;
 
   if (request_queue_.empty()) {
     // On initial connection, XBDM will send an unsolicited OK response.

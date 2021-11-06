@@ -30,11 +30,11 @@ void GDBTransport::OnBytesRead() {
       for (; it != read_buffer_.end(); ++it) {
         switch (*it) {
           case '+':
-            BOOST_LOG_TRIVIAL(trace) << "Ack received";
+            BOOST_LOG_TRIVIAL(trace) << "GDB Ack received";
             continue;
 
           case '-':
-            BOOST_LOG_TRIVIAL(warning) << "Remote requested resend.";
+            BOOST_LOG_TRIVIAL(warning) << "GDB remote requested resend.";
             continue;
 
           case 0x03:

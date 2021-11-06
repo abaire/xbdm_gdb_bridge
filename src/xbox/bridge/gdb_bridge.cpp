@@ -224,8 +224,7 @@ void GDBBridge::HandleEnableExtendedMode(const GDBPacket& packet) {
 void GDBBridge::HandleQueryHaltReason(const GDBPacket& packet) {
   auto thread = debugger_->ActiveThread();
   if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
-    BOOST_LOG_TRIVIAL(error) << "Halt query issued but target is not halted.";
-    SendEmpty();
+    SendOK();
   } else {
     SendThreadStopPacket(thread);
   }
@@ -495,6 +494,7 @@ void GDBBridge::HandleReadQuery(const GDBPacket& packet) {
 void GDBBridge::HandleWriteQuery(const GDBPacket& packet) {
   if (packet.DataString() == "QStartNoAckMode") {
     gdb_->SetNoAckMode(true);
+    SendOK();
     return;
   }
 
@@ -825,7 +825,7 @@ std::shared_ptr<Thread> GDBBridge::GetThreadForCommand(char command) const {
 }
 
 void GDBBridge::HandleQueryAttached(const GDBPacket& packet) {
-  // TODO: Check to see if the debugger is still attached.
+  // Always report that the debugger is attached to an existing process.
   gdb_->Send(GDBPacket("1"));
 }
 
@@ -994,6 +994,11 @@ void GDBBridge::HandleQueryThreadExtraInfo(const GDBPacket& packet) {
 }
 
 void GDBBridge::HandleThreadInfoStart() {
+  if (!debugger_->FetchThreads()) {
+    SendError(EFAULT);
+    return;
+  }
+
   thread_info_buffer_ = debugger_->GetThreadIDs();
   SendThreadInfoBuffer();
 }
@@ -1011,12 +1016,12 @@ void GDBBridge::SendThreadInfoBuffer(bool send_all) {
   char buffer[16] = {0};
   auto it = thread_info_buffer_.begin();
   snprintf(buffer, 15, "%x", *it++);
-  send_buffer += "buffer";
+  send_buffer += buffer;
 
   if (send_all) {
     for (; it != thread_info_buffer_.end(); ++it) {
       snprintf(buffer, 15, ",%x", *it);
-      send_buffer += "buffer";
+      send_buffer += buffer;
     }
   }
 
@@ -1026,19 +1031,22 @@ void GDBBridge::SendThreadInfoBuffer(bool send_all) {
   } else {
     thread_info_buffer_.erase(thread_info_buffer_.begin(), it);
   }
+
+  gdb_->Send(GDBPacket(send_buffer));
 }
 
 void GDBBridge::HandleQueryTraceStatus() { SendEmpty(); }
 
 void GDBBridge::HandleQueryCurrentThreadID() {
-  int32_t thread_id = debugger_->ActiveThreadID();
+  int32_t thread_id = debugger_->AnyThreadID();
   if (thread_id >= 0) {
     char buffer[32] = {0};
     snprintf(buffer, 31, "QC%x", thread_id);
     gdb_->Send(GDBPacket(buffer));
-  } else {
-    SendEmpty();
+    return;
   }
+
+  SendEmpty();
 }
 
 void GDBBridge::HandleFeaturesRead(const GDBPacket& packet) {

@@ -21,8 +21,15 @@ bool TCPServer::Listen(const IPAddress &address) {
   struct sockaddr_in bind_addr {};
   socklen_t bind_addr_len = sizeof(bind_addr);
 
+  int enabled = 1;
+  if (setsockopt(socket_, SOL_SOCKET, SO_REUSEADDR, &enabled,
+                 sizeof(enabled))) {
+    BOOST_LOG_TRIVIAL(warning) << "Failed to set reuseaddr " << errno;
+  }
+
   if (bind(socket_, reinterpret_cast<struct sockaddr const *>(&addr),
            sizeof(addr))) {
+    BOOST_LOG_TRIVIAL(error) << "Bind failed " << errno;
     goto close_and_fail;
   }
 

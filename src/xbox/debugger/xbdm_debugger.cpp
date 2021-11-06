@@ -132,10 +132,15 @@ std::list<std::shared_ptr<Section>> XBDMDebugger::Sections() {
 std::vector<int32_t> XBDMDebugger::GetThreadIDs() {
   std::unique_lock<std::recursive_mutex> lock(threads_lock_);
   std::vector<int32_t> ret;
+  if (threads_.empty()) {
+    return {};
+  }
   ret.reserve(threads_.size());
 
   int32_t active_thread_id = ActiveThreadID();
-  ret.push_back(active_thread_id);
+  if (active_thread_id > 0) {
+    ret.push_back(active_thread_id);
+  }
 
   for (auto &thread : threads_) {
     if (thread->thread_id == active_thread_id) {

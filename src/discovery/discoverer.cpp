@@ -165,12 +165,12 @@ bool Discoverer::ReceiveResponse(XBDMServer &result) const {
   if (bytes_processed != received) {
     BOOST_LOG_TRIVIAL(trace)
         << "Received " << received << " bytes but NAPPacket only processed "
-        << bytes_processed << std::endl;
+        << bytes_processed;
   }
 
   if (packet.type != NAPPacket::REPLY) {
-    BOOST_LOG_TRIVIAL(trace) << "Received unexpected response packet of type "
-                             << packet.type << std::endl;
+    BOOST_LOG_TRIVIAL(trace)
+        << "Received unexpected response packet of type " << packet.type;
     return false;
   }
 
