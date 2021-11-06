@@ -75,7 +75,7 @@ void XBDMContext::OnNotificationChannelConnected(int sock, IPAddress& address) {
   auto transport = std::make_shared<XBDMNotificationTransport>(
       name_ + "__xbdm_notification_channel", sock, address,
       [this](std::shared_ptr<XBDMNotification> notification) {
-        this->OnNotificationReceived(notification);
+        this->OnNotificationReceived(std::move(notification));
       });
 
   select_thread_->AddConnection(transport);
