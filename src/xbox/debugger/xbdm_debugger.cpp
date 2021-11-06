@@ -252,13 +252,15 @@ void XBDMDebugger::OnNotification(
       break;
 
     case NT_INVALID:
-      BOOST_LOG_TRIVIAL(error) << "Received invalid notification type.";
+      BOOST_LOG_TRIVIAL(error)
+          << "XBDMNotif: Received invalid notification type.";
       break;
   }
 }
 
 void XBDMDebugger::OnVX(const std::shared_ptr<NotificationVX> &msg) {
-  BOOST_LOG_TRIVIAL(info) << "VX notification: " << std::endl << *msg;
+  BOOST_LOG_TRIVIAL(info) << "XBDMNotif: VX notification: " << std::endl
+                          << *msg;
 }
 
 void XBDMDebugger::OnDebugStr(
@@ -276,8 +278,8 @@ void XBDMDebugger::OnDebugStr(
   auto existing = debugstr_accumulator_.find(msg->thread_id);
   if (existing != debugstr_accumulator_.end()) {
     BOOST_LOG_TRIVIAL(info) << std::endl << existing->second << *msg;
-    ;
     debugstr_accumulator_.erase(existing);
+    return;
   }
 
   BOOST_LOG_TRIVIAL(info) << std::endl << *msg;
@@ -334,13 +336,13 @@ void XBDMDebugger::OnThreadTerminated(
   }
 
   BOOST_LOG_TRIVIAL(warning)
-      << "Received thread termination message for unknown thread "
+      << "XBDMNotif: Received thread termination message for unknown thread "
       << msg->thread_id;
 }
 
 void XBDMDebugger::OnExecutionStateChanged(
     const std::shared_ptr<NotificationExecutionStateChanged> &msg) {
-  BOOST_LOG_TRIVIAL(info) << "State changed: " << *msg;
+  BOOST_LOG_TRIVIAL(info) << "XBDMNotif: State changed: " << *msg;
 
   {
     const std::lock_guard<std::mutex> lock(state_lock_);
@@ -358,7 +360,8 @@ void XBDMDebugger::OnBreakpoint(
   auto thread = GetThread(msg->thread_id);
   if (!thread) {
     BOOST_LOG_TRIVIAL(warning)
-        << "Received breakpoint message for unknown thread " << msg->thread_id;
+        << "XBDMNotif: Received breakpoint message for unknown thread "
+        << msg->thread_id;
     return;
   }
 
@@ -373,7 +376,8 @@ void XBDMDebugger::OnWatchpoint(
   auto thread = GetThread(msg->thread_id);
   if (!thread) {
     BOOST_LOG_TRIVIAL(warning)
-        << "Received breakpoint message for unknown thread " << msg->thread_id;
+        << "XBDMNotif: Received breakpoint message for unknown thread "
+        << msg->thread_id;
     return;
   }
 
@@ -388,7 +392,8 @@ void XBDMDebugger::OnSingleStep(
   auto thread = GetThread(msg->thread_id);
   if (!thread) {
     BOOST_LOG_TRIVIAL(warning)
-        << "Received breakpoint message for unknown thread " << msg->thread_id;
+        << "XBDMNotif: Received breakpoint message for unknown thread "
+        << msg->thread_id;
     return;
   }
 
@@ -404,7 +409,8 @@ void XBDMDebugger::OnException(
   auto thread = GetThread(msg->thread_id);
   if (!thread) {
     BOOST_LOG_TRIVIAL(warning)
-        << "Received breakpoint message for unknown thread " << msg->thread_id;
+        << "XBDMNotif: Received breakpoint message for unknown thread "
+        << msg->thread_id;
     return;
   }
 

@@ -38,7 +38,7 @@ bool GDBBridge::HasGDBClient() const { return gdb_ && gdb_->IsConnected(); }
 
 bool GDBBridge::HandlePacket(const GDBPacket& packet) {
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
-  BOOST_LOG_TRIVIAL(trace) << "HANDLE PACKET: " << packet.DataString();
+  BOOST_LOG_TRIVIAL(trace) << "GDB: received packet: " << packet.DataString();
 #endif
 
   switch (packet.Command()) {
@@ -1152,10 +1152,7 @@ void GDBBridge::HandleVCont(const std::string& args) {
   }
 
   std::vector<std::string> commands;
-  {
-    static constexpr char delim[] = {';'};
-    boost::split(commands, args, boost::is_any_of(delim));
-  }
+  boost::split(commands, args, boost::is_any_of(";"));
 
   for (auto& command : commands) {
     if (command == "c") {
@@ -1168,10 +1165,7 @@ void GDBBridge::HandleVCont(const std::string& args) {
 
     if (command.front() == 's') {
       std::vector<std::string> step_commands;
-      {
-        static constexpr char delim[] = {':'};
-        boost::split(commands, args, boost::is_any_of(delim));
-      }
+      boost::split(commands, args, boost::is_any_of(":"));
       if (step_commands.size() > 1) {
         int thread_id;
         if (!MaybeParseHexInt(thread_id, step_commands[1])) {

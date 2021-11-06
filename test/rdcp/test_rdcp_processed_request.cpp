@@ -43,8 +43,8 @@ BOOST_AUTO_TEST_CASE(empty_terminated_line_returns_empty_lines) {
   int line = 1;
   for (auto it = response.lines.begin(); it != response.lines.end();
        ++it, ++line) {
-    char message[16] = {0};
-    snprintf(message, 15, "Line: %d", line);
+    char message[32] = {0};
+    snprintf(message, 31, "Line: %d", line);
     BOOST_TEST(std::equal(it->begin(), it->end(), ""), message);
   }
 }

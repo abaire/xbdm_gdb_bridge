@@ -133,7 +133,7 @@ void TCPConnection::DoSend() {
 
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
   std::string data(write_buffer_.begin(), write_buffer_.begin() + bytes_sent);
-  BOOST_LOG_TRIVIAL(trace) << "Sending to " << name_ << ": " << bytes_sent
+  BOOST_LOG_TRIVIAL(trace) << "  socket<< " << name_ << ": " << bytes_sent
                            << " bytes " << data;
 #endif
 
