@@ -15,11 +15,12 @@ XBDMContext::XBDMContext(std::string name, IPAddress xbox_address,
     : name_(std::move(name)),
       xbox_address_(std::move(xbox_address)),
       select_thread_(std::move(select_thread)) {
-  xbdm_transport_ = std::make_shared<XBDMTransport>(name_);
+  xbdm_transport_ = std::make_shared<XBDMTransport>(name_ + "__xbdm");
   select_thread_->AddConnection(xbdm_transport_);
 
   notification_server_ = std::make_shared<DelegatingServer>(
-      name_, [this](int sock, IPAddress& address) {
+      name_ + "__xbdm_notification_server",
+      [this](int sock, IPAddress& address) {
         this->OnNotificationChannelConnected(sock, address);
       });
   select_thread_->AddConnection(notification_server_);
@@ -72,7 +73,7 @@ void XBDMContext::OnNotificationChannelConnected(int sock, IPAddress& address) {
                            << address;
   // TODO: Hold on to the transport so it can be shut down gracefully.
   auto transport = std::make_shared<XBDMNotificationTransport>(
-      name_, sock, address,
+      name_ + "__xbdm_notification_channel", sock, address,
       [this](std::shared_ptr<XBDMNotification> notification) {
         this->OnNotificationReceived(notification);
       });
@@ -95,7 +96,7 @@ bool XBDMContext::Reconnect() {
     xbdm_transport_.reset();
   }
 
-  xbdm_transport_ = std::make_shared<XBDMTransport>(name_);
+  xbdm_transport_ = std::make_shared<XBDMTransport>(name_ + "__xbdm");
   select_thread_->AddConnection(xbdm_transport_);
   return xbdm_transport_->Connect(xbox_address_);
 }

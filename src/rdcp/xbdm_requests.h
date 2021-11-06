@@ -842,8 +842,7 @@ struct IsStopped : public RDCPProcessedRequest {
   }
 
   [[nodiscard]] bool IsOK() const override {
-    return status == StatusCode::OK_BINARY_RESPONSE ||
-           status == StatusCode::ERR_NOT_STOPPED;
+    return status == StatusCode::OK || status == StatusCode::ERR_NOT_STOPPED;
   }
 
   void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {

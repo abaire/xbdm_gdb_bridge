@@ -73,7 +73,7 @@ bool XBOXInterface::StartGDBServer(const IPAddress& address) {
   gdb_bridge_ = std::make_shared<GDBBridge>(xbdm_context_, xbdm_debugger_);
 
   gdb_server_ = std::make_shared<DelegatingServer>(
-      name_, [this](int sock, IPAddress& address) {
+      name_ + "__gdb_server", [this](int sock, IPAddress& address) {
         this->OnGDBClientConnected(sock, address);
       });
   select_thread_->AddConnection(gdb_server_);
@@ -166,6 +166,7 @@ void XBOXInterface::OnGDBClientConnected(int sock, IPAddress& address) {
   assert(gdb_executor_);
   boost::asio::dispatch(*gdb_executor_, [this, transport]() mutable {
     this->xbdm_debugger_->Attach();
+    this->xbdm_debugger_->HaltAll();
     this->select_thread_->AddConnection(transport);
     this->gdb_bridge_->AddTransport(transport);
   });

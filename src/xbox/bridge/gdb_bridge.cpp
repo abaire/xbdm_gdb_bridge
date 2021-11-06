@@ -289,10 +289,7 @@ void GDBBridge::HandleFileIO(const GDBPacket& packet) {
 }
 
 void GDBBridge::HandleReadGeneralRegisters(const GDBPacket& packet) {
-  char command;
-  assert(packet.GetFirstDataChar(command));
-
-  int32_t thread_id = GetThreadIDForCommand(command);
+  int32_t thread_id = GetThreadIDForCommand(packet.Command());
   if (thread_id < 0) {
     BOOST_LOG_TRIVIAL(error)
         << "Unsupported read general registers query for all threads: "
@@ -305,6 +302,12 @@ void GDBBridge::HandleReadGeneralRegisters(const GDBPacket& packet) {
     thread_id = debugger_->AnyThreadID();
   }
   auto thread = debugger_->GetThread(thread_id);
+  if (!thread) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Attempt to read general registers with no threads.";
+    SendError(EBADMSG);
+    return;
+  }
   if (!thread->FetchContextSync(*xbdm_)) {
     BOOST_LOG_TRIVIAL(error)
         << "Failed to retrieve registers for thread " << thread_id;

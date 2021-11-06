@@ -1,6 +1,7 @@
 #ifndef XBDM_GDB_BRIDGE_SRC_GDB_GDB_PACKET_H_
 #define XBDM_GDB_BRIDGE_SRC_GDB_GDB_PACKET_H_
 
+#include <cassert>
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -24,7 +25,10 @@ class GDBPacket {
     CalculateChecksum();
   }
 
-  [[nodiscard]] char Command() const { return static_cast<char>(data_[0]); }
+  [[nodiscard]] char Command() const {
+    assert(!data_.empty());
+    return static_cast<char>(data_[0]);
+  }
   [[nodiscard]] bool GetFirstDataChar(char &ret) const {
     if (data_.size() < 2) {
       return false;

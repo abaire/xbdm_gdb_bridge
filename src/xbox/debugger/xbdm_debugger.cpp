@@ -174,10 +174,17 @@ std::shared_ptr<Thread> XBDMDebugger::GetThread(int thread_id) {
 }
 
 bool XBDMDebugger::SetActiveThread(int thread_id) {
-  if (GetThread(thread_id)) {
-    active_thread_index_ = thread_id;
-    return true;
+  const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
+  int i = 0;
+  for (auto &thread : threads_) {
+    if (thread->thread_id == thread_id) {
+      active_thread_index_ = i;
+      return true;
+    }
+    ++i;
   }
+
+  active_thread_index_ = -1;
   return false;
 }
 
@@ -310,10 +317,18 @@ void XBDMDebugger::OnThreadCreated(
 void XBDMDebugger::OnThreadTerminated(
     const std::shared_ptr<NotificationThreadTerminated> &msg) {
   const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
+  auto active_thread_id = ActiveThreadID();
   for (auto it = threads_.begin(); it != threads_.end(); ++it) {
     auto &thread = *it;
     if (thread->thread_id == msg->thread_id) {
       threads_.erase(it);
+      if (thread->thread_id == active_thread_id) {
+        active_thread_index_ = -1;
+      } else {
+        if (!SetActiveThread(active_thread_id)) {
+          BOOST_LOG_TRIVIAL(error) << "Failed to update active thread";
+        }
+      }
       return;
     }
   }
@@ -347,7 +362,9 @@ void XBDMDebugger::OnBreakpoint(
     return;
   }
 
+  SetActiveThread(thread->thread_id);
   thread->last_known_address = msg->address;
+  // TODO: Set the stop reason from the notification content.
   thread->FetchStopReasonSync(*context_);
 }
 
@@ -360,7 +377,10 @@ void XBDMDebugger::OnWatchpoint(
     return;
   }
 
+  SetActiveThread(thread->thread_id);
   thread->last_known_address = msg->address;
+  // TODO: Set the stop reason from the notification content.
+  thread->FetchStopReasonSync(*context_);
 }
 
 void XBDMDebugger::OnSingleStep(
@@ -372,7 +392,10 @@ void XBDMDebugger::OnSingleStep(
     return;
   }
 
+  SetActiveThread(thread->thread_id);
   thread->last_known_address = msg->address;
+  // TODO: Set the stop reason from the notification content.
+  thread->FetchStopReasonSync(*context_);
 }
 
 void XBDMDebugger::OnException(
@@ -384,7 +407,11 @@ void XBDMDebugger::OnException(
         << "Received breakpoint message for unknown thread " << msg->thread_id;
     return;
   }
+
+  SetActiveThread(thread->thread_id);
   thread->last_known_address = msg->address;
+  // TODO: Set the stop reason from the notification content.
+  thread->FetchStopReasonSync(*context_);
 }
 
 bool XBDMDebugger::RestartAndAttach(int flags) {
