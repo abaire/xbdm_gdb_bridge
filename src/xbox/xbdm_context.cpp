@@ -150,7 +150,8 @@ bool XBDMContext::XBDMConnect(int max_wait_millis) {
     if (xbdm_transport_->CanProcessCommands()) {
       return true;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(busywait_millis));
+
+    WaitMilliseconds(busywait_millis);
     max_wait_millis -= busywait_millis;
   }
 

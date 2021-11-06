@@ -7,11 +7,13 @@ class Timer {
  public:
   Timer() { Start(); }
 
-  void Start() { start_ = std::chrono::steady_clock::now(); }
+  void Start() { start_ = std::chrono::high_resolution_clock::now(); }
   [[nodiscard]] long long MillisecondsElapsed() const;
+  [[nodiscard]] long long MicrosecondsElapsed() const;
+  [[nodiscard]] double FractionalMillisecondsElapsed() const;
 
  private:
-  std::chrono::steady_clock::time_point start_;
+  std::chrono::high_resolution_clock::time_point start_;
 };
 
 void WaitMilliseconds(uint32_t milliseconds);

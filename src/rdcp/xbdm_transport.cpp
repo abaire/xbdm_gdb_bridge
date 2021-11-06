@@ -68,6 +68,7 @@ void XBDMTransport::WriteNextRequest() {
   const auto &request = request_queue_.front();
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
   BOOST_LOG_TRIVIAL(trace) << "XBDM request: " << *request;
+  request_sent_.Start();
 #endif
   std::vector<uint8_t> buffer = static_cast<std::vector<uint8_t>>(*request);
   TCPConnection::Send(buffer);
@@ -113,7 +114,17 @@ void XBDMTransport::OnBytesRead() {
     request_queue_.pop_front();
     WriteNextRequest();
 
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
+    BOOST_LOG_TRIVIAL(trace) << "XBDM: Request " << *request << " round trip "
+                             << request_sent_.FractionalMillisecondsElapsed();
+    request_sent_.Start();
+#endif
     request->Complete(response);
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
+    BOOST_LOG_TRIVIAL(trace)
+        << "XBDM: Completion of request " << *request << " took "
+        << request_sent_.FractionalMillisecondsElapsed();
+#endif
   }
 }
 

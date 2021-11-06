@@ -5,6 +5,8 @@
 #include <boost/log/trivial.hpp>
 #include <chrono>
 
+#include "util/timer.h"
+
 static int kMaxWaitMilliseconds = 100;
 
 void SelectThread::ThreadMainBootstrap(SelectThread *instance) {
@@ -16,7 +18,7 @@ void SelectThread::ThreadMain() {
   fd_set send_fds;
   fd_set except_fds;
 
-  static constexpr int kMinSleepMilliseconds = 10;
+  static constexpr int kMinSleepMilliseconds = 5;
   struct timeval timeout = {.tv_sec = 0,
                             .tv_usec = 1000 * kMaxWaitMilliseconds};
 
@@ -38,8 +40,7 @@ void SelectThread::ThreadMain() {
     }
 
     if (max_fd < 0) {
-      std::this_thread::sleep_for(
-          std::chrono::milliseconds(kMinSleepMilliseconds));
+      WaitMilliseconds(kMinSleepMilliseconds);
       continue;
     }
 
@@ -50,8 +51,7 @@ void SelectThread::ThreadMain() {
     if (fds < 0) {
       BOOST_LOG_TRIVIAL(error) << "select failed " << errno;
       // TODO: Determine if this would ever be recoverable.
-      std::this_thread::sleep_for(
-          std::chrono::milliseconds(kMinSleepMilliseconds));
+      WaitMilliseconds(kMinSleepMilliseconds);
       continue;
     }
 

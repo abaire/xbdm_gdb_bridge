@@ -5,7 +5,12 @@
 #include <memory>
 #include <mutex>
 
+#include "configure.h"
 #include "net/tcp_connection.h"
+
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
+#include "util/timer.h"
+#endif
 
 class RDCPRequest;
 class RDCPResponse;
@@ -40,6 +45,10 @@ class XBDMTransport : public TCPConnection {
 
   std::recursive_mutex request_queue_lock_;
   std::deque<std::shared_ptr<RDCPRequest>> request_queue_;
+
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
+  Timer request_sent_;
+#endif
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_RDCP_XBDM_TRANSPORT_H_
