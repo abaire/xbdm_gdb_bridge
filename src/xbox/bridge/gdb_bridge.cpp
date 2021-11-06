@@ -386,7 +386,9 @@ void GDBBridge::HandleReadMemory(const GDBPacket& packet) {
 
   auto memory = debugger_->GetMemory(address, length);
   if (memory.has_value()) {
-    gdb_->Send(GDBPacket(*memory));
+    std::vector<uint8_t> data;
+    boost::algorithm::hex(memory->begin(), memory->end(), back_inserter(data));
+    gdb_->Send(GDBPacket(data));
   } else {
     SendError(EFAULT);
   }
