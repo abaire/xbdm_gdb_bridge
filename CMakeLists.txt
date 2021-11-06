@@ -3,6 +3,8 @@ project(xbdm_gdb_bridge)
 
 enable_testing()
 set(CMAKE_CXX_STANDARD 17)
+include (CMakePushCheckState)
+include(CheckSymbolExists)
 
 find_package(
         Boost 1.70
@@ -13,7 +15,23 @@ find_package(
         REQUIRED
 )
 
-include_directories(${Boost_INCLUDE_DIR})
+set(GENERATED_FILES_DIR "${CMAKE_BINARY_DIR}/generated")
+include_directories("${Boost_INCLUDE_DIR}" "${GENERATED_FILES_DIR}")
+
+cmake_push_check_state(RESET)
+set(CMAKE_REQUIRED_LIBRARIES ${SOCKET_LIBRARIES})
+if (WIN32)
+    check_symbol_exists(htonll Winsock2.h HAVE_HTONLL)
+else (WIN32)
+    check_symbol_exists(htonll arpa/inet.h HAVE_HTONLL)
+endif (WIN32)
+cmake_pop_check_state()
+
+cmake_push_check_state(RESET)
+check_symbol_exists(be64toh endian.h HAVE_BE64TOH)
+cmake_pop_check_state()
+
+configure_file("src/configure.h.cmake" "${GENERATED_FILES_DIR}/configure.h")
 
 add_executable(
         xbdm_gdb_bridge

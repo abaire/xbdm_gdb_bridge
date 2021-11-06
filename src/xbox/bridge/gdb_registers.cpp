@@ -2,6 +2,7 @@
 
 #include <arpa/inet.h>
 
+#include "configure.h"
 #include "rdcp/types/thread_context.h"
 
 static void AppendRegister(std::string &output,
@@ -26,7 +27,13 @@ static void Append10ByteRegister(std::string &output,
     return;
   }
 
+#if defined(HAVE_HTONLL)
   snprintf(buffer, 63, "%020llx", htonll(*value));
+#elif defined(HAVE_BE64TOH)
+  snprintf(buffer, 63, "%020lx", htole64(*value));
+#else
+#error "No 64-bit byte swapping function for this platform."
+#endif
   // Truncate if the value has digits beyond the first 10 bytes.
   buffer[20] = 0;
   output += buffer;
