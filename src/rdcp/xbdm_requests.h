@@ -425,6 +425,8 @@ struct GetContext : public RDCPProcessedRequest {
     SetData(" thread=");
     AppendHexString(thread_id);
 
+    assert(enable_control || enable_integer || enable_float);
+
     if (enable_control) {
       AppendData(" control");
     }

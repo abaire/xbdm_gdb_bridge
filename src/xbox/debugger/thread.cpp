@@ -63,7 +63,7 @@ bool Thread::FetchInfoSync(XBDMContext &ctx) {
 }
 
 bool Thread::FetchContextSync(XBDMContext &ctx) {
-  auto request = std::make_shared<GetContext>(thread_id);
+  auto request = std::make_shared<GetContext>(thread_id, true, true, true);
   ctx.SendCommandSync(request);
   if (!request->IsOK()) {
     context.reset();

@@ -304,7 +304,8 @@ void GDBBridge::HandleReadGeneralRegisters(const GDBPacket& packet) {
   auto thread = debugger_->GetThread(thread_id);
   if (!thread) {
     BOOST_LOG_TRIVIAL(error)
-        << "Attempt to read general registers with no threads.";
+        << "Attempt to read general registers for non-existent thread "
+        << thread_id;
     SendError(EBADMSG);
     return;
   }
