@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <boost/log/trivial.hpp>
 
+#include "configure.h"
+
 void TCPConnection::ShiftReadBuffer(long shift_bytes) {
   if (!shift_bytes) {
     return;
@@ -129,7 +131,7 @@ void TCPConnection::DoSend() {
     return;
   }
 
-#if 1
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
   std::string data(write_buffer_.begin(), write_buffer_.begin() + bytes_sent);
   BOOST_LOG_TRIVIAL(trace) << "Sending to " << name_ << ": " << bytes_sent
                            << " bytes " << data;

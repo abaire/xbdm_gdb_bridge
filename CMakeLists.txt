@@ -15,6 +15,8 @@ find_package(
         REQUIRED
 )
 
+option(ENABLE_HIGH_VERBOSITY_LOGGING "Enable low level, highly verbose logging")
+
 set(GENERATED_FILES_DIR "${CMAKE_BINARY_DIR}/generated")
 include_directories("${Boost_INCLUDE_DIR}" "${GENERATED_FILES_DIR}")
 

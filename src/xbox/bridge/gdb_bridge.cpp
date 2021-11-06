@@ -8,6 +8,7 @@
 #include <boost/log/trivial.hpp>
 #include <cstdio>
 
+#include "configure.h"
 #include "gdb/gdb_packet.h"
 #include "gdb/gdb_transport.h"
 #include "gdb_registers.h"
@@ -36,7 +37,9 @@ void GDBBridge::Stop() {
 bool GDBBridge::HasGDBClient() const { return gdb_ && gdb_->IsConnected(); }
 
 bool GDBBridge::HandlePacket(const GDBPacket& packet) {
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
   BOOST_LOG_TRIVIAL(trace) << "HANDLE PACKET: " << packet.DataString();
+#endif
 
   switch (packet.Command()) {
     case 0x03:

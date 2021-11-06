@@ -2,6 +2,7 @@
 
 #include <boost/log/trivial.hpp>
 
+#include "configure.h"
 #include "rdcp/rdcp_request.h"
 #include "rdcp/rdcp_response.h"
 
@@ -65,7 +66,9 @@ void XBDMTransport::WriteNextRequest() {
   }
 
   const auto &request = request_queue_.front();
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
   BOOST_LOG_TRIVIAL(trace) << "XBDM request: " << *request;
+#endif
   std::vector<uint8_t> buffer = static_cast<std::vector<uint8_t>>(*request);
   TCPConnection::Send(buffer);
 }
@@ -99,7 +102,9 @@ void XBDMTransport::OnBytesRead() {
 
   ShiftReadBuffer(bytes_consumed);
 
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
   BOOST_LOG_TRIVIAL(trace) << "XBDM response: " << *response;
+#endif
 
   if (request_queue_.empty()) {
     // On initial connection, XBDM will send an unsolicited OK response.

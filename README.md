@@ -13,6 +13,12 @@ to automate some aspects of keeping the code base healthy.
 Please copy the files from the `githooks` subdirectory into `.git/hooks` to
 enable them.
 
+# Building
+
+## `cmake` options
+
+* ``
+* `ENABLE_HIGH_VERBOSITY_LOGGING` - Enables low level logging of socket traffic. May have a negative impact on performance.
 
 # Design
 

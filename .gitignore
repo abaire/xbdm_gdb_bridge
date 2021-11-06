@@ -12,4 +12,4 @@
 bin/
 __pycache__/
 build/
-cmake-build-debug/
+cmake-build*/

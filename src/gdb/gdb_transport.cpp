@@ -3,6 +3,8 @@
 #include <boost/log/trivial.hpp>
 #include <utility>
 
+#include "configure.h"
+
 static constexpr uint8_t kAck[1] = {'+'};
 static constexpr uint8_t kNAck[1] = {'-'};
 
@@ -30,11 +32,15 @@ void GDBTransport::OnBytesRead() {
       for (; it != read_buffer_.end(); ++it) {
         switch (*it) {
           case '+':
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
             BOOST_LOG_TRIVIAL(trace) << "GDB Ack received";
+#endif
             continue;
 
           case '-':
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
             BOOST_LOG_TRIVIAL(warning) << "GDB remote requested resend.";
+#endif
             continue;
 
           case 0x03:
