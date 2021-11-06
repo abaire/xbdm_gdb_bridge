@@ -97,12 +97,19 @@ long RDCPResponse::Parse(std::shared_ptr<RDCPResponse> &response,
   std::vector<char> data;
 
   switch (status) {
-    case OK_MULTILINE_RESPONSE:
-      response_message.assign(buffer + 5,
-                              buffer + packet_size - kTerminatorLen);
-      after_body_end =
-          ParseMultilineResponse(data, buffer + packet_size, buffer_end);
-      break;
+    case OK_MULTILINE_RESPONSE: {
+      const char *end_of_message = buffer + packet_size - kTerminatorLen;
+      response_message.assign(buffer + 5, end_of_message);
+      // Empty multiline responses use the message terminator as part of the
+      // multiline termination.
+      if (!memcmp(end_of_message, kMultilineTerminator,
+                  kMultilineTerminatorLen)) {
+        after_body_end = end_of_message + kMultilineTerminatorLen;
+      } else {
+        after_body_end =
+            ParseMultilineResponse(data, buffer + packet_size, buffer_end);
+      }
+    } break;
 
     case OK_BINARY_RESPONSE:
       after_body_end = ParseBinaryResponse(data, buffer + packet_size,
