@@ -185,6 +185,21 @@ struct CommandGetExtContext : Command {
                     const std::vector<std::string> &args) override;
 };
 
+struct CommandGetFile : Command {
+  CommandGetFile()
+      : Command(
+            "<path> [local_path]\n"
+            "\n"
+            "Retrieves the file at `path`.\n"
+            "If `path` is a directory, retrieves the contents recursively.\n"
+            "If `local_path` is given, writes the file into `local_path`. If "
+            "`local_path` is a directory, the file will retain\n"
+            "the original filename, if it does not exist, the file will saved "
+            "as the given name.") {}
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &args) override;
+};
+
 struct CommandGetFileAttributes : Command {
   CommandGetFileAttributes()
       : Command(

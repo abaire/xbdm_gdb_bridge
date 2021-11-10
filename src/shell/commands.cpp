@@ -1,5 +1,7 @@
 #include "commands.h"
 
+#include <filesystem>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -158,6 +160,31 @@ Command::Result CommandDelete::operator()(
   return HANDLED;
 }
 
+static bool FetchDirectoryEntires(XBOXInterface &interface,
+                                  const std::string &path,
+                                  std::list<DirList::Entry> &directories,
+                                  std::list<DirList::Entry> &files) {
+  directories.clear();
+  files.clear();
+
+  auto request = std::make_shared<DirList>(path);
+  interface.SendCommandSync(request);
+  if (!request->IsOK()) {
+    std::cout << *request << std::endl;
+    return false;
+  }
+
+  for (const auto &entry : request->entries) {
+    if (entry.is_directory) {
+      directories.push_back(entry);
+    } else {
+      files.push_back(entry);
+    }
+  }
+
+  return true;
+}
+
 Command::Result CommandDirList::operator()(
     XBOXInterface &interface, const std::vector<std::string> &args) {
   ArgParser parser(args);
@@ -173,36 +200,26 @@ Command::Result CommandDirList::operator()(
     path.push_back('\\');
   }
 
-  auto request = std::make_shared<DirList>(path);
-  interface.SendCommandSync(request);
-  if (!request->IsOK()) {
-    std::cout << *request << std::endl;
-  } else {
-    std::list<const DirList::Entry *> directories;
-    std::list<const DirList::Entry *> files;
-    for (const auto &entry : request->entries) {
-      if (entry.is_directory) {
-        directories.push_back(&entry);
-      } else {
-        files.push_back(&entry);
-      }
-    }
-
-    auto comparator = [](const DirList::Entry *a, const DirList::Entry *b) {
-      return boost::algorithm::to_lower_copy(a->name) <
-             boost::algorithm::to_lower_copy(b->name);
-    };
-    directories.sort(comparator);
-    files.sort(comparator);
-
-    for (auto entry : directories) {
-      std::cout << "           " << entry->name << std::endl;
-    }
-    for (auto entry : files) {
-      std::cout << std::setw(10) << entry->filesize << " " << entry->name
-                << std::endl;
-    }
+  std::list<DirList::Entry> directories;
+  std::list<DirList::Entry> files;
+  if (!FetchDirectoryEntires(interface, path, directories, files)) {
+    return HANDLED;
   }
+  auto comparator = [](const DirList::Entry &a, const DirList::Entry &b) {
+    return boost::algorithm::to_lower_copy(a.name) <
+           boost::algorithm::to_lower_copy(b.name);
+  };
+  directories.sort(comparator);
+  files.sort(comparator);
+
+  for (auto &entry : directories) {
+    std::cout << "           " << entry.name << "\\" << std::endl;
+  }
+  for (auto &entry : files) {
+    std::cout << std::setw(10) << entry.filesize << " " << entry.name
+              << std::endl;
+  }
+
   return HANDLED;
 }
 
@@ -351,6 +368,112 @@ Command::Result CommandGetExtContext::operator()(
   } else {
     std::cout << request->context << std::endl;
   }
+  return HANDLED;
+}
+
+static bool SaveFile(XBOXInterface &interface, const std::string &remote,
+                     const std::filesystem::path &local) {
+  auto request = std::make_shared<GetFile>(remote);
+  interface.SendCommandSync(request);
+  if (!request->IsOK()) {
+    std::cout << *request << std::endl;
+    return false;
+  }
+
+  std::ofstream of(local, std::ofstream::binary | std::ofstream::trunc);
+  if (!of) {
+    std::cout << "Failed to create local file " << local << std::endl;
+    return false;
+  }
+  of.write(reinterpret_cast<char *>(request->data.data()),
+           static_cast<std::streamsize>(request->data.size()));
+  of.close();
+
+  return of.good();
+}
+
+static bool SaveDirectory(XBOXInterface &interface, const std::string &remote,
+                          const std::filesystem::path &local) {
+  std::list<DirList::Entry> directories;
+  std::list<DirList::Entry> files;
+  if (!FetchDirectoryEntires(interface, remote, directories, files)) {
+    return false;
+  }
+
+  std::string remote_dir = remote;
+  if (remote_dir.back() != '\\') {
+    remote_dir += "\\";
+  }
+
+  for (auto &dir : directories) {
+    std::string remote_path = remote_dir + dir.name;
+    std::filesystem::path local_path = local / dir.name;
+    std::error_code err;
+    std::filesystem::create_directories(local_path, err);
+
+    if (!SaveDirectory(interface, remote_path, local_path)) {
+      return false;
+    }
+  }
+
+  for (auto &file : files) {
+    std::string remote_path = remote_dir + file.name;
+    std::filesystem::path local_path = local / file.name;
+    if (!SaveFile(interface, remote_path, local_path)) {
+      return false;
+    }
+    std::cout << remote_path << " -> " << local_path << std::endl;
+  }
+
+  return true;
+}
+
+Command::Result CommandGetFile::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &args) {
+  ArgParser parser(args);
+  std::string path;
+  if (!parser.Parse(0, path)) {
+    std::cout << "Missing required path argument." << std::endl;
+    PrintUsage();
+    return HANDLED;
+  }
+
+  bool is_directory = false;
+  auto request = std::make_shared<GetFileAttributes>(path);
+  interface.SendCommandSync(request);
+  if (!request->IsOK()) {
+    std::cout << *request << std::endl;
+    return HANDLED;
+  } else {
+    is_directory = request->flags.find("directory") != request->flags.end();
+  }
+
+  std::string local_path_str;
+  std::filesystem::path local_path;
+  if (!parser.Parse(1, local_path_str)) {
+    std::string portable_path = path;
+    std::replace(portable_path.begin(), portable_path.end(), '\\', '/');
+    local_path = std::filesystem::path(portable_path).filename();
+  } else {
+    local_path = local_path_str;
+  }
+
+  if (is_directory) {
+    std::cout << "Recursively fetching files from " << path << std::endl;
+    std::error_code err;
+    std::filesystem::create_directories(local_path, err);
+    SaveDirectory(interface, path, local_path);
+  } else {
+    std::filesystem::path parent_dir = local_path.parent_path();
+    if (!parent_dir.empty()) {
+      std::error_code err;
+      std::filesystem::create_directories(parent_dir, err);
+    }
+    if (SaveFile(interface, path, local_path)) {
+      std::cout << path << " -> " << local_path << std::endl;
+    }
+  }
+
   return HANDLED;
 }
 

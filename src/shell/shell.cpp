@@ -60,6 +60,7 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   REGISTER("getchecksum", CommandGetChecksum);
   REGISTER("getcontext", CommandGetContext);
   REGISTER("getextcontext", CommandGetExtContext);
+  REGISTER("getfile", CommandGetFile);
   REGISTER("getfileattr", CommandGetFileAttributes);
   REGISTER("getmem", CommandGetMem);
   REGISTER("getpid", CommandGetProcessID);
