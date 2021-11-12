@@ -866,14 +866,17 @@ static bool UploadFile(XBOXInterface &interface, const std::string &local_path,
   std::vector<uint8_t> data(ifs_begin, ifs_end);
   ifs.close();
 
+  std::cout << local_path << " => " << full_remote_path << " ... "
+            << std::flush;
+
   auto request = std::make_shared<SendFile>(full_remote_path, data);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
+    std::cout << "Failed" << std::endl;
     std::cout << *request << std::endl;
     return false;
   }
-
-  std::cout << local_path << " => " << full_remote_path << std::endl;
+  std::cout << "OK" << std::endl;
 
   return true;
 }

@@ -20,6 +20,7 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   REGISTER("gdb", ShellCommandGDB);
   commands_["help"] = nullptr;
   commands_["?"] = nullptr;
+  commands_["!"] = nullptr;
   REGISTER("reconnect", ShellCommandReconnect);
   commands_["quit"] = quit;
 
@@ -150,6 +151,23 @@ void Shell::Run() {
 
 Command::Result Shell::ProcessCommand(std::vector<std::string> &args) {
   std::string command = args.front();
+
+  if (command == "!") {
+    if (last_command_.empty()) {
+      std::cout << "No command to replay." << std::endl;
+      return Command::HANDLED;
+    }
+    for (auto &element : last_command_) {
+      std::cout << element << " ";
+    }
+    std::cout << std::endl;
+
+    args = last_command_;
+    command = args.front();
+  }
+
+  last_command_ = args;
+
   boost::algorithm::to_lower(command);
   args.erase(args.begin());
 
@@ -180,11 +198,16 @@ void Shell::PrintHelp(std::vector<std::string> &args) const {
   std::string target = args.front();
   boost::algorithm::to_lower(target);
 
-  if (target == "help") {
+  if (target == "help" || target == "?") {
     std::cout << "[command]" << std::endl;
     std::cout << "With no argument: print all commands." << std::endl;
     std::cout << "With argument: print detailed help about `command`."
               << std::endl;
+    return;
+  }
+
+  if (target == "!") {
+    std::cout << "Re-runs the last shell command." << std::endl;
     return;
   }
 

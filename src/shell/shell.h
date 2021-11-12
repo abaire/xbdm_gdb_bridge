@@ -22,6 +22,8 @@ class Shell {
   std::shared_ptr<XBOXInterface> interface_;
   std::string prompt_;
   std::map<std::string, std::shared_ptr<Command>> commands_;
+
+  std::vector<std::string> last_command_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SHELL_H
