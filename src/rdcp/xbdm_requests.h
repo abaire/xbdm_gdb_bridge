@@ -304,7 +304,7 @@ struct DefTitle : public RDCPProcessedRequest {
 struct Delete : public RDCPProcessedRequest {
   explicit Delete(const std::string& path, bool is_directory = false)
       : RDCPProcessedRequest("delete") {
-    SetData("name=\"");
+    SetData(" name=\"");
     AppendData(path);
     AppendData("\"");
     if (is_directory) {
@@ -562,7 +562,9 @@ struct GetFileAttributes : public RDCPProcessedRequest {
   }
 
   [[nodiscard]] bool IsOK() const override {
-    return status == StatusCode::OK_MULTILINE_RESPONSE;
+    return status == StatusCode::OK_MULTILINE_RESPONSE ||
+           status == StatusCode::ERR_FILE_NOT_FOUND ||
+           status == StatusCode::ERR_ACCESS_DENIED;
   }
 
   void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
@@ -570,13 +572,17 @@ struct GetFileAttributes : public RDCPProcessedRequest {
       return;
     }
 
-    auto parsed = RDCPMapResponse(response->Data());
-    filesize = parsed.GetQWORD("sizelo", "sizehi");
-    create_timestamp = parsed.GetQWORD("createlo", "createhi");
-    change_timestamp = parsed.GetQWORD("changelo", "changehi");
-    flags = parsed.valueless_keys;
+    exists = status == StatusCode::OK_MULTILINE_RESPONSE;
+    if (exists) {
+      auto parsed = RDCPMapResponse(response->Data());
+      filesize = parsed.GetQWORD("sizelo", "sizehi");
+      create_timestamp = parsed.GetQWORD("createlo", "createhi");
+      change_timestamp = parsed.GetQWORD("changelo", "changehi");
+      flags = parsed.valueless_keys;
+    }
   }
 
+  bool exists;
   int64_t filesize{0};
   int64_t create_timestamp{0};
   int64_t change_timestamp{0};
@@ -1509,10 +1515,10 @@ struct SendFile : public RDCPProcessedRequest {
     SetData(" name=\"");
     AppendData(name);
     AppendData("\" length=");
-    AppendHexString(static_cast<uint32_t>(buffer.size()));
+    AppendHexString(static_cast<uint32_t>(binary_payload.size()));
   }
 
-  [[nodiscard]] const std::vector<uint8_t>* BinaryPaylod() override {
+  [[nodiscard]] const std::vector<uint8_t>* BinaryPayload() override {
     return &binary_payload;
   }
 
@@ -1575,7 +1581,7 @@ struct SetContext : public RDCPProcessedRequest {
     AppendHexString(static_cast<uint32_t>(binary_payload.size()));
   }
 
-  [[nodiscard]] const std::vector<uint8_t>* BinaryPaylod() override {
+  [[nodiscard]] const std::vector<uint8_t>* BinaryPayload() override {
     return &binary_payload;
   }
 

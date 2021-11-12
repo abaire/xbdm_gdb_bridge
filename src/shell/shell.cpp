@@ -80,6 +80,7 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   REGISTER("nostopon", CommandNoStopOn);
   REGISTER("notifyat", CommandNotifyAt);
   REGISTER("mv", CommandRename);
+  REGISTER("putfile", CommandPutFile);
   REGISTER("reboot", CommandReboot);
   REGISTER("resume", CommandResume);
   //  REGISTER("setcontext", CommandSetContext);

@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -428,6 +429,20 @@ static bool SaveDirectory(XBOXInterface &interface, const std::string &remote,
   return true;
 }
 
+bool CheckRemoteFile(XBOXInterface &interface, const std::string &path,
+                     bool &exists, bool &is_dir) {
+  auto request = std::make_shared<GetFileAttributes>(path);
+  interface.SendCommandSync(request);
+  if (!request->IsOK()) {
+    std::cout << *request << std::endl;
+    return false;
+  }
+
+  exists = request->exists;
+  is_dir = request->flags.find("directory") != request->flags.end();
+  return true;
+}
+
 Command::Result CommandGetFile::operator()(
     XBOXInterface &interface, const std::vector<std::string> &args) {
   ArgParser parser(args);
@@ -438,14 +453,15 @@ Command::Result CommandGetFile::operator()(
     return HANDLED;
   }
 
-  bool is_directory = false;
-  auto request = std::make_shared<GetFileAttributes>(path);
-  interface.SendCommandSync(request);
-  if (!request->IsOK()) {
-    std::cout << *request << std::endl;
+  bool exists;
+  bool is_directory;
+  if (!CheckRemoteFile(interface, path, exists, is_directory)) {
     return HANDLED;
-  } else {
-    is_directory = request->flags.find("directory") != request->flags.end();
+  }
+
+  if (!exists) {
+    std::cout << "No such file." << std::endl;
+    return HANDLED;
   }
 
   std::string local_path_str;
@@ -810,6 +826,138 @@ Command::Result CommandNotifyAt::operator()(
   } else {
     interface.DetachDebugNotificationHandler();
   }
+  return HANDLED;
+}
+
+static bool UploadFile(XBOXInterface &interface, const std::string &local_path,
+                       const std::string &remote_path, bool overwrite) {
+  bool exists;
+  bool is_dir;
+  if (!CheckRemoteFile(interface, remote_path, exists, is_dir)) {
+    return false;
+  }
+
+  std::string full_remote_path = remote_path;
+  if (is_dir) {
+    if (full_remote_path.back() != '\\') {
+      full_remote_path += "\\";
+    }
+    full_remote_path += std::filesystem::path(local_path).filename();
+
+    if (!CheckRemoteFile(interface, full_remote_path, exists, is_dir)) {
+      return false;
+    }
+  }
+
+  if (exists && !is_dir && !overwrite) {
+    std::cout << "Remote file '" << remote_path
+              << "' already exists, skipping..." << std::endl;
+    return true;
+  }
+
+  std::ifstream ifs(local_path, std::ifstream::binary);
+  if (!ifs) {
+    std::cout << "Failed to open '" << local_path << "' for reading."
+              << std::endl;
+    return false;
+  }
+  std::istreambuf_iterator<char> ifs_begin(ifs);
+  std::istreambuf_iterator<char> ifs_end;
+  std::vector<uint8_t> data(ifs_begin, ifs_end);
+  ifs.close();
+
+  auto request = std::make_shared<SendFile>(full_remote_path, data);
+  interface.SendCommandSync(request);
+  if (!request->IsOK()) {
+    std::cout << *request << std::endl;
+    return false;
+  }
+
+  std::cout << local_path << " => " << full_remote_path << std::endl;
+
+  return true;
+}
+
+static bool UploadDirectory(XBOXInterface &interface,
+                            const std::string &local_path,
+                            const std::string &remote_path, bool overwrite) {
+  bool exists;
+  bool is_dir;
+  if (!CheckRemoteFile(interface, remote_path, exists, is_dir)) {
+    return false;
+  }
+  if (exists && !is_dir) {
+    std::cout << "Remote path '" << remote_path
+              << "' exists and is a file. Aborting." << std::endl;
+    return false;
+  }
+
+  if (!exists) {
+    auto request = std::make_shared<Mkdir>(remote_path);
+    interface.SendCommandSync(request);
+    if (!request->IsOK()) {
+      std::cout << *request << std::endl;
+      return false;
+    }
+  }
+
+  std::string full_remote_path = remote_path;
+  if (full_remote_path.back() != '\\') {
+    full_remote_path += "\\";
+  }
+  full_remote_path += std::filesystem::path(local_path).filename();
+  full_remote_path += "\\";
+
+  for (auto const &dir_entry :
+       std::filesystem::directory_iterator{local_path}) {
+    if (dir_entry.is_regular_file()) {
+      if (!UploadFile(interface, dir_entry.path(), full_remote_path,
+                      overwrite)) {
+        return false;
+      }
+    } else if (dir_entry.is_directory()) {
+      if (!UploadDirectory(interface, dir_entry.path(), full_remote_path,
+                           overwrite)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+Command::Result CommandPutFile::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &args) {
+  ArgParser parser(args);
+  std::string local_path;
+  if (!parser.Parse(0, local_path)) {
+    std::cout << "Missing required local_path argument." << std::endl;
+    PrintUsage();
+    return HANDLED;
+  }
+
+  std::string remote_path;
+  if (!parser.Parse(1, remote_path)) {
+    std::cout << "Missing required remote_path argument." << std::endl;
+    PrintUsage();
+    return HANDLED;
+  }
+
+  bool is_directory = std::filesystem::is_directory(local_path);
+  if (!is_directory && !std::filesystem::is_regular_file(local_path)) {
+    std::cout << "Invalid local_path, must be a regular file or a directory."
+              << std::endl;
+    return HANDLED;
+  }
+
+  bool allow_overwrite = parser.ArgExists("allow_overwrite", "overwrite", "-f");
+
+  if (is_directory) {
+    UploadDirectory(interface, local_path, remote_path, allow_overwrite);
+  } else {
+    UploadFile(interface, local_path, remote_path, allow_overwrite);
+  }
+
   return HANDLED;
 }
 

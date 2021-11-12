@@ -111,6 +111,21 @@ void XBDMTransport::OnBytesRead() {
     // On initial connection, XBDM will send an unsolicited OK response.
     HandleInitialConnectResponse(response);
   } else {
+    if (response->Status() == OK_SEND_BINARY_DATA) {
+      auto payload = request->BinaryPayload();
+      if (!payload) {
+        BOOST_LOG_TRIVIAL(error) << "Binary payload requested from remote but "
+                                    "not attached to request.";
+        // TODO: Close connection forcefully and complete request as an error?
+        assert(!"Binary payload requested from remote but not attached to request.");
+      }
+
+      TCPConnection::Send(*payload);
+
+      // The request will be finished by the response to the binary being sent.
+      return;
+    }
+
     request_queue_.pop_front();
     WriteNextRequest();
 

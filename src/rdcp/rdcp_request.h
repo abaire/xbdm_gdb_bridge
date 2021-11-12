@@ -25,7 +25,7 @@ class RDCPRequest {
     return RDCPResponse::kBinaryNotAllowed;
   }
 
-  [[nodiscard]] virtual const std::vector<uint8_t> *BinaryPaylod() {
+  [[nodiscard]] virtual const std::vector<uint8_t> *BinaryPayload() {
     return nullptr;
   }
 

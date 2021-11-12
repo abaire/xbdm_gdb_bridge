@@ -356,6 +356,18 @@ struct CommandNotifyAt : Command {
                     const std::vector<std::string> &args) override;
 };
 
+struct CommandPutFile : Command {
+  CommandPutFile()
+      : Command(
+            "<local_path> <remote_path> [-f]\n"
+            "\n"
+            "Uploads the file at `local_path` to `remote_path`.\n"
+            "If `local_path` is a directory, sends the contents recursively.\n"
+            "If the `-f` flag is given, overwrites remote files.") {}
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &args) override;
+};
+
 struct CommandRename : Command {
   CommandRename()
       : Command(
