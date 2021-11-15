@@ -149,7 +149,9 @@ void Shell::Run() {
   }
 }
 
-Command::Result Shell::ProcessCommand(std::vector<std::string> &args) {
+Command::Result Shell::ProcessCommand(
+    const std::vector<std::string> &command_args) {
+  auto args = command_args;
   std::string command = args.front();
 
   if (command == "!") {

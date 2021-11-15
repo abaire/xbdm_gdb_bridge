@@ -23,13 +23,19 @@ void validate(boost::any &v, const std::vector<std::string> &values,
   v = boost::any(addr);
 }
 
-static int main_(const IPAddress &xbox_addr, bool colorize_output) {
+static int main_(const IPAddress &xbox_addr,
+                 const std::vector<std::string> &command,
+                 bool colorize_output) {
   BOOST_LOG_TRIVIAL(trace) << "Startup - XBDM @ " << xbox_addr;
   auto interface = std::make_shared<XBOXInterface>("XBOX", xbox_addr);
   interface->Start();
 
   auto shell = Shell(interface);
-  shell.Run();
+  if (command.empty()) {
+    shell.Run();
+  } else {
+    shell.ProcessCommand(command);
+  }
 
   interface->Stop();
   return 0;
@@ -45,11 +51,13 @@ int main(int argc, char *argv[]) {
       ("xbox", po::value<IPAddress>()->value_name("<IP[:Port]>"), "IP (and optionally Port) of the XBOX to connect to.")
       ("color,c", po::bool_switch(&colorize), "Colorize output.")
       ("verbosity,v", po::value<uint32_t>()->value_name("<level>")->default_value(0), "Sets logging verbosity.")
+      ("command", po::value<std::vector<std::string>>()->multitoken(), "Optional command to run instead of running the shell.")
       ;
   // clang-format on
 
   po::positional_options_description positional;
   positional.add("xbox", 1);
+  positional.add("command", -1);
 
   auto parsed = po::command_line_parser(argc, argv)
                     .allow_unregistered()
@@ -81,6 +89,12 @@ int main(int argc, char *argv[]) {
 
   IPAddress xbox_addr = vm["xbox"].as<IPAddress>();
   uint32_t verbosity = vm["verbosity"].as<uint32_t>();
+  std::vector<std::string> command;
+  auto command_params = vm.find("command");
+  if (command_params != vm.end()) {
+    command = command_params->second.as<std::vector<std::string>>();
+  }
+
   logging::core::get()->set_filter(
       [verbosity](const boost::log::attribute_value_set &values) mutable {
         auto severity =
@@ -94,5 +108,5 @@ int main(int argc, char *argv[]) {
         return severity >= (logging::trivial::info - verbosity);
       });
 
-  return main_(xbox_addr, colorize);
+  return main_(xbox_addr, command, colorize);
 }

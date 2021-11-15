@@ -13,9 +13,9 @@ class Shell {
   explicit Shell(std::shared_ptr<XBOXInterface> &interface);
 
   void Run();
+  Command::Result ProcessCommand(const std::vector<std::string> &args);
 
  private:
-  Command::Result ProcessCommand(std::vector<std::string> &args);
   void PrintHelp(std::vector<std::string> &args) const;
 
  private:
