@@ -52,6 +52,7 @@ struct NotificationDebugStr : XBDMNotification {
   std::ostream &WriteStream(std::ostream &os) const override;
   int thread_id;
   std::string text;
+  std::string termination;
   bool is_terminated;
 };
 

@@ -16,7 +16,7 @@ void SelectThread::ThreadMain() {
   fd_set send_fds;
   fd_set except_fds;
 
-  static constexpr int kMinSleepMilliseconds = 5;
+  static constexpr int kMinSleepMilliseconds = 1;
   struct timeval timeout = {.tv_sec = 0, .tv_usec = 0};
 
   while (running_) {

@@ -4,8 +4,10 @@
 #include <cassert>
 #include <cstring>
 #include <ostream>
+#include <regex>
 
 #include "rdcp/rdcp_response_processors.h"
+#include "util/parsing.h"
 
 static bool StartsWith(const char *buffer, long buffer_len, const char *prefix,
                        long prefix_len);
@@ -57,17 +59,40 @@ std::ostream &NotificationVX::WriteStream(std::ostream &os) const {
   return os;
 }
 
+// "thread=4 lf string=Test string with newline"
+static std::regex notification_regex(
+    R"(thread=(\d+)\s+(lf|cr|crlf)?\s*string=(.*))");
+
 NotificationDebugStr::NotificationDebugStr(const char *buffer_start,
                                            const char *buffer_end) {
-  RDCPMapResponse parsed(buffer_start, buffer_end);
-  thread_id = parsed.GetDWORD("thread");
-  text = parsed.GetString("string");
-  is_terminated = parsed.HasAnyOf("cr", "lf", "crlf");
+  std::string buffer(buffer_start, buffer_end);
+  std::smatch match;
+  if (!std::regex_match(buffer, match, notification_regex)) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Regex match failed on notification buffer '" << buffer << "'";
+    thread_id = -1;
+    text = "";
+    termination = "\n";
+    is_terminated = true;
+    return;
+  }
+
+  thread_id = ParseInt32(match[1]);
+  text = match[3];
+
+  if (match[2] == "lf") {
+    termination = "\n";
+  } else if (match[2] == "cr") {
+    termination = "\r";
+  } else if (match[2] == "crlf") {
+    termination = "\r\n";
+  }
+  is_terminated = !termination.empty();
 }
 
 std::ostream &NotificationDebugStr::WriteStream(std::ostream &os) const {
   os << "DebugStr: thread_id: " << thread_id << " text: " << text
-     << " is_terminated: " << is_terminated;
+     << termination;
   return os;
 }
 
