@@ -24,17 +24,18 @@ void validate(boost::any &v, const std::vector<std::string> &values,
 }
 
 static int main_(const IPAddress &xbox_addr,
-                 const std::vector<std::string> &command,
-                 bool colorize_output) {
+                 const std::vector<std::string> &command, bool run_shell) {
   BOOST_LOG_TRIVIAL(trace) << "Startup - XBDM @ " << xbox_addr;
   auto interface = std::make_shared<XBOXInterface>("XBOX", xbox_addr);
   interface->Start();
 
   auto shell = Shell(interface);
-  if (command.empty()) {
-    shell.Run();
-  } else {
+  if (!command.empty()) {
     shell.ProcessCommand(command);
+  }
+
+  if (run_shell) {
+    shell.Run();
   }
 
   interface->Stop();
@@ -42,14 +43,13 @@ static int main_(const IPAddress &xbox_addr,
 }
 
 int main(int argc, char *argv[]) {
-  bool colorize;
-
+  bool run_shell;
   po::options_description opts("Options:");
   // clang-format off
   opts.add_options()
       ("help,?", po::bool_switch(), "Print this help message.")
       ("xbox", po::value<IPAddress>()->value_name("<IP[:Port]>"), "IP (and optionally Port) of the XBOX to connect to.")
-      ("color,c", po::bool_switch(&colorize), "Colorize output.")
+      ("shell,s", po::bool_switch(&run_shell), "Run the shell even if an initial command is given.")
       ("verbosity,v", po::value<uint32_t>()->value_name("<level>")->default_value(0), "Sets logging verbosity.")
       ("command", po::value<std::vector<std::string>>()->multitoken(), "Optional command to run instead of running the shell.")
       ;
@@ -108,5 +108,5 @@ int main(int argc, char *argv[]) {
         return severity >= (logging::trivial::info - verbosity);
       });
 
-  return main_(xbox_addr, command, colorize);
+  return main_(xbox_addr, command, run_shell || command.empty());
 }
