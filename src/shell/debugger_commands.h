@@ -7,13 +7,25 @@
 
 class XBOXInterface;
 
+struct DebuggerCommandRun : Command {
+  DebuggerCommandRun()
+      : Command(
+            "<path_to_xbe> [commandline_args]\n"
+            "\n"
+            "Launches the XBE at the given path, passing any remaining "
+            "parameters as "
+            "command line arguments. Does not set any breakpoints.") {}
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &args) override;
+};
+
 struct DebuggerCommandLaunch : Command {
   DebuggerCommandLaunch()
       : Command(
             "<path_to_xbe> [commandline_args]\n"
             "\n"
             "Launches the given path, passing any remaining parameters as "
-            "launch rest.") {}
+            "command line arguments.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
@@ -24,7 +36,7 @@ struct DebuggerCommandLaunchWait : Command {
             "<path_to_xbe> [commandline_args]\n"
             "\n"
             "Launches the given path, passing any remaining parameters as "
-            "launch rest.\n"
+            "command line arguments.\n"
             "A breakpoint will be set on the XBE entrypoint and execution will "
             "wait for a `go` command.") {}
   Result operator()(XBOXInterface &interface,

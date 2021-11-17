@@ -4,6 +4,32 @@
 #include "util/parsing.h"
 #include "xbox/debugger/xbdm_debugger.h"
 
+Command::Result DebuggerCommandRun::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &args) {
+  ArgParser parser(args);
+  std::string path;
+  if (!parser.Parse(0, path)) {
+    std::cout << "Missing required path argument." << std::endl;
+    PrintUsage();
+    return HANDLED;
+  }
+  std::string command_line_args;
+  parser.Parse(1, command_line_args);
+
+  auto debugger = interface.Debugger();
+  if (!debugger) {
+    if (!interface.AttachDebugger()) {
+      std::cout << "Failed to attach debugger." << std::endl;
+      return HANDLED;
+    }
+    debugger = interface.Debugger();
+    assert(debugger);
+  }
+
+  debugger->DebugXBE(path, command_line_args, false, false);
+  return HANDLED;
+}
+
 Command::Result DebuggerCommandLaunch::operator()(
     XBOXInterface &interface, const std::vector<std::string> &args) {
   ArgParser parser(args);

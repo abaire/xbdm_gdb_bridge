@@ -24,6 +24,7 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   REGISTER("reconnect", ShellCommandReconnect);
   commands_["quit"] = quit;
 
+  REGISTER("/run", DebuggerCommandRun);
   REGISTER("/launch", DebuggerCommandLaunch);
   REGISTER("/launchwait", DebuggerCommandLaunchWait);
   REGISTER("/attach", DebuggerCommandAttach);

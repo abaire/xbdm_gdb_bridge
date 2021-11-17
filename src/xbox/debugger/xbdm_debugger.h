@@ -40,9 +40,10 @@ class XBDMDebugger {
   bool Attach();
   void Shutdown();
 
-  bool DebugXBE(const std::string &path, bool wait_forever = false);
+  bool DebugXBE(const std::string &path, bool wait_forever = false,
+                bool break_at_start = true);
   bool DebugXBE(const std::string &path, const std::string &command_line,
-                bool wait_forever = false);
+                bool wait_forever = false, bool break_at_start = true);
 
   [[nodiscard]] std::list<std::shared_ptr<Thread>> Threads();
   [[nodiscard]] std::list<std::shared_ptr<Module>> Modules();

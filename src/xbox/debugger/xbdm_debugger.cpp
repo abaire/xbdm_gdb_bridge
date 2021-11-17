@@ -71,13 +71,14 @@ void XBDMDebugger::Shutdown() {
   notification_handler_id_ = 0;
 }
 
-bool XBDMDebugger::DebugXBE(const std::string &path, bool wait_forever) {
-  return DebugXBE(path, "", wait_forever);
+bool XBDMDebugger::DebugXBE(const std::string &path, bool wait_forever,
+                            bool break_at_start) {
+  return DebugXBE(path, "", wait_forever, break_at_start);
 }
 
 bool XBDMDebugger::DebugXBE(const std::string &path,
-                            const std::string &command_line,
-                            bool wait_forever) {
+                            const std::string &command_line, bool wait_forever,
+                            bool break_at_start) {
   std::string xbe_dir;
   std::string xbe_name;
   if (!SplitXBEPath(path, xbe_dir, xbe_name)) {
@@ -104,6 +105,11 @@ bool XBDMDebugger::DebugXBE(const std::string &path,
       return false;
     }
   }
+
+  if (!break_at_start) {
+    return Go();
+  }
+
   if (!BreakAtStart()) {
     return false;
   }
