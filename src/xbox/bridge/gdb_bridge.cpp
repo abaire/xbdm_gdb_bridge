@@ -1183,7 +1183,7 @@ void GDBBridge::HandleVCont(const std::string& args) {
 
     if (command.front() == 's') {
       std::vector<std::string> step_commands;
-      boost::split(commands, args, boost::is_any_of(":"));
+      boost::split(step_commands, args, boost::is_any_of(":"));
       if (step_commands.size() > 1) {
         int thread_id;
         if (!MaybeParseHexInt(thread_id, step_commands[1])) {
