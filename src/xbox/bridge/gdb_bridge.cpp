@@ -613,6 +613,8 @@ static bool ExtractBreakpointCommandParams(
     return false;
   }
 
+  // Drop the breakpoint command argument.
+  type_address_kind[0].erase(type_address_kind[0].begin());
   if (!MaybeParseHexInt(type, type_address_kind[0])) {
     return false;
   }
