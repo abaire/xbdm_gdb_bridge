@@ -14,6 +14,8 @@
 namespace logging = boost::log;
 namespace po = boost::program_options;
 
+static const std::string kCommandDelimiter{"&&"};
+
 void validate(boost::any &v, const std::vector<std::string> &values,
               IPAddress *, int) {
   po::validators::check_first_occurrence(v);
@@ -24,13 +26,14 @@ void validate(boost::any &v, const std::vector<std::string> &values,
 }
 
 static int main_(const IPAddress &xbox_addr,
-                 const std::vector<std::string> &command, bool run_shell) {
+                 const std::vector<std::vector<std::string>> &commands,
+                 bool run_shell) {
   BOOST_LOG_TRIVIAL(trace) << "Startup - XBDM @ " << xbox_addr;
   auto interface = std::make_shared<XBOXInterface>("XBOX", xbox_addr);
   interface->Start();
 
   auto shell = Shell(interface);
-  if (!command.empty()) {
+  for (auto &command : commands) {
     shell.ProcessCommand(command);
   }
 
@@ -40,6 +43,31 @@ static int main_(const IPAddress &xbox_addr,
 
   interface->Stop();
   return 0;
+}
+
+// Splits the given vector of strings into sub-vectors delimited by
+// kCommandDelimiter
+static std::vector<std::vector<std::string>> split_commands(
+    const std::vector<std::string> &additional_commands) {
+  std::vector<std::vector<std::string>> ret;
+
+  if (additional_commands.empty()) {
+    return ret;
+  }
+
+  std::vector<std::string> cmd;
+  for (auto &elem : additional_commands) {
+    if (elem == "&&") {
+      ret.push_back(cmd);
+      cmd.clear();
+      continue;
+    }
+
+    cmd.push_back(elem);
+  }
+  ret.push_back(cmd);
+
+  return std::move(ret);
 }
 
 int main(int argc, char *argv[]) {
@@ -89,10 +117,10 @@ int main(int argc, char *argv[]) {
 
   IPAddress xbox_addr = vm["xbox"].as<IPAddress>();
   uint32_t verbosity = vm["verbosity"].as<uint32_t>();
-  std::vector<std::string> command;
+  std::vector<std::string> additional_commands;
   auto command_params = vm.find("command");
   if (command_params != vm.end()) {
-    command = command_params->second.as<std::vector<std::string>>();
+    additional_commands = command_params->second.as<std::vector<std::string>>();
   }
 
   logging::core::get()->set_filter(
@@ -108,5 +136,8 @@ int main(int argc, char *argv[]) {
         return severity >= (logging::trivial::info - verbosity);
       });
 
-  return main_(xbox_addr, command, run_shell || command.empty());
+  std::vector<std::vector<std::string>> commands =
+      split_commands(additional_commands);
+
+  return main_(xbox_addr, commands, run_shell || commands.empty());
 }
