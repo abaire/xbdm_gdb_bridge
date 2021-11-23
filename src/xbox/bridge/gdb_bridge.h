@@ -8,9 +8,15 @@
 
 class GDBPacket;
 class GDBTransport;
+class NotificationExecutionStateChanged;
+class NotificationBreakpoint;
+class NotificationWatchpoint;
+class NotificationSingleStep;
+class NotificationException;
 class Thread;
 class XBDMContext;
 class XBDMDebugger;
+class XBDMNotification;
 
 class GDBBridge {
  public:
@@ -91,6 +97,14 @@ class GDBBridge {
   void HandleVContQuery();
   void HandleVCont(const std::string &args);
 
+  void OnNotification(const std::shared_ptr<XBDMNotification> &);
+  void OnExecutionStateChanged(
+      const std::shared_ptr<NotificationExecutionStateChanged> &);
+  void OnBreakpoint(const std::shared_ptr<NotificationBreakpoint> &);
+  void OnWatchpoint(const std::shared_ptr<NotificationWatchpoint> &);
+  void OnSingleStep(const std::shared_ptr<NotificationSingleStep> &);
+  void OnException(const std::shared_ptr<NotificationException> &);
+
  private:
   std::shared_ptr<GDBTransport> gdb_;
   std::shared_ptr<XBDMDebugger> debugger_;
@@ -99,6 +113,8 @@ class GDBBridge {
   std::map<char, int> thread_id_for_command_;
 
   std::vector<int32_t> thread_info_buffer_;
+
+  int notification_handler_id_{0};
 };
 
 #endif  // XBDM_GDB_BRIDGE_GDB_BRIDGE_H

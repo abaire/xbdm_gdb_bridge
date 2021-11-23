@@ -12,8 +12,10 @@
 #include "gdb/gdb_packet.h"
 #include "gdb/gdb_transport.h"
 #include "gdb_registers.h"
+#include "notification/xbdm_notification.h"
 #include "util/parsing.h"
 #include "xbox/debugger/xbdm_debugger.h"
+#include "xbox/xbdm_context.h"
 
 GDBBridge::GDBBridge(std::shared_ptr<XBDMContext> xbdm_context,
                      std::shared_ptr<XBDMDebugger> debugger)
@@ -24,6 +26,20 @@ bool GDBBridge::AddTransport(std::shared_ptr<GDBTransport> transport) {
     return false;
   }
   gdb_ = std::move(transport);
+
+  // TODO: Either chain notifications off the debugger or add "go last" flag.
+  // Currently the debugger receives the same notifications as the bridge and
+  // does some work to update thread states/etc... This class assumes this has
+  // all happened by the time it receives notifications, but it is not enforced
+  // anywhere. The context could be extended to allow a "last" handler or the
+  // debugger could hold a weak_ptr to a notification listener (this class) to
+  // be notified once it has finished processing notifications from the context.
+  xbdm_->UnregisterNotificationHandler(notification_handler_id_);
+  notification_handler_id_ = xbdm_->RegisterNotificationHandler(
+      [this](const std::shared_ptr<XBDMNotification>& notification) {
+        this->OnNotification(notification);
+      });
+
   return true;
 }
 
@@ -1187,4 +1203,144 @@ void GDBBridge::HandleVCont(const std::string& args) {
     BOOST_LOG_TRIVIAL(error) << "TODO: Implement vcont subcommand " << command;
     SendEmpty();
   }
+}
+
+void GDBBridge::OnNotification(
+    const std::shared_ptr<XBDMNotification>& notification) {
+  switch (notification->Type()) {
+      //    case NT_MODULE_LOADED:
+      //      OnModuleLoaded(
+      //          std::dynamic_pointer_cast<NotificationModuleLoaded>(notification));
+      //      break;
+      //
+      //    case NT_SECTION_LOADED:
+      //      OnSectionLoaded(
+      //          std::dynamic_pointer_cast<NotificationSectionLoaded>(notification));
+      //      break;
+      //
+      //    case NT_SECTION_UNLOADED:
+      //      OnSectionUnloaded(
+      //          std::dynamic_pointer_cast<NotificationSectionUnloaded>(notification));
+      //      break;
+      //
+      //    case NT_THREAD_CREATED:
+      //      OnThreadCreated(
+      //          std::dynamic_pointer_cast<NotificationThreadCreated>(notification));
+      //      break;
+      //
+      //    case NT_THREAD_TERMINATED:
+      //      OnThreadTerminated(
+      //          std::dynamic_pointer_cast<NotificationThreadTerminated>(
+      //              notification));
+      //      break;
+
+    case NT_EXECUTION_STATE_CHANGED:
+      OnExecutionStateChanged(
+          std::dynamic_pointer_cast<NotificationExecutionStateChanged>(
+              notification));
+      break;
+
+    case NT_BREAKPOINT:
+      OnBreakpoint(
+          std::dynamic_pointer_cast<NotificationBreakpoint>(notification));
+      break;
+
+    case NT_WATCHPOINT:
+      OnWatchpoint(
+          std::dynamic_pointer_cast<NotificationWatchpoint>(notification));
+      break;
+
+    case NT_SINGLE_STEP:
+      OnSingleStep(
+          std::dynamic_pointer_cast<NotificationSingleStep>(notification));
+      break;
+
+    case NT_EXCEPTION:
+      OnException(
+          std::dynamic_pointer_cast<NotificationException>(notification));
+      break;
+
+    case NT_INVALID:
+      BOOST_LOG_TRIVIAL(error)
+          << "XBDMNotif: Received invalid notification type.";
+      break;
+
+    default:
+      // Other types are not interesting to GDB.
+      break;
+  }
+}
+
+void GDBBridge::OnExecutionStateChanged(
+    const std::shared_ptr<NotificationExecutionStateChanged>& msg) {
+  // TODO: Report reboots as well?
+  if (msg->state != ExecutionState::S_STOPPED) {
+    return;
+  }
+
+  auto thread = debugger_->ActiveThread();
+  if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Stop state received by bridge with no active thread.";
+    return;
+  }
+
+  SendThreadStopPacket(thread);
+}
+
+void GDBBridge::OnBreakpoint(
+    const std::shared_ptr<NotificationBreakpoint>& msg) {
+  auto thread = debugger_->ActiveThread();
+  if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Breakpoint received by bridge with no active thread.";
+    return;
+  }
+
+  SendThreadStopPacket(thread);
+}
+
+void GDBBridge::OnWatchpoint(
+    const std::shared_ptr<NotificationWatchpoint>& msg) {
+  auto thread = debugger_->ActiveThread();
+  if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Watchpoint received by bridge with no active thread.";
+    return;
+  }
+
+  SendThreadStopPacket(thread);
+}
+
+void GDBBridge::OnSingleStep(
+    const std::shared_ptr<NotificationSingleStep>& msg) {
+  BOOST_LOG_TRIVIAL(error) << "FINISHME " << msg;
+  //  auto thread = GetThread(msg->thread_id);
+  //  if (!thread) {
+  //    BOOST_LOG_TRIVIAL(warning)
+  //      << "XBDMNotif: Received breakpoint message for unknown thread "
+  //      << msg->thread_id;
+  //    return;
+  //  }
+  //
+  //  SetActiveThread(thread->thread_id);
+  //  thread->last_known_address = msg->address;
+  //  // TODO: Set the stop reason from the notification content.
+  //  thread->FetchStopReasonSync(*context_);
+}
+
+void GDBBridge::OnException(const std::shared_ptr<NotificationException>& msg) {
+  //  BOOST_LOG_TRIVIAL(warning) << "Received exception: " << *msg;
+  //  auto thread = GetThread(msg->thread_id);
+  //  if (!thread) {
+  //    BOOST_LOG_TRIVIAL(warning)
+  //      << "XBDMNotif: Received breakpoint message for unknown thread "
+  //      << msg->thread_id;
+  //    return;
+  //  }
+  //
+  //  SetActiveThread(thread->thread_id);
+  //  thread->last_known_address = msg->address;
+  //  // TODO: Set the stop reason from the notification content.
+  //  thread->FetchStopReasonSync(*context_);
 }
