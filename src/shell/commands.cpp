@@ -837,6 +837,16 @@ static bool UploadFile(XBOXInterface &interface, const std::string &local_path,
     return false;
   }
 
+  if (!exists && remote_path.back() == '\\') {
+    auto request = std::make_shared<Mkdir>(remote_path);
+    interface.SendCommandSync(request);
+    if (!request->IsOK()) {
+      std::cout << *request << std::endl;
+      return false;
+    }
+    is_dir = true;
+  }
+
   std::string full_remote_path = remote_path;
   if (is_dir) {
     if (full_remote_path.back() != '\\') {
@@ -909,18 +919,23 @@ static bool UploadDirectory(XBOXInterface &interface,
     full_remote_path += "\\";
   }
   full_remote_path += std::filesystem::path(local_path).filename();
-  full_remote_path += "\\";
+  if (full_remote_path.back() != '\\') {
+    full_remote_path += "\\";
+  }
 
   for (auto const &dir_entry :
        std::filesystem::directory_iterator{local_path}) {
     if (dir_entry.is_regular_file()) {
-      if (!UploadFile(interface, dir_entry.path(), full_remote_path,
-                      overwrite)) {
+      std::string subpath = dir_entry.path();
+      auto status = UploadFile(interface, subpath, full_remote_path, overwrite);
+      if (!status) {
         return false;
       }
     } else if (dir_entry.is_directory()) {
-      if (!UploadDirectory(interface, dir_entry.path(), full_remote_path,
-                           overwrite)) {
+      std::string filename = dir_entry.path();
+      auto status =
+          UploadDirectory(interface, filename, full_remote_path, overwrite);
+      if (!status) {
         return false;
       }
     }
