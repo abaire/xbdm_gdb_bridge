@@ -4,79 +4,50 @@
 #include "util/parsing.h"
 #include "xbox/debugger/xbdm_debugger.h"
 
-Command::Result DebuggerCommandRun::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+static bool DebugXBE(XBOXInterface &interface,
+                     const std::vector<std::string> &args, bool wait_forever,
+                     bool break_at_start) {
   ArgParser parser(args);
   std::string path;
   if (!parser.Parse(0, path)) {
     std::cout << "Missing required path argument." << std::endl;
-    PrintUsage();
-    return HANDLED;
+    return false;
   }
   std::string command_line_args;
   parser.Parse(1, command_line_args);
 
-  auto debugger = interface.Debugger();
-  if (!debugger) {
-    if (!interface.AttachDebugger()) {
-      std::cout << "Failed to attach debugger." << std::endl;
-      return HANDLED;
-    }
-    debugger = interface.Debugger();
-    assert(debugger);
+  if (!interface.AttachDebugger()) {
+    std::cout << "Failed to attach debugger." << std::endl;
+    return true;
   }
+  auto debugger = interface.Debugger();
+  assert(debugger);
 
-  debugger->DebugXBE(path, command_line_args, false, false);
+  debugger->DebugXBE(path, command_line_args, wait_forever, break_at_start);
+  return true;
+}
+
+Command::Result DebuggerCommandRun::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &args) {
+  if (!DebugXBE(interface, args, false, false)) {
+    PrintUsage();
+  }
   return HANDLED;
 }
 
 Command::Result DebuggerCommandLaunch::operator()(
     XBOXInterface &interface, const std::vector<std::string> &args) {
-  ArgParser parser(args);
-  std::string path;
-  if (!parser.Parse(0, path)) {
-    std::cout << "Missing required path argument." << std::endl;
+  if (!DebugXBE(interface, args, false, true)) {
     PrintUsage();
-    return HANDLED;
   }
-  std::string command_line_args;
-  parser.Parse(1, command_line_args);
-
-  auto debugger = interface.Debugger();
-  if (!debugger) {
-    if (!interface.AttachDebugger()) {
-      std::cout << "Failed to attach debugger." << std::endl;
-      return HANDLED;
-    }
-    debugger = interface.Debugger();
-    assert(debugger);
-  }
-
-  debugger->DebugXBE(path, command_line_args);
   return HANDLED;
 }
 
 Command::Result DebuggerCommandLaunchWait::operator()(
     XBOXInterface &interface, const std::vector<std::string> &args) {
-  ArgParser parser(args);
-  std::string path;
-  if (!parser.Parse(0, path)) {
-    std::cout << "Missing required path argument." << std::endl;
+  if (!DebugXBE(interface, args, true, true)) {
     PrintUsage();
-    return HANDLED;
   }
-  std::string command_line_args;
-  parser.Parse(1, command_line_args);
-
-  auto debugger = interface.Debugger();
-  if (!debugger) {
-    if (!interface.AttachDebugger()) {
-      std::cout << "Failed to attach debugger." << std::endl;
-    }
-    return HANDLED;
-  }
-
-  debugger->DebugXBE(path, command_line_args, true);
   return HANDLED;
 }
 
