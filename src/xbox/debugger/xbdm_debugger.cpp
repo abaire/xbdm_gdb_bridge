@@ -126,7 +126,7 @@ bool XBDMDebugger::DebugXBE(const std::string &path,
     BOOST_LOG_TRIVIAL(warning)
         << "Failed to fetch threads while at start breakpoint.";
   }
-  return ContinueAll();
+  return true;
 }
 
 std::list<std::shared_ptr<Thread>> XBDMDebugger::Threads() {

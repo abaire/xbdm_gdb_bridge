@@ -115,6 +115,8 @@ class GDBBridge {
   std::vector<int32_t> thread_info_buffer_;
 
   int notification_handler_id_{0};
+
+  bool send_thread_events_{false};
 };
 
 #endif  // XBDM_GDB_BRIDGE_GDB_BRIDGE_H

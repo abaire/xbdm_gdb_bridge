@@ -244,8 +244,11 @@ void GDBBridge::HandleQueryHaltReason(const GDBPacket& packet) {
   auto thread = debugger_->ActiveThread();
   if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
     SendOK();
-  } else {
-    SendThreadStopPacket(thread);
+    return;
+  }
+
+  if (!SendThreadStopPacket(thread)) {
+    SendEmpty();
   }
 }
 
@@ -780,7 +783,15 @@ bool GDBBridge::SendThreadStopPacket(const std::shared_ptr<Thread>& thread) {
       break;
 
     case SRT_THREAD_CREATED:
-      // TODO: Send `create` if requested via QThreadEvents.
+      if (send_thread_events_) {
+        BOOST_LOG_TRIVIAL(error) << "TODO: Send thread created events.";
+      }
+      break;
+
+    case SRT_THREAD_TERMINATED:
+      if (send_thread_events_) {
+        BOOST_LOG_TRIVIAL(error) << "TODO: Send thread terminated events.";
+      }
       break;
 
     case SRT_WATCHPOINT: {
@@ -815,7 +826,6 @@ bool GDBBridge::SendThreadStopPacket(const std::shared_ptr<Thread>& thread) {
     case SRT_SINGLE_STEP:
     case SRT_EXECUTION_STATE_CHANGED:
     case SRT_EXCEPTION:
-    case SRT_THREAD_TERMINATED:
     case SRT_MODULE_LOADED:
     case SRT_SECTION_LOADED:
     case SRT_SECTION_UNLOADED:
