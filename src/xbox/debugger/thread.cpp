@@ -1,5 +1,7 @@
 #include "thread.h"
 
+#include <boost/log/trivial.hpp>
+
 #include "rdcp/xbdm_requests.h"
 #include "xbox/xbdm_context.h"
 
@@ -122,4 +124,7 @@ bool Thread::Resume(XBDMContext &ctx) {
   return request->IsOK();
 }
 
-bool Thread::StepInstruction(XBDMContext &ctx) { return false; }
+bool Thread::StepInstruction(XBDMContext &ctx) {
+  BOOST_LOG_TRIVIAL(error) << "TODO: Implement Thread::StepInstruction";
+  return false;
+}
