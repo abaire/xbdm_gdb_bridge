@@ -874,8 +874,7 @@ void GDBBridge::HandleQuerySupported(const GDBPacket& packet) {
     boost::split(features, feature_str, boost::is_any_of(delim));
   }
 
-  std::string response =
-      "PacketSize=4096;QStartNoAckMode+;qXfer:features:read+;";
+  std::string response = "PacketSize=4096;qXfer:features:read+;";
   for (auto& feature : features) {
     if (feature == "multiprocess+") {
       response += "multiprocess-;";

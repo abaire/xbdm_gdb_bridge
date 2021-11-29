@@ -14,7 +14,12 @@ GDBTransport::GDBTransport(std::string name, int sock, IPAddress address,
       packet_received_handler_(std::move(handler)) {}
 
 void GDBTransport::Send(const GDBPacket &packet) {
-  TCPConnection::Send(packet.Serialize());
+  {
+    const std::lock_guard<std::recursive_mutex> lock(ack_buffer_lock_);
+    ack_buffer_.push_back(packet.Serialize());
+  }
+
+  TCPConnection::Send(ack_buffer_.back());
 }
 
 void GDBTransport::OnBytesRead() {
@@ -35,12 +40,32 @@ void GDBTransport::OnBytesRead() {
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
             BOOST_LOG_TRIVIAL(trace) << "GDB Ack received";
 #endif
+            {
+              const std::lock_guard<std::recursive_mutex> ack_lock(
+                  ack_buffer_lock_);
+              if (ack_buffer_.empty()) {
+                BOOST_LOG_TRIVIAL(error)
+                    << "Ack received with empty ack buffer";
+              } else {
+                ack_buffer_.pop_front();
+              }
+            }
             continue;
 
           case '-':
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
             BOOST_LOG_TRIVIAL(warning) << "GDB remote requested resend.";
 #endif
+            {
+              const std::lock_guard<std::recursive_mutex> ack_lock(
+                  ack_buffer_lock_);
+              if (ack_buffer_.empty()) {
+                BOOST_LOG_TRIVIAL(error)
+                    << "Resend received with empty ack buffer";
+              } else {
+                TCPConnection::Send(ack_buffer_.front());
+              }
+            }
             continue;
 
           case 0x03:

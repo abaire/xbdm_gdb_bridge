@@ -32,7 +32,14 @@ class GDBTransport : public TCPConnection {
   bool no_ack_mode_{false};
 
   std::recursive_mutex unescaped_read_lock_;
+  // Buffer of received bytes that have been unescaped and are ready for
+  // processing at higher levels.
   std::vector<uint8_t> unescaped_read_buffer_;
+
+  std::recursive_mutex ack_buffer_lock_;
+  // List of serialized packets that have been sent but not yet acknowledged by
+  // the debugger.
+  std::list<std::vector<uint8_t>> ack_buffer_;
 
   PacketReceivedHandler packet_received_handler_;
 };
