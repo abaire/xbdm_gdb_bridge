@@ -225,14 +225,23 @@ void GDBBridge::HandleDeprecatedCommand(const GDBPacket& packet) {
 }
 
 void GDBBridge::HandleInterruptRequest(const GDBPacket& packet) {
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
+  BOOST_LOG_TRIVIAL(trace) << "Processing GDB interrupt request";
+#endif
+
   if (!debugger_->HaltAll()) {
+    BOOST_LOG_TRIVIAL(error) << "Failed to halt on GDB interrupt request";
     SendError(EBADMSG);
     return;
   }
 
   auto thread = debugger_->ActiveThread();
   assert(thread);
-  SendThreadStopPacket(thread);
+  if (!SendThreadStopPacket(thread)) {
+    BOOST_LOG_TRIVIAL(error)
+        << "Failed to send stop reason on GDB interrupt request";
+    SendOK();
+  }
 }
 
 void GDBBridge::HandleEnableExtendedMode(const GDBPacket& packet) {
@@ -301,8 +310,11 @@ void GDBBridge::HandleContinueWithSignal(const GDBPacket& packet) {
 }
 
 void GDBBridge::HandleDetach(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
-  SendEmpty();
+  debugger_->ContinueAll(true);
+  if (!debugger_->Go()) {
+    BOOST_LOG_TRIVIAL(error) << "Go failed during debugger detach.";
+  }
+  SendOK();
 }
 
 void GDBBridge::HandleFileIO(const GDBPacket& packet) {
