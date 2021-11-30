@@ -938,7 +938,7 @@ void GDBBridge::HandleQueryThreadExtraInfo(const GDBPacket& packet) {
   auto split = packet.FindFirst(',');
   int32_t thread_id;
   if (!MaybeParseHexInt(thread_id, packet.Data(),
-                        split - packet.Data().begin())) {
+                        split - packet.Data().begin() + 1)) {
     LOG_GDB(error) << "Invalid thread_id parameter: " << packet.DataString();
     SendError(EBADMSG);
     return;
@@ -1022,7 +1022,7 @@ void GDBBridge::HandleQueryThreadExtraInfo(const GDBPacket& packet) {
   snprintf(buffer, 127, "%d %s", thread_id, stop_reason.c_str());
 
   std::vector<uint8_t> data;
-  boost::algorithm::hex(buffer, data.begin());
+  boost::algorithm::hex(buffer, std::back_inserter(data));
   gdb_->Send(GDBPacket(data));
 }
 
