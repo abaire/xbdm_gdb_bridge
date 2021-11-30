@@ -5,12 +5,14 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/utility/manipulators/add_value.hpp>
 #include <cstdint>
+#include <thread>
 
 namespace logging {
 
 constexpr const char kLoggingTagAttribute[] = "Tag";
 constexpr const char kLoggingFileAttribute[] = "Filename";
 constexpr const char kLoggingLineAttribute[] = "LineNumber";
+constexpr const char kLoggingThreadAttribute[] = "Thread";
 
 constexpr const char kLoggingTagGDB[] = "GDB";
 constexpr const char kLoggingTagXBDM[] = "XBDM";
@@ -19,12 +21,16 @@ constexpr const char kLoggingTagDebugger[] = "DEBUGGER";
 BOOST_LOG_ATTRIBUTE_KEYWORD(tag_attr, kLoggingTagAttribute, std::string)
 BOOST_LOG_ATTRIBUTE_KEYWORD(file_attr, kLoggingFileAttribute, std::string)
 BOOST_LOG_ATTRIBUTE_KEYWORD(line_attr, kLoggingLineAttribute, unsigned int)
+BOOST_LOG_ATTRIBUTE_KEYWORD(thread_attr, kLoggingThreadAttribute,
+                            std::thread::id)
 
-#define LOG(lvl)                                                        \
-  BOOST_LOG_TRIVIAL(lvl) << boost::log::add_value(::logging::file_attr, \
-                                                  __FILE__)             \
-                         << boost::log::add_value(::logging::line_attr, \
-                                                  __LINE__)
+#define LOG(lvl)                                                          \
+  BOOST_LOG_TRIVIAL(lvl) << boost::log::add_value(::logging::file_attr,   \
+                                                  __FILE__)               \
+                         << boost::log::add_value(::logging::line_attr,   \
+                                                  __LINE__)               \
+                         << boost::log::add_value(::logging::thread_attr, \
+                                                  std::this_thread::get_id())
 
 #define LOG_TAGGED(lvl, tag) \
   LOG(lvl) << boost::log::add_value(::logging::tag_attr, tag)

@@ -1,5 +1,6 @@
 #include "logging.h"
 
+#include <atomic>
 #include <boost/log/core.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/sinks/sync_frontend.hpp>
@@ -64,6 +65,9 @@ static constexpr const char ANSI_BOLD[] = "\x1b[1m";
 static constexpr const char ANSI_UNDERLINE[] = "\x1b[4m";
 static constexpr const char ANSI_REVERSED[] = "\x1b[7m";
 
+static std::map<std::thread::id, uint32_t> thread_names;
+static std::atomic<uint32_t> next_thread_name{1};
+
 typedef sinks::basic_formatted_sink_backend<char, sinks::synchronized_feeding>
     SynchronizedSink;
 
@@ -106,8 +110,26 @@ class LoggerSink : public SynchronizedSink {
         snprintf(buf, 63, "%s:%d", path.c_str(), line_num.get());
 
         strm << std::left << std::setw(42) << buf;
-        strm << " ";
+        strm << std::right << " ";
       }
+    }
+
+    auto thread =
+        boost::log::extract<std::thread::id>(kLoggingThreadAttribute, rec);
+    if (!thread.empty()) {
+      // This assumes that access to thread_names has been serialized by the
+      // sink, which may not be true.
+      auto thread_id = thread.get();
+      auto it = thread_names.find(thread_id);
+      uint32_t thread_short_id;
+      if (it == thread_names.end()) {
+        thread_short_id = next_thread_name.fetch_add(1);
+        thread_names[thread_id] = thread_short_id;
+      } else {
+        thread_short_id = it->second;
+      }
+      strm << "(" << std::hex << std::setfill('0') << std::setw(2)
+           << thread_short_id << ") ";
     }
 
     if (enable_colorized_output) {
