@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <boost/algorithm/string/trim.hpp>
 #include <boost/log/trivial.hpp>
 
 #include "configure.h"
@@ -133,9 +134,14 @@ void TCPConnection::DoSend() {
   }
 
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
-  std::string data(write_buffer_.begin(), write_buffer_.begin() + bytes_sent);
-  LOG_TAGGED(trace, name_) << "   " << bytes_sent << " bytes" << std::endl
-                           << data;
+  {
+    std::string data(write_buffer_.begin(), write_buffer_.begin() + bytes_sent);
+    // Special case XBDM message terminators to condense log.
+    boost::algorithm::trim_right(data);
+
+    LOG_TAGGED(trace, name_) << "  Sent " << bytes_sent << " bytes" << std::endl
+                             << data;
+  }
 #endif
 
   write_buffer_.erase(write_buffer_.begin(),
