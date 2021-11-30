@@ -214,6 +214,10 @@ void GDBBridge::SendError(uint8_t error) const {
     return;
   }
 
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
+  LOG_GDB(error) << "Sending error response " << std::hex << error;
+#endif
+
   char buffer[8] = {0};
   snprintf(buffer, 4, "E%02x", error);
   gdb_->Send(GDBPacket(buffer));
@@ -229,9 +233,19 @@ void GDBBridge::HandleInterruptRequest(const GDBPacket& packet) {
   LOG_GDB(trace) << "Processing GDB interrupt request";
 #endif
 
+  if (!debugger_->Stop()) {
+    LOG_GDB(error) << "Failed to stop on GDB interrupt request";
+    SendError(EBADMSG);
+    return;
+  }
+
   if (!debugger_->HaltAll()) {
     LOG_GDB(error) << "Failed to halt on GDB interrupt request";
     SendError(EBADMSG);
+
+    if (!debugger_->Go()) {
+      LOG_GDB(error) << "Failed to Go after failing to halt all";
+    }
     return;
   }
 
@@ -759,7 +773,12 @@ bool GDBBridge::SendThreadStopPacket(const std::shared_ptr<Thread>& thread) {
     return false;
   }
 
-  if (!thread || !thread->stopped) {
+  if (!thread) {
+    LOG_GDB(error) << "Attempting to send stop packet for a null thread.";
+    return false;
+  }
+  if (!thread->stopped) {
+    LOG_GDB(error) << "Attempting to send stop packet for a running thread.";
     return false;
   }
 
@@ -1196,7 +1215,7 @@ void GDBBridge::HandleVCont(const std::string& args) {
     char command_code = command.front();
     if (command_code == 'c') {
       if (processed_threads.empty() && thread_id <= 0) {
-        if (!debugger_->ContinueAll() || !debugger_->Go()) {
+        if (!debugger_->ContinueAll()) {
           LOG_GDB(warning) << "Failed to continue after vCont;c";
         }
         continue;
