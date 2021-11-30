@@ -1,9 +1,10 @@
 #include "xbdm_notification_transport.h"
 
 #include <algorithm>
-#include <boost/log/trivial.hpp>
 #include <cstring>
 #include <utility>
+
+#include "util/logging.h"
 
 static constexpr uint8_t kTerminator[] = {'\r', '\n'};
 static constexpr long kTerminatorLen =
@@ -51,8 +52,8 @@ void XBDMNotificationTransport::HandleNotification(const char *message,
   auto notification = ParseXBDMNotification(message, message_len);
   if (!notification) {
     std::string dbg_message(message, message + message_len);
-    BOOST_LOG_TRIVIAL(warning)
-        << "Unhandled notification '" << dbg_message << "'" << std::endl;
+    LOG(warning) << "Unhandled notification '" << dbg_message << "'"
+                 << std::endl;
     return;
   }
 

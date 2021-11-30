@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "configure.h"
+#include "util/logging.h"
 
 static constexpr uint8_t kAck[1] = {'+'};
 static constexpr uint8_t kNAck[1] = {'-'};
@@ -38,14 +39,13 @@ void GDBTransport::OnBytesRead() {
         switch (*it) {
           case '+':
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
-            BOOST_LOG_TRIVIAL(trace) << "GDB Ack received";
+            LOG_GDB(trace) << "Ack received";
 #endif
             {
               const std::lock_guard<std::recursive_mutex> ack_lock(
                   ack_buffer_lock_);
               if (ack_buffer_.empty()) {
-                BOOST_LOG_TRIVIAL(error)
-                    << "Ack received with empty ack buffer";
+                LOG_GDB(error) << "Ack received with empty ack buffer";
               } else {
                 ack_buffer_.pop_front();
               }
@@ -54,14 +54,13 @@ void GDBTransport::OnBytesRead() {
 
           case '-':
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
-            BOOST_LOG_TRIVIAL(warning) << "GDB remote requested resend.";
+            LOG_GDB(warning) << "Remote requested resend.";
 #endif
             {
               const std::lock_guard<std::recursive_mutex> ack_lock(
                   ack_buffer_lock_);
               if (ack_buffer_.empty()) {
-                BOOST_LOG_TRIVIAL(error)
-                    << "Resend received with empty ack buffer";
+                LOG_GDB(error) << "Resend received with empty ack buffer";
               } else {
                 TCPConnection::Send(ack_buffer_.front());
               }

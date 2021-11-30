@@ -1,7 +1,6 @@
 #include "xbdm_context.h"
 
 #include <boost/asio/dispatch.hpp>
-#include <boost/log/trivial.hpp>
 #include <utility>
 
 #include "net/delegating_server.h"
@@ -9,6 +8,7 @@
 #include "notification/xbdm_notification_transport.h"
 #include "rdcp/rdcp_processed_request.h"
 #include "rdcp/xbdm_transport.h"
+#include "util/logging.h"
 #include "util/timer.h"
 
 XBDMContext::XBDMContext(std::string name, IPAddress xbox_address,
@@ -16,7 +16,7 @@ XBDMContext::XBDMContext(std::string name, IPAddress xbox_address,
     : name_(std::move(name)),
       xbox_address_(std::move(xbox_address)),
       select_thread_(std::move(select_thread)) {
-  xbdm_transport_ = std::make_shared<XBDMTransport>(name_ + "__xbdm");
+  xbdm_transport_ = std::make_shared<XBDMTransport>(logging::kLoggingTagXBDM);
   select_thread_->AddConnection(xbdm_transport_);
 
   notification_server_ = std::make_shared<DelegatingServer>(
@@ -53,7 +53,7 @@ void XBDMContext::Shutdown() {
 
 bool XBDMContext::StartNotificationListener(const IPAddress& address) {
   if (notification_server_->IsConnected()) {
-    BOOST_LOG_TRIVIAL(trace) << "Notification server may only be started once.";
+    LOG_XBDM(trace) << "Notification server may only be started once.";
     return false;
   }
 
@@ -70,11 +70,10 @@ bool XBDMContext::GetNotificationServerAddress(IPAddress& address) const {
 }
 
 void XBDMContext::OnNotificationChannelConnected(int sock, IPAddress& address) {
-  BOOST_LOG_TRIVIAL(trace) << "Notification channel established from "
-                           << address;
+  LOG_XBDM(trace) << "Notification channel established from " << address;
   // TODO: Hold on to the transport so it can be shut down gracefully.
   auto transport = std::make_shared<XBDMNotificationTransport>(
-      name_ + "__xbdm_notification_channel", sock, address,
+      logging::kLoggingTagXBDM, sock, address,
       [this](std::shared_ptr<XBDMNotification> notification) {
         this->OnNotificationReceived(std::move(notification));
       });
@@ -97,7 +96,7 @@ bool XBDMContext::Reconnect() {
     xbdm_transport_.reset();
   }
 
-  xbdm_transport_ = std::make_shared<XBDMTransport>(name_ + "__xbdm");
+  xbdm_transport_ = std::make_shared<XBDMTransport>(logging::kLoggingTagXBDM);
   select_thread_->AddConnection(xbdm_transport_);
   return xbdm_transport_->Connect(xbox_address_);
 }

@@ -2,8 +2,9 @@
 
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
-#include <boost/log/trivial.hpp>
 #include <cstdint>
+
+#include "util/logging.h"
 
 static constexpr char kPacketLeader = '$';
 static constexpr char kPacketTrailer = '#';
@@ -81,8 +82,7 @@ long GDBPacket::Parse(const uint8_t *buffer, size_t buffer_length) {
   char *checksum_end;
   long checksum = strtol(checksum_str, &checksum_end, 16);
   if (checksum_end != checksum_str + 2) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Non-numeric checksum " << checksum_str << std::endl;
+    LOG_GDB(error) << "Non-numeric checksum " << checksum_str << std::endl;
     // This should never happen, but consume the packet through the terminator
     // and leave the non-numeric chars.
     return terminator - buffer + 1;
@@ -93,8 +93,8 @@ long GDBPacket::Parse(const uint8_t *buffer, size_t buffer_length) {
 
   checksum_ok_ = checksum == checksum_;
   if (!checksum_ok_) {
-    BOOST_LOG_TRIVIAL(error) << "Checksum mismatch " << checksum_
-                             << " != sent checksum " << checksum << std::endl;
+    LOG_GDB(error) << "Checksum mismatch " << checksum_ << " != sent checksum "
+                   << checksum << std::endl;
   }
 
   return (terminator - buffer) + 3;

@@ -85,6 +85,8 @@ add_executable(
         src/shell/shell.cpp
         src/shell/shell.h
         src/shell/shell_commands.h
+        src/util/logging.cpp
+        src/util/logging.h
         src/util/optional.h
         src/util/parsing.cpp
         src/util/parsing.h

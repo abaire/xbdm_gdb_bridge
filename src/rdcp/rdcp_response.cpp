@@ -3,8 +3,9 @@
 #include <arpa/inet.h>
 
 #include <algorithm>
-#include <boost/log/trivial.hpp>
 #include <ostream>
+
+#include "util/logging.h"
 
 std::ostream &operator<<(std::ostream &os, RDCPResponse const &r) {
   return os << "RDCPResponse [" << r.status_ << "] " << r.response_message_
@@ -31,9 +32,8 @@ static const char *ParseBinaryResponse(std::vector<char> &data,
                                        const char *buffer_end,
                                        long binary_response_size) {
   if (binary_response_size == RDCPResponse::kBinaryNotAllowed) {
-    BOOST_LOG_TRIVIAL(error) << "Invalid RDCP packet, response contains binary "
-                                "data but no binary was expected."
-                             << std::endl;
+    LOG_XBDM(error) << "Invalid RDCP packet, response contains binary data but "
+                       "no binary was expected.";
     return nullptr;
   }
 
@@ -75,15 +75,14 @@ long RDCPResponse::Parse(std::shared_ptr<RDCPResponse> &response,
   long packet_size = (terminator - buffer) + kTerminatorLen;
 
   if (packet_size < 4) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Invalid RDCP packet, length is " << packet_size << std::endl;
+    LOG_XBDM(error) << "Invalid RDCP packet, length is " << packet_size;
     return -packet_size;
   }
 
   if (buffer[3] != '-') {
-    BOOST_LOG_TRIVIAL(error)
+    LOG_XBDM(error)
         << "Invalid RDCP packet, missing code_buffer delimiter. Received "
-        << buffer[3] << std::endl;
+        << buffer[3];
     return -packet_size;
   }
 

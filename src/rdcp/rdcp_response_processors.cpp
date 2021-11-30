@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <boost/algorithm/string_regex.hpp>
-#include <boost/log/trivial.hpp>
 #include <boost/regex.hpp>
 
+#include "util/logging.h"
 #include "util/parsing.h"
 
 static std::vector<std::vector<char>> SplitMultiline(
@@ -84,9 +84,8 @@ int64_t RDCPMapResponse::GetQWORD(const std::string &low_key,
 
   it = map.find(high_key);
   if (it == map.end()) {
-    BOOST_LOG_TRIVIAL(warning)
-        << "Found QWORD low key " << low_key << " but missing high key "
-        << high_key << std::endl;
+    LOG_XBDM(warning) << "Found QWORD low key " << low_key
+                      << " but missing high key " << high_key;
     return default_value;
   }
 

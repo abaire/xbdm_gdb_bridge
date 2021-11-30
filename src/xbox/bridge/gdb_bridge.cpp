@@ -13,6 +13,7 @@
 #include "gdb/gdb_transport.h"
 #include "gdb_registers.h"
 #include "notification/xbdm_notification.h"
+#include "util/logging.h"
 #include "util/parsing.h"
 #include "xbox/debugger/xbdm_debugger.h"
 #include "xbox/xbdm_context.h"
@@ -54,7 +55,7 @@ bool GDBBridge::HasGDBClient() const { return gdb_ && gdb_->IsConnected(); }
 
 bool GDBBridge::HandlePacket(const GDBPacket& packet) {
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
-  BOOST_LOG_TRIVIAL(trace) << "GDB: received packet: " << packet.DataString();
+  LOG_GDB(trace) << "Received packet: " << packet.DataString();
 #endif
 
   switch (packet.Command()) {
@@ -189,7 +190,7 @@ bool GDBBridge::HandlePacket(const GDBPacket& packet) {
   }
 
   // TODO: FINISH ME
-  BOOST_LOG_TRIVIAL(error) << "IMPLEMENT ME";
+  LOG_GDB(error) << "IMPLEMENT ME";
   SendEmpty();
   return true;
 }
@@ -219,18 +220,17 @@ void GDBBridge::SendError(uint8_t error) const {
 }
 
 void GDBBridge::HandleDeprecatedCommand(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(info) << "Ignoring deprecated command: "
-                          << packet.DataString();
+  LOG_GDB(info) << "Ignoring deprecated command: " << packet.DataString();
   SendEmpty();
 }
 
 void GDBBridge::HandleInterruptRequest(const GDBPacket& packet) {
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
-  BOOST_LOG_TRIVIAL(trace) << "Processing GDB interrupt request";
+  LOG_GDB(trace) << "Processing GDB interrupt request";
 #endif
 
   if (!debugger_->HaltAll()) {
-    BOOST_LOG_TRIVIAL(error) << "Failed to halt on GDB interrupt request";
+    LOG_GDB(error) << "Failed to halt on GDB interrupt request";
     SendError(EBADMSG);
     return;
   }
@@ -238,14 +238,13 @@ void GDBBridge::HandleInterruptRequest(const GDBPacket& packet) {
   auto thread = debugger_->ActiveThread();
   assert(thread);
   if (!SendThreadStopPacket(thread)) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Failed to send stop reason on GDB interrupt request";
+    LOG_GDB(error) << "Failed to send stop reason on GDB interrupt request";
     SendOK();
   }
 }
 
 void GDBBridge::HandleEnableExtendedMode(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
@@ -262,14 +261,14 @@ void GDBBridge::HandleQueryHaltReason(const GDBPacket& packet) {
 }
 
 void GDBBridge::HandleArgv(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
 void GDBBridge::HandleBCommandGroup(const GDBPacket& packet) {
   char subcommand;
   if (!packet.GetFirstDataChar(subcommand)) {
-    BOOST_LOG_TRIVIAL(error) << "Unexpected truncated b packet.";
+    LOG_GDB(error) << "Unexpected truncated b packet.";
     SendEmpty();
     return;
   }
@@ -290,42 +289,42 @@ void GDBBridge::HandleBCommandGroup(const GDBPacket& packet) {
 }
 
 void GDBBridge::HandleBackwardContinue(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
 void GDBBridge::HandleBackwardStep(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
 void GDBBridge::HandleContinue(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
 void GDBBridge::HandleContinueWithSignal(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
 void GDBBridge::HandleDetach(const GDBPacket& packet) {
   debugger_->ContinueAll(true);
   if (!debugger_->Go()) {
-    BOOST_LOG_TRIVIAL(error) << "Go failed during debugger detach.";
+    LOG_GDB(error) << "Go failed during debugger detach.";
   }
   SendOK();
 }
 
 void GDBBridge::HandleFileIO(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
 void GDBBridge::HandleReadGeneralRegisters(const GDBPacket& packet) {
   int32_t thread_id = GetThreadIDForCommand(packet.Command());
   if (thread_id < 0) {
-    BOOST_LOG_TRIVIAL(error)
+    LOG_GDB(error)
         << "Unsupported read general registers query for all threads: "
         << packet.DataString();
     SendEmpty();
@@ -337,15 +336,14 @@ void GDBBridge::HandleReadGeneralRegisters(const GDBPacket& packet) {
   }
   auto thread = debugger_->GetThread(thread_id);
   if (!thread) {
-    BOOST_LOG_TRIVIAL(error)
+    LOG_GDB(error)
         << "Attempt to read general registers for non-existent thread "
         << thread_id;
     SendError(EBADMSG);
     return;
   }
   if (!thread->FetchContextSync(*xbdm_)) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Failed to retrieve registers for thread " << thread_id;
+    LOG_GDB(error) << "Failed to retrieve registers for thread " << thread_id;
     SendError(EBUSY);
     return;
   }
@@ -357,14 +355,13 @@ void GDBBridge::HandleReadGeneralRegisters(const GDBPacket& packet) {
 }
 
 void GDBBridge::HandleWriteGeneralRegisters(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
 void GDBBridge::HandleSelectThreadForCommandGroup(const GDBPacket& packet) {
   if (packet.Data().size() < 3) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Command missing parameters: " << packet.DataString();
+    LOG_GDB(error) << "Command missing parameters: " << packet.DataString();
     SendError(EBADMSG);
     return;
   }
@@ -372,8 +369,7 @@ void GDBBridge::HandleSelectThreadForCommandGroup(const GDBPacket& packet) {
   char operation = static_cast<char>(packet.Data()[1]);
   int32_t thread_id;
   if (!MaybeParseHexInt(thread_id, packet.Data(), 2)) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Invalid thread_id parameter: " << packet.DataString();
+    LOG_GDB(error) << "Invalid thread_id parameter: " << packet.DataString();
     SendError(EBADMSG);
     return;
   }
@@ -382,17 +378,17 @@ void GDBBridge::HandleSelectThreadForCommandGroup(const GDBPacket& packet) {
 }
 
 void GDBBridge::HandleStepInstruction(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
 void GDBBridge::HandleSignalStep(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
 void GDBBridge::HandleKill(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
@@ -404,16 +400,14 @@ void GDBBridge::HandleReadMemory(const GDBPacket& packet) {
 
   uint32_t address;
   if (!MaybeParseHexInt(address, address_str)) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Invalid address parameter: " << packet.DataString();
+    LOG_GDB(error) << "Invalid address parameter: " << packet.DataString();
     SendError(EBADMSG);
     return;
   }
 
   uint32_t length;
   if (!MaybeParseHexInt(length, length_str)) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Invalid address parameter: " << packet.DataString();
+    LOG_GDB(error) << "Invalid address parameter: " << packet.DataString();
     SendError(EBADMSG);
     return;
   }
@@ -446,8 +440,7 @@ void GDBBridge::HandleWriteMemory(const GDBPacket& packet) {
   std::string address_str(packet.Data().begin() + 1, address_length_split);
   uint32_t address;
   if (!MaybeParseHexInt(address, address_str)) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Invalid address parameter: " << packet.DataString();
+    LOG_GDB(error) << "Invalid address parameter: " << packet.DataString();
     SendError(EBADMSG);
     return;
   }
@@ -458,9 +451,9 @@ void GDBBridge::HandleWriteMemory(const GDBPacket& packet) {
                           data.begin());
 
   if (data.size() != length) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Failed to unpack " << length << " bytes from hex data. Got "
-        << data.size() << " bytes. " << packet.DataString();
+    LOG_GDB(error) << "Failed to unpack " << length
+                   << " bytes from hex data. Got " << data.size() << " bytes. "
+                   << packet.DataString();
     SendError(EBADMSG);
     return;
   }
@@ -474,12 +467,12 @@ void GDBBridge::HandleWriteMemory(const GDBPacket& packet) {
 }
 
 void GDBBridge::HandleReadRegister(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
 void GDBBridge::HandleWriteRegister(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
@@ -526,8 +519,7 @@ void GDBBridge::HandleReadQuery(const GDBPacket& packet) {
     return;
   }
 
-  BOOST_LOG_TRIVIAL(error) << "Unsupported query read packet "
-                           << packet.DataString();
+  LOG_GDB(error) << "Unsupported query read packet " << packet.DataString();
   SendEmpty();
 }
 
@@ -538,33 +530,32 @@ void GDBBridge::HandleWriteQuery(const GDBPacket& packet) {
     return;
   }
 
-  BOOST_LOG_TRIVIAL(error) << "Unsupported query write packet "
-                           << packet.DataString();
+  LOG_GDB(error) << "Unsupported query write packet " << packet.DataString();
   SendEmpty();
 }
 
 void GDBBridge::HandleRestartSystem(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
 void GDBBridge::HandleSingleStep(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
 void GDBBridge::HandleSingleStepWithSignal(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
 void GDBBridge::HandleSearchBackward(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
 void GDBBridge::HandleCheckThreadAlive(const GDBPacket& packet) {
-  BOOST_LOG_TRIVIAL(error) << "Unsupported packet " << packet.DataString();
+  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
   SendEmpty();
 }
 
@@ -581,7 +572,7 @@ void GDBBridge::HandleExtendedVCommand(const GDBPacket& packet) {
   }
 
   if (data != "vMustReplyEmpty") {
-    BOOST_LOG_TRIVIAL(error) << "Unsupported v packet: " << data;
+    LOG_GDB(error) << "Unsupported v packet: " << data;
   }
   SendEmpty();
 }
@@ -604,16 +595,15 @@ void GDBBridge::HandleWriteMemoryBinary(const GDBPacket& packet) {
   std::string address_str(packet.Data().begin() + 1, address_length_split);
   uint32_t address;
   if (!MaybeParseHexInt(address, address_str)) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Invalid address parameter: " << packet.DataString();
+    LOG_GDB(error) << "Invalid address parameter: " << packet.DataString();
     SendError(EBADMSG);
     return;
   }
 
   std::vector<uint8_t> data(place_data_split + 1, packet.Data().end());
   if (length != data.size()) {
-    BOOST_LOG_TRIVIAL(error) << "Packet size mismatch, got " << data.size()
-                             << " bytes but expected " << length;
+    LOG_GDB(error) << "Packet size mismatch, got " << data.size()
+                   << " bytes but expected " << length;
     SendError(EBADMSG);
     return;
   }
@@ -667,8 +657,8 @@ void GDBBridge::HandleRemoveBreakpointType(const GDBPacket& packet) {
   int32_t int_arg;
   std::vector<std::vector<uint8_t>> args;
   if (!ExtractBreakpointCommandParams(packet, type, address, int_arg, args)) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Invalid Remove Breakpoint message " << packet.DataString();
+    LOG_GDB(error) << "Invalid Remove Breakpoint message "
+                   << packet.DataString();
     SendError(EBADMSG);
     return;
   }
@@ -676,10 +666,9 @@ void GDBBridge::HandleRemoveBreakpointType(const GDBPacket& packet) {
   switch (type) {
     case BP_SOFTWARE:
       if (int_arg != 1) {
-        BOOST_LOG_TRIVIAL(warning)
-            << "Remove swbreak at " << std::hex << std::setw(8)
-            << std::setfill('0') << address << "with kind " << std::dec
-            << int_arg;
+        LOG_GDB(warning) << "Remove swbreak at " << std::hex << std::setw(8)
+                         << std::setfill('0') << address << "with kind "
+                         << std::dec << int_arg;
       }
       debugger_->RemoveBreakpoint(address);
       SendOK();
@@ -706,8 +695,8 @@ void GDBBridge::HandleRemoveBreakpointType(const GDBPacket& packet) {
       return;
 
     default:
-      BOOST_LOG_TRIVIAL(error)
-          << "Unsupported remove breakpoint type " << packet.DataString();
+      LOG_GDB(error) << "Unsupported remove breakpoint type "
+                     << packet.DataString();
       break;
   }
 
@@ -720,8 +709,7 @@ void GDBBridge::HandleInsertBreakpointType(const GDBPacket& packet) {
   int32_t int_arg;
   std::vector<std::vector<uint8_t>> args;
   if (!ExtractBreakpointCommandParams(packet, type, address, int_arg, args)) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Invalid Add Breakpoint message " << packet.DataString();
+    LOG_GDB(error) << "Invalid Add Breakpoint message " << packet.DataString();
     SendError(EBADMSG);
     return;
   }
@@ -729,10 +717,9 @@ void GDBBridge::HandleInsertBreakpointType(const GDBPacket& packet) {
   switch (type) {
     case BP_SOFTWARE:
       if (int_arg != 1 || !args.empty()) {
-        BOOST_LOG_TRIVIAL(warning)
-            << "Partially supported insert swbreak " << std::hex << std::setw(8)
-            << std::setfill('0') << address << "with kind " << std::dec
-            << int_arg;
+        LOG_GDB(warning) << "Partially supported insert swbreak " << std::hex
+                         << std::setw(8) << std::setfill('0') << address
+                         << "with kind " << std::dec << int_arg;
       }
       debugger_->AddBreakpoint(address);
       SendOK();
@@ -759,8 +746,8 @@ void GDBBridge::HandleInsertBreakpointType(const GDBPacket& packet) {
       return;
 
     default:
-      BOOST_LOG_TRIVIAL(error)
-          << "Unsupported add breakpoint type " << packet.DataString();
+      LOG_GDB(error) << "Unsupported add breakpoint type "
+                     << packet.DataString();
       break;
   }
 
@@ -790,19 +777,19 @@ bool GDBBridge::SendThreadStopPacket(const std::shared_ptr<Thread>& thread) {
 
   switch (stop_reason->type) {
     case SRT_UNKNOWN:
-      BOOST_LOG_TRIVIAL(error)
+      LOG_GDB(error)
           << "Attempting to send stop notification for unknown stop reason";
       break;
 
     case SRT_THREAD_CREATED:
       if (send_thread_events_) {
-        BOOST_LOG_TRIVIAL(error) << "TODO: Send thread created events.";
+        LOG_GDB(error) << "TODO: Send thread created events.";
       }
       break;
 
     case SRT_THREAD_TERMINATED:
       if (send_thread_events_) {
-        BOOST_LOG_TRIVIAL(error) << "TODO: Send thread terminated events.";
+        LOG_GDB(error) << "TODO: Send thread terminated events.";
       }
       break;
 
@@ -820,7 +807,7 @@ bool GDBBridge::SendThreadStopPacket(const std::shared_ptr<Thread>& thread) {
           break;
 
         case StopReasonDataBreakpoint::AT_EXECUTE:
-          BOOST_LOG_TRIVIAL(warning)
+          LOG_GDB(warning)
               << "Watchpoint of type Execute not supported by GDB.";
 
         case StopReasonDataBreakpoint::AT_UNKNOWN:
@@ -854,8 +841,8 @@ int32_t GDBBridge::GetThreadIDForCommand(char command) const {
   auto registered = thread_id_for_command_.find(command);
   int32_t thread_id;
   if (registered == thread_id_for_command_.end()) {
-    BOOST_LOG_TRIVIAL(warning) << "Request for registered thread with command '"
-                               << command << "' but no thread is set!";
+    LOG_GDB(warning) << "Request for registered thread with command '"
+                     << command << "' but no thread is set!";
     thread_id = 0;
   } else {
     thread_id = registered->second;
@@ -883,8 +870,7 @@ void GDBBridge::HandleQuerySupported(const GDBPacket& packet) {
 
   auto split = packet.FindFirst(':');
   if (split == packet.Data().end()) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Invalid qSupported message " << packet.DataString();
+    LOG_GDB(error) << "Invalid qSupported message " << packet.DataString();
     SendEmpty();
     return;
   }
@@ -942,7 +928,7 @@ void GDBBridge::HandleQuerySupported(const GDBPacket& packet) {
       continue;
     }
 
-    BOOST_LOG_TRIVIAL(trace) << "Unknown feature " << feature;
+    LOG_GDB(trace) << "Unknown feature " << feature;
   }
 
   gdb_->Send(GDBPacket(response));
@@ -953,16 +939,15 @@ void GDBBridge::HandleQueryThreadExtraInfo(const GDBPacket& packet) {
   int32_t thread_id;
   if (!MaybeParseHexInt(thread_id, packet.Data(),
                         split - packet.Data().begin())) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Invalid thread_id parameter: " << packet.DataString();
+    LOG_GDB(error) << "Invalid thread_id parameter: " << packet.DataString();
     SendError(EBADMSG);
     return;
   }
 
   auto thread = debugger_->GetThread(thread_id);
   if (!thread) {
-    BOOST_LOG_TRIVIAL(error)
-        << "TheradExtraInfo query for non-existent thread id: " << thread_id;
+    LOG_GDB(error) << "TheradExtraInfo query for non-existent thread id: "
+                   << thread_id;
     SendError(EBADMSG);
     return;
   }
@@ -1102,7 +1087,7 @@ void GDBBridge::HandleFeaturesRead(const GDBPacket& packet) {
 
   size_t body_start = command.find("read:");
   if (body_start == std::string::npos) {
-    BOOST_LOG_TRIVIAL(error) << "Invalid feature read packet " << command;
+    LOG_GDB(error) << "Invalid feature read packet " << command;
     SendError(EBADMSG);
     return;
   }
@@ -1110,8 +1095,7 @@ void GDBBridge::HandleFeaturesRead(const GDBPacket& packet) {
 
   size_t target_region_delim = command.find(':', body_start);
   if (target_region_delim == std::string::npos) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Invalid feature read packet, missing region " << command;
+    LOG_GDB(error) << "Invalid feature read packet, missing region " << command;
     SendError(EBADMSG);
     return;
   }
@@ -1119,15 +1103,15 @@ void GDBBridge::HandleFeaturesRead(const GDBPacket& packet) {
   std::string target_file =
       command.substr(body_start, target_region_delim - body_start);
   if (target_file != "target.xml") {
-    BOOST_LOG_TRIVIAL(error) << "Request for unknown resource " << target_file;
+    LOG_GDB(error) << "Request for unknown resource " << target_file;
     SendError(EBADMSG);
     return;
   }
 
   size_t start_length_delim = command.find(',', target_region_delim + 1);
   if (start_length_delim == std::string::npos) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Invalid feature read packet, missing offset,length " << command;
+    LOG_GDB(error) << "Invalid feature read packet, missing offset,length "
+                   << command;
     SendError(EBADMSG);
     return;
   }
@@ -1137,8 +1121,7 @@ void GDBBridge::HandleFeaturesRead(const GDBPacket& packet) {
       std::next(command.begin(), static_cast<long>(start_length_delim)));
   uint32_t start;
   if (!MaybeParseHexInt(start, start_str)) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Invalid feature read packet, bad offset " << command;
+    LOG_GDB(error) << "Invalid feature read packet, bad offset " << command;
     SendError(EBADMSG);
     return;
   }
@@ -1148,16 +1131,15 @@ void GDBBridge::HandleFeaturesRead(const GDBPacket& packet) {
       command.end());
   uint32_t length;
   if (!MaybeParseHexInt(length, length_str)) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Invalid feature read packet, bad length " << command;
+    LOG_GDB(error) << "Invalid feature read packet, bad length " << command;
     SendError(EBADMSG);
     return;
   }
 
   uint32_t end = start + length;
 
-  BOOST_LOG_TRIVIAL(trace) << "Feature read " << target_file << " [" << start
-                           << " - " << end << "]";
+  LOG_GDB(trace) << "Feature read " << target_file << " [" << start << " - "
+                 << end << "]";
 
   uint32_t available = kTargetXML.size();
   if (start >= available) {
@@ -1181,12 +1163,12 @@ void GDBBridge::HandleFeaturesRead(const GDBPacket& packet) {
 void GDBBridge::HandleVContQuery() {
   // c - continue
   // s - step
-  gdb_->Send(GDBPacket("vcont;c;s"));
+  gdb_->Send(GDBPacket("vCont;c;C;s;S"));
 }
 
 void GDBBridge::HandleVCont(const std::string& args) {
   if (args.empty()) {
-    BOOST_LOG_TRIVIAL(error) << "Unexpected empty vcont packet.";
+    LOG_GDB(error) << "Unexpected empty vcont packet.";
     SendError(EBADMSG);
   }
 
@@ -1196,9 +1178,9 @@ void GDBBridge::HandleVCont(const std::string& args) {
   for (auto& command : commands) {
     if (command == "c") {
       if (!debugger_->ContinueAll() || !debugger_->Go()) {
-        BOOST_LOG_TRIVIAL(warning) << "Failed to continue after vcont;c";
+        LOG_GDB(warning) << "Failed to continue after vcont;c";
       }
-      SendOK();
+      //      SendOK();
       continue;
     }
 
@@ -1208,8 +1190,8 @@ void GDBBridge::HandleVCont(const std::string& args) {
       if (step_commands.size() > 1) {
         int thread_id;
         if (!MaybeParseHexInt(thread_id, step_commands[1])) {
-          BOOST_LOG_TRIVIAL(error)
-              << "Failed to extract thread id from  vcont;s " << command;
+          LOG_GDB(error) << "Failed to extract thread id from  vcont;s "
+                         << command;
           SendError(EBADMSG);
           continue;
         }
@@ -1221,7 +1203,7 @@ void GDBBridge::HandleVCont(const std::string& args) {
       continue;
     }
 
-    BOOST_LOG_TRIVIAL(error) << "TODO: Implement vcont subcommand " << command;
+    LOG_GDB(error) << "TODO: Implement vcont subcommand " << command;
     SendEmpty();
   }
 }
@@ -1282,8 +1264,7 @@ void GDBBridge::OnNotification(
       break;
 
     case NT_INVALID:
-      BOOST_LOG_TRIVIAL(error)
-          << "XBDMNotif: Received invalid notification type.";
+      LOG_GDB(error) << "XBDMNotif: Received invalid notification type.";
       break;
 
     default:
@@ -1301,8 +1282,7 @@ void GDBBridge::OnExecutionStateChanged(
 
   auto thread = debugger_->ActiveThread();
   if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Stop state received by bridge with no active thread.";
+    LOG_GDB(error) << "Stop state received by bridge with no active thread.";
     return;
   }
 
@@ -1313,8 +1293,7 @@ void GDBBridge::OnBreakpoint(
     const std::shared_ptr<NotificationBreakpoint>& msg) {
   auto thread = debugger_->ActiveThread();
   if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Breakpoint received by bridge with no active thread.";
+    LOG_GDB(error) << "Breakpoint received by bridge with no active thread.";
     return;
   }
 
@@ -1325,8 +1304,7 @@ void GDBBridge::OnWatchpoint(
     const std::shared_ptr<NotificationWatchpoint>& msg) {
   auto thread = debugger_->ActiveThread();
   if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Watchpoint received by bridge with no active thread.";
+    LOG_GDB(error) << "Watchpoint received by bridge with no active thread.";
     return;
   }
 
@@ -1335,10 +1313,10 @@ void GDBBridge::OnWatchpoint(
 
 void GDBBridge::OnSingleStep(
     const std::shared_ptr<NotificationSingleStep>& msg) {
-  BOOST_LOG_TRIVIAL(error) << "FINISHME " << msg;
+  LOG_GDB(error) << "FINISHME " << msg;
   //  auto thread = GetThread(msg->thread_id);
   //  if (!thread) {
-  //    BOOST_LOG_TRIVIAL(warning)
+  //    LOG_GDB(warning)
   //      << "XBDMNotif: Received breakpoint message for unknown thread "
   //      << msg->thread_id;
   //    return;
@@ -1351,10 +1329,10 @@ void GDBBridge::OnSingleStep(
 }
 
 void GDBBridge::OnException(const std::shared_ptr<NotificationException>& msg) {
-  //  BOOST_LOG_TRIVIAL(warning) << "Received exception: " << *msg;
+  //  LOG_GDB(warning) << "Received exception: " << *msg;
   //  auto thread = GetThread(msg->thread_id);
   //  if (!thread) {
-  //    BOOST_LOG_TRIVIAL(warning)
+  //    LOG_GDB(warning)
   //      << "XBDMNotif: Received breakpoint message for unknown thread "
   //      << msg->thread_id;
   //    return;

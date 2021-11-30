@@ -2,9 +2,9 @@
 
 #include <sys/socket.h>
 
-#include <boost/log/trivial.hpp>
 #include <chrono>
 
+#include "util/logging.h"
 #include "util/timer.h"
 
 void SelectThread::ThreadMainBootstrap(SelectThread *instance) {
@@ -46,7 +46,7 @@ void SelectThread::ThreadMain() {
       continue;
     }
     if (fds < 0) {
-      BOOST_LOG_TRIVIAL(error) << "select failed " << errno;
+      LOG(error) << "select failed " << errno;
       // TODO: Determine if this would ever be recoverable.
       WaitMilliseconds(kMinSleepMilliseconds);
       continue;

@@ -1,8 +1,7 @@
 #include "thread.h"
 
-#include <boost/log/trivial.hpp>
-
 #include "rdcp/xbdm_requests.h"
+#include "util/logging.h"
 #include "xbox/xbdm_context.h"
 
 std::ostream &operator<<(std::ostream &os, const Thread &t) {
@@ -125,6 +124,6 @@ bool Thread::Resume(XBDMContext &ctx) {
 }
 
 bool Thread::StepInstruction(XBDMContext &ctx) {
-  BOOST_LOG_TRIVIAL(error) << "TODO: Implement Thread::StepInstruction";
+  LOG_DEBUGGER(error) << "TODO: Implement Thread::StepInstruction";
   return false;
 }

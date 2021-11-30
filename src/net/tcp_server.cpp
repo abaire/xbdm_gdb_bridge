@@ -3,10 +3,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include <boost/log/trivial.hpp>
 #include <cassert>
 
 #include "net/ip_address.h"
+#include "util/logging.h"
 
 bool TCPServer::Listen(const IPAddress &address) {
   const std::lock_guard<std::recursive_mutex> lock(socket_lock_);
@@ -24,28 +24,28 @@ bool TCPServer::Listen(const IPAddress &address) {
   int enabled = 1;
   if (setsockopt(socket_, SOL_SOCKET, SO_REUSEADDR, &enabled,
                  sizeof(enabled))) {
-    BOOST_LOG_TRIVIAL(warning) << "Failed to set reuseaddr " << errno;
+    LOG(warning) << "Failed to set reuseaddr " << errno;
   }
 
   if (bind(socket_, reinterpret_cast<struct sockaddr const *>(&addr),
            sizeof(addr))) {
-    BOOST_LOG_TRIVIAL(error) << "Bind failed " << errno;
+    LOG(error) << "Bind failed " << errno;
     goto close_and_fail;
   }
 
   if (getsockname(socket_, reinterpret_cast<struct sockaddr *>(&bind_addr),
                   &bind_addr_len) < 0) {
-    BOOST_LOG_TRIVIAL(error) << "getsockname failed" << errno;
+    LOG(error) << "getsockname failed" << errno;
     goto close_and_fail;
   }
   address_ = IPAddress(bind_addr);
 
   if (listen(socket_, 1)) {
-    BOOST_LOG_TRIVIAL(error) << "listen failed" << errno;
+    LOG(error) << "listen failed" << errno;
     goto close_and_fail;
   }
 
-  BOOST_LOG_TRIVIAL(trace) << "Server listening at " << address_;
+  LOG(trace) << "Server listening at " << address_;
 
   return true;
 
@@ -82,7 +82,7 @@ bool TCPServer::Process(const fd_set &read_fds, const fd_set &write_fds,
   }
 
   if (FD_ISSET(socket_, &except_fds)) {
-    BOOST_LOG_TRIVIAL(trace) << "Socket exception detected.";
+    LOG(trace) << "Socket exception detected.";
     Close();
     return false;
   }
@@ -95,7 +95,7 @@ bool TCPServer::Process(const fd_set &read_fds, const fd_set &write_fds,
         accept(socket_, reinterpret_cast<struct sockaddr *>(&bind_addr),
                &bind_addr_len);
     if (accepted_socket < 0) {
-      BOOST_LOG_TRIVIAL(error) << "accept failed" << errno;
+      LOG(error) << "accept failed" << errno;
     } else {
       auto address = IPAddress(bind_addr);
       OnAccepted(accepted_socket, address);

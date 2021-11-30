@@ -1,7 +1,6 @@
 #include "shell.h"
 
 #include <boost/algorithm/string.hpp>
-#include <boost/log/trivial.hpp>
 #include <boost/tokenizer.hpp>
 #include <iostream>
 #include <string>
@@ -9,6 +8,7 @@
 #include "commands.h"
 #include "debugger_commands.h"
 #include "shell_commands.h"
+#include "util/logging.h"
 
 Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
     : interface_(interface), prompt_("> ") {
@@ -111,11 +111,11 @@ void Shell::Run() {
     boost::algorithm::trim(line);
     if (line.empty()) {
       if (std::cin.eof()) {
-        BOOST_LOG_TRIVIAL(error) << "stdin closed.";
+        LOG(error) << "stdin closed.";
         break;
       }
       if (std::cin.fail()) {
-        BOOST_LOG_TRIVIAL(error) << "Failure on std::cin.";
+        LOG(error) << "Failure on std::cin.";
         // TODO: Determine if this is recoverable or not.
         break;
       }

@@ -1,12 +1,12 @@
 #include "xbdm_notification.h"
 
-#include <boost/log/trivial.hpp>
 #include <cassert>
 #include <cstring>
 #include <ostream>
 #include <regex>
 
 #include "rdcp/rdcp_response_processors.h"
+#include "util/logging.h"
 #include "util/parsing.h"
 
 static bool StartsWith(const char *buffer, long buffer_len, const char *prefix,
@@ -35,7 +35,7 @@ std::shared_ptr<XBDMNotification> ParseXBDMNotification(const char *buffer,
 
 #undef SETIF
   std::string notification(buffer, buffer_len);
-  BOOST_LOG_TRIVIAL(error) << "Uknown notification " << notification;
+  LOG(error) << "Uknown notification " << notification;
   assert(false && "Unknown notification type");
   return {};
 }
@@ -68,8 +68,8 @@ NotificationDebugStr::NotificationDebugStr(const char *buffer_start,
   std::string buffer(buffer_start, buffer_end);
   std::smatch match;
   if (!std::regex_match(buffer, match, notification_regex)) {
-    BOOST_LOG_TRIVIAL(error)
-        << "Regex match failed on notification buffer '" << buffer << "'";
+    LOG(error) << "Regex match failed on notification buffer '" << buffer
+               << "'";
     thread_id = -1;
     text = "";
     termination = "\n";

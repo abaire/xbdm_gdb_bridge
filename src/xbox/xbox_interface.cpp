@@ -3,7 +3,6 @@
 #include <unistd.h>
 
 #include <boost/asio/dispatch.hpp>
-#include <boost/log/trivial.hpp>
 #include <cassert>
 #include <iostream>
 #include <utility>
@@ -12,6 +11,7 @@
 #include "net/delegating_server.h"
 #include "net/select_thread.h"
 #include "notification/xbdm_notification.h"
+#include "util/logging.h"
 #include "xbox/bridge/gdb_bridge.h"
 #include "xbox/debugger/xbdm_debugger.h"
 #include "xbox/xbdm_context.h"
@@ -148,14 +148,14 @@ std::future<std::shared_ptr<RDCPProcessedRequest>> XBOXInterface::SendCommand(
 void XBOXInterface::OnGDBClientConnected(int sock, IPAddress& address) {
   assert(gdb_bridge_);
   if (gdb_bridge_->HasGDBClient()) {
-    BOOST_LOG_TRIVIAL(warning)
-        << "Disallowing additional GDB connection from " << address;
+    LOG_XBDM(warning) << "Disallowing additional GDB connection from "
+                      << address;
     shutdown(sock, SHUT_RDWR);
     close(sock);
     return;
   }
 
-  BOOST_LOG_TRIVIAL(trace) << "GDB channel established from " << address;
+  LOG_XBDM(trace) << "GDB channel established from " << address;
   auto transport = std::make_shared<GDBTransport>(
       "GDB", sock, address, [this](const std::shared_ptr<GDBPacket>& packet) {
         this->OnGDBPacketReceived(packet);

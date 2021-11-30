@@ -7,6 +7,7 @@
 #include <boost/log/trivial.hpp>
 
 #include "configure.h"
+#include "util/logging.h"
 
 void TCPConnection::ShiftReadBuffer(long shift_bytes) {
   if (!shift_bytes) {
@@ -77,7 +78,7 @@ bool TCPConnection::Process(const fd_set &read_fds, const fd_set &write_fds,
   }
 
   if (FD_ISSET(socket_, &except_fds)) {
-    BOOST_LOG_TRIVIAL(trace) << "Socket exception detected.";
+    LOG_TAGGED(trace, name_) << "Socket exception detected.";
     Close();
     return false;
   }
@@ -101,12 +102,12 @@ bool TCPConnection::DoReceive() {
 
   ssize_t bytes_read = recv(socket_, buffer.data(), buffer.size(), 0);
   if (!bytes_read) {
-    BOOST_LOG_TRIVIAL(trace) << "remote closed socket.";
+    LOG_TAGGED(trace, name_) << "remote closed socket.";
     Close();
     return false;
   }
   if (bytes_read < 0) {
-    BOOST_LOG_TRIVIAL(trace)
+    LOG_TAGGED(trace, name_)
         << "recv returned " << bytes_read << " errno: " << errno;
     Close();
     return false;
@@ -125,16 +126,16 @@ void TCPConnection::DoSend() {
   ssize_t bytes_sent =
       send(socket_, write_buffer_.data(), write_buffer_.size(), 0);
   if (bytes_sent < 0) {
-    BOOST_LOG_TRIVIAL(trace)
-        << "send returned " << bytes_sent << " errno: " << errno << std::endl;
+    LOG_TAGGED(trace, name_)
+        << "send returned " << bytes_sent << " errno: " << errno;
     Close();
     return;
   }
 
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
   std::string data(write_buffer_.begin(), write_buffer_.begin() + bytes_sent);
-  BOOST_LOG_TRIVIAL(trace) << "  socket<< " << name_ << ": " << bytes_sent
-                           << " bytes " << data;
+  LOG_TAGGED(trace, name_) << "   " << bytes_sent << " bytes" << std::endl
+                           << data;
 #endif
 
   write_buffer_.erase(write_buffer_.begin(),

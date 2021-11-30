@@ -1,17 +1,14 @@
-#include <boost/log/core.hpp>
-#include <boost/log/expressions.hpp>
-#include <boost/log/trivial.hpp>
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <vector>
 
 #include "net/ip_address.h"
 #include "shell/shell.h"
+#include "util/logging.h"
 #include "xbox/xbox_interface.h"
 
 #define DEFAULT_PORT 731
 
-namespace logging = boost::log;
 namespace po = boost::program_options;
 
 static const std::string kCommandDelimiter{"&&"};
@@ -28,7 +25,7 @@ void validate(boost::any &v, const std::vector<std::string> &values,
 static int main_(const IPAddress &xbox_addr,
                  const std::vector<std::vector<std::string>> &commands,
                  bool run_shell) {
-  BOOST_LOG_TRIVIAL(trace) << "Startup - XBDM @ " << xbox_addr;
+  LOG(trace) << "Startup - XBDM @ " << xbox_addr;
   auto interface = std::make_shared<XBOXInterface>("XBOX", xbox_addr);
   interface->Start();
 
@@ -71,7 +68,11 @@ static std::vector<std::vector<std::string>> split_commands(
 }
 
 int main(int argc, char *argv[]) {
-  bool run_shell;
+  bool run_shell{false};
+  bool disable_xbdm_logging{false};
+  bool disable_gdb_logging{false};
+  bool disable_debugger_logging{false};
+
   po::options_description opts("Options:");
   // clang-format off
   opts.add_options()
@@ -79,6 +80,9 @@ int main(int argc, char *argv[]) {
       ("xbox", po::value<IPAddress>()->value_name("<IP[:Port]>"), "IP (and optionally Port) of the XBOX to connect to.")
       ("shell,s", po::bool_switch(&run_shell), "Run the shell even if an initial command is given.")
       ("verbosity,v", po::value<uint32_t>()->value_name("<level>")->default_value(0), "Sets logging verbosity.")
+      ("no-debugger", po::bool_switch(&disable_debugger_logging), "Disable verbose logging for the debugger module.")
+      ("no-gdb", po::bool_switch(&disable_gdb_logging), "Disable verbose logging for the GDB module.")
+      ("no-xbdm", po::bool_switch(&disable_xbdm_logging), "Disable verbose logging for the XBDM module.")
       ("command", po::value<std::vector<std::string>>()->multitoken(), "Optional command to run instead of running the shell.")
       ;
   // clang-format on
@@ -123,18 +127,10 @@ int main(int argc, char *argv[]) {
     additional_commands = command_params->second.as<std::vector<std::string>>();
   }
 
-  logging::core::get()->set_filter(
-      [verbosity](const boost::log::attribute_value_set &values) mutable {
-        auto severity =
-            values["Severity"].extract<logging::trivial::severity_level>();
-        int info_level = logging::trivial::info;
-        if (verbosity > info_level) {
-          verbosity = info_level;
-        } else if (info_level - verbosity > logging::trivial::fatal) {
-          verbosity = info_level - logging::trivial::fatal;
-        }
-        return severity >= (logging::trivial::info - verbosity);
-      });
+  logging::InitializeLogging(verbosity);
+  logging::SetGDBTraceEnabled(!disable_gdb_logging);
+  logging::SetXBDMTraceEnabled(!disable_xbdm_logging);
+  logging::SetDebuggerTraceEnabled(!disable_debugger_logging);
 
   std::vector<std::vector<std::string>> commands =
       split_commands(additional_commands);
