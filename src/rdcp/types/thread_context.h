@@ -45,43 +45,43 @@ struct ThreadContext {
       ret += buf;
     }
     if (esp.has_value()) {
-      snprintf(buf, 63, " Esp=0x%x", ebp.value());
+      snprintf(buf, 63, " Esp=0x%x", esp.value());
       ret += buf;
     }
     if (eip.has_value()) {
-      snprintf(buf, 63, " Eip=0x%x", ebp.value());
+      snprintf(buf, 63, " Eip=0x%x", eip.value());
       ret += buf;
     }
     if (eflags.has_value()) {
-      snprintf(buf, 63, " EFlags=0x%x", ebp.value());
+      snprintf(buf, 63, " EFlags=0x%x", eflags.value());
       ret += buf;
     }
     if (eax.has_value()) {
-      snprintf(buf, 63, " Eax=0x%x", ebp.value());
+      snprintf(buf, 63, " Eax=0x%x", eax.value());
       ret += buf;
     }
     if (ebx.has_value()) {
-      snprintf(buf, 63, " Ebx=0x%x", ebp.value());
+      snprintf(buf, 63, " Ebx=0x%x", ebx.value());
       ret += buf;
     }
     if (ecx.has_value()) {
-      snprintf(buf, 63, " Ecx=0x%x", ebp.value());
+      snprintf(buf, 63, " Ecx=0x%x", ecx.value());
       ret += buf;
     }
     if (edx.has_value()) {
-      snprintf(buf, 63, " Edx=0x%x", ebp.value());
+      snprintf(buf, 63, " Edx=0x%x", edx.value());
       ret += buf;
     }
     if (edi.has_value()) {
-      snprintf(buf, 63, " Edi=0x%x", ebp.value());
+      snprintf(buf, 63, " Edi=0x%x", edi.value());
       ret += buf;
     }
     if (esi.has_value()) {
-      snprintf(buf, 63, " Esi=0x%x", ebp.value());
+      snprintf(buf, 63, " Esi=0x%x", esi.value());
       ret += buf;
     }
     if (cr0_npx_state.has_value()) {
-      snprintf(buf, 63, " Cr0NpxState=0x%x", ebp.value());
+      snprintf(buf, 63, " Cr0NpxState=0x%x", cr0_npx_state.value());
       ret += buf;
     }
 

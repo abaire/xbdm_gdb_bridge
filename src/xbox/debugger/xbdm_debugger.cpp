@@ -625,6 +625,20 @@ bool XBDMDebugger::ContinueAll(bool no_break_on_exception) {
   return ret;
 }
 
+bool XBDMDebugger::ContinueThread(int thread_id, bool no_break_on_exception) {
+  auto thread = GetThread(thread_id);
+  if (!thread) {
+    LOG_DEBUGGER(error) << "Failed to continue unknown thread " << thread_id;
+    return false;
+  }
+
+  if (!thread->Continue(*context_, no_break_on_exception)) {
+    LOG_DEBUGGER(error) << "Failed to continue thread " << thread->thread_id;
+    return false;
+  }
+  return true;
+}
+
 bool XBDMDebugger::HaltAll(uint32_t optimistic_max_wait) {
   std::list<std::shared_ptr<Thread>> threads = Threads();
   if (threads.empty()) {

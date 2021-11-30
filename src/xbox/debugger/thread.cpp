@@ -4,6 +4,9 @@
 #include "util/logging.h"
 #include "xbox/xbdm_context.h"
 
+// x86 single step flag.
+static constexpr uint32_t TRAP_FLAG = 0x100;
+
 std::ostream &operator<<(std::ostream &os, const Thread &t) {
   os << "Thread " << t.thread_id << std::endl;
 
@@ -124,6 +127,32 @@ bool Thread::Resume(XBDMContext &ctx) {
 }
 
 bool Thread::StepInstruction(XBDMContext &ctx) {
-  LOG_DEBUGGER(error) << "TODO: Implement Thread::StepInstruction";
-  return false;
+  if (!FetchContextSync(ctx)) {
+    LOG_DEBUGGER(error) << "Failed to fetch context in StepInstruction.";
+    return false;
+  }
+
+  auto flags = context->eflags;
+  if (!flags.has_value()) {
+    LOG_DEBUGGER(error) << "Context does not contain eflags in StepInstruction";
+    return false;
+  }
+
+  uint32_t new_flags = flags.value() | TRAP_FLAG;
+  if (new_flags == flags) {
+    return true;
+  }
+
+  {
+    ThreadContext new_context(context.value());
+    new_context.eflags = new_flags;
+    auto request = std::make_shared<::SetContext>(thread_id, new_context);
+    ctx.SendCommandSync(request);
+    if (!request->IsOK()) {
+      LOG_DEBUGGER(error) << "Failed to set trap flag in StepInstruction";
+      return false;
+    }
+  }
+
+  return Continue(ctx);
 }

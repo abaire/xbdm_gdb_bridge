@@ -1675,6 +1675,11 @@ struct SetSystemTime : public RDCPProcessedRequest {
 
 struct Stop : public RDCPProcessedRequest {
   Stop() : RDCPProcessedRequest("stop") {}
+
+  [[nodiscard]] bool IsOK() const override {
+    // Treat "already stopped" responses as successful.
+    return status == StatusCode::OK || status == StatusCode::ERR_UNEXPECTED;
+  }
 };
 
 struct Suspend : public RDCPProcessedRequest {

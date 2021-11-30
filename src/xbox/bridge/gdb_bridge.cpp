@@ -1175,36 +1175,78 @@ void GDBBridge::HandleVCont(const std::string& args) {
   std::vector<std::string> commands;
   boost::split(commands, args, boost::is_any_of(";"));
 
+  std::set<uint32_t> processed_threads;
+
   for (auto& command : commands) {
-    if (command == "c") {
-      if (!debugger_->ContinueAll() || !debugger_->Go()) {
-        LOG_GDB(warning) << "Failed to continue after vcont;c";
+    int thread_id = -1;
+    std::vector<std::string> command_params;
+    boost::split(command_params, command, boost::is_any_of(":"));
+    if (command_params.size() > 1) {
+      if (!MaybeParseHexInt(thread_id, command_params[1])) {
+        LOG_GDB(error) << "Failed to extract thread id from  vCont " << command;
+        SendError(EBADMSG);
+        continue;
       }
-      //      SendOK();
-      continue;
     }
 
-    if (command.front() == 's') {
-      std::vector<std::string> step_commands;
-      boost::split(step_commands, args, boost::is_any_of(":"));
-      if (step_commands.size() > 1) {
-        int thread_id;
-        if (!MaybeParseHexInt(thread_id, step_commands[1])) {
-          LOG_GDB(error) << "Failed to extract thread id from  vcont;s "
-                         << command;
-          SendError(EBADMSG);
+    if (thread_id > 0) {
+      processed_threads.insert(thread_id);
+    }
+
+    char command_code = command.front();
+    if (command_code == 'c') {
+      if (processed_threads.empty() && thread_id <= 0) {
+        if (!debugger_->ContinueAll() || !debugger_->Go()) {
+          LOG_GDB(warning) << "Failed to continue after vCont;c";
+        }
+        continue;
+      }
+
+      if (thread_id > 0) {
+        if (!debugger_->ContinueThread(thread_id)) {
+          LOG_GDB(warning) << "Failed to continue thread " << command;
+        }
+        continue;
+      }
+
+      for (auto& thread : debugger_->Threads()) {
+        if (processed_threads.find(thread->thread_id) !=
+            processed_threads.end()) {
           continue;
         }
 
-        debugger_->SetActiveThread(thread_id);
+        if (!debugger_->ContinueThread(thread_id)) {
+          LOG_GDB(warning) << "Failed to continue thread " << thread_id << " "
+                           << command;
+        }
       }
-      debugger_->StepInstruction();
-      SendOK();
       continue;
     }
 
-    LOG_GDB(error) << "TODO: Implement vcont subcommand " << command;
+    if (command_code == 's') {
+      if (thread_id > 0) {
+        debugger_->SetActiveThread(thread_id);
+        processed_threads.insert(thread_id);
+      } else {
+        LOG_GDB(error) << "TODO: Implement vCont s with no thread arg. "
+                       << command;
+        SendError(EBADMSG);
+        continue;
+      }
+
+      if (!debugger_->StepInstruction()) {
+        SendError(EFAULT);
+        continue;
+      }
+      continue;
+    }
+
+    LOG_GDB(error) << "TODO: Implement vCont subcommand " << command;
     SendEmpty();
+  }
+
+  if (!debugger_->Go()) {
+    LOG_GDB(error) << "Go failed in vCont handler.";
   }
 }
 

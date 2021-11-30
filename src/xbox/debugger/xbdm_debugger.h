@@ -96,6 +96,7 @@ class XBDMDebugger {
   }
 
   bool ContinueAll(bool no_break_on_exception = false);
+  bool ContinueThread(int thread_id, bool no_break_on_exception = false);
   bool HaltAll(
       uint32_t optimistic_max_wait = kDefaultHaltAllMaxWaitMilliseconds);
   //! Halts the active thread.
