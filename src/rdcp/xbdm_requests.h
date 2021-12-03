@@ -871,7 +871,6 @@ struct IsStopped : public RDCPProcessedRequest {
 
     const auto& data = response->Data();
     auto delimiter = std::find(data.begin(), data.end(), ' ');
-    assert(delimiter != data.end());
 
     std::string reason(data.begin(), delimiter);
     RDCPMapResponse parsed(delimiter, data.end());
