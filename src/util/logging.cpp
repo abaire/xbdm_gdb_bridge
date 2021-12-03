@@ -109,7 +109,7 @@ class LoggerSink : public SynchronizedSink {
         char buf[64] = {0};
         snprintf(buf, 63, "%s:%d", path.c_str(), line_num.get());
 
-        strm << std::left << std::setw(42) << buf;
+        strm << std::left << std::setfill(' ') << std::setw(42) << buf;
         strm << std::right << " ";
       }
     }
@@ -129,7 +129,7 @@ class LoggerSink : public SynchronizedSink {
         thread_short_id = it->second;
       }
       strm << "(" << std::hex << std::setfill('0') << std::setw(2)
-           << thread_short_id << ") ";
+           << thread_short_id << ") " << std::setfill(' ');
     }
 
     if (enable_colorized_output) {
