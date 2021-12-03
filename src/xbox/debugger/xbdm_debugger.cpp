@@ -153,10 +153,10 @@ bool XBDMDebugger::DebugXBE(const std::string &path,
 
   // Stop breaking on threads.
   {
-    auto request = std::make_shared<StopOn>(StopOn::kFirstChanceException);
+    auto request = std::make_shared<NoStopOn>(NoStopOn::kCreateThread);
     context_->SendCommandSync(request);
     if (!request->IsOK()) {
-      LOG_DEBUGGER(error) << "Failed to enable StopOn CreateThread "
+      LOG_DEBUGGER(error) << "Failed to disable StopOn CreateThread "
                           << request->status << " " << request->message;
       return false;
     }
@@ -365,6 +365,7 @@ void XBDMDebugger::OnDebugStr(
 
 void XBDMDebugger::OnModuleLoaded(
     const std::shared_ptr<NotificationModuleLoaded> &msg) {
+  LOG_DEBUGGER(info) << "Module loaded";
   std::unique_lock<std::recursive_mutex> lock(modules_lock_);
   modules_.push_back(std::make_shared<Module>(msg->module));
 }
