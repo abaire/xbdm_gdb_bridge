@@ -8,7 +8,7 @@
 static constexpr uint32_t TRAP_FLAG = 0x100;
 
 std::ostream &operator<<(std::ostream &os, const Thread &t) {
-  os << "Thread " << t.thread_id << std::endl;
+  os << "Thread " << std::dec << t.thread_id << std::endl;
 
   auto print_decimal = [&os](const char *prefix,
                              const std::optional<int32_t> &val) {
@@ -40,6 +40,7 @@ std::ostream &operator<<(std::ostream &os, const Thread &t) {
   print_hex("Thread local base: ", t.tls_base);
   print_hex("Limit: ", t.limit);
 
+  os << std::dec << std::setfill(' ');
   return os;
 }
 
