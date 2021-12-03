@@ -217,6 +217,33 @@ std::shared_ptr<Thread> XBDMDebugger::GetThread(int thread_id) {
   return {};
 }
 
+std::shared_ptr<Thread> XBDMDebugger::GetFirstStoppedThread() {
+  std::list<std::shared_ptr<Thread>> threads;
+  {
+    const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
+    threads = threads_;
+  }
+
+  // Prefer the active active_thread if it's still stopped.
+  auto active_thread = ActiveThread();
+  if (active_thread && active_thread->FetchStopReasonSync(*context_)) {
+    return active_thread;
+  }
+
+  auto active_thread_id = ActiveThreadID();
+  for (auto &thread : threads) {
+    if (thread->thread_id == active_thread_id) {
+      continue;
+    }
+
+    if (thread->FetchStopReasonSync(*context_)) {
+      return thread;
+    }
+  }
+
+  return nullptr;
+}
+
 bool XBDMDebugger::SetActiveThread(int thread_id) {
   const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
   int i = 0;
@@ -394,6 +421,11 @@ void XBDMDebugger::OnExecutionStateChanged(
     if (state_ == ExecutionState::S_REBOOTING) {
       modules_.clear();
       sections_.clear();
+    } else if (state_ == ExecutionState::S_STOPPED) {
+      auto stopped_thread = GetFirstStoppedThread();
+      if (stopped_thread) {
+        SetActiveThread(stopped_thread->thread_id);
+      }
     }
   }
   state_condition_variable_.notify_all();

@@ -85,6 +85,8 @@ class XBDMDebugger {
 
   [[nodiscard]] std::shared_ptr<Thread> GetThread(int thread_id);
 
+  [[nodiscard]] std::shared_ptr<Thread> GetFirstStoppedThread();
+
   bool SetActiveThread(int thread_id);
 
   [[nodiscard]] const std::list<std::shared_ptr<Module>> &Modules() const {

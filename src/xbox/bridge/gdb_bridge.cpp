@@ -796,8 +796,12 @@ bool GDBBridge::SendThreadStopPacket(const std::shared_ptr<Thread>& thread) {
 
   switch (stop_reason->type) {
     case SRT_UNKNOWN:
-      LOG_GDB(error)
-          << "Attempting to send stop notification for unknown stop reason";
+      // In practice this should only be hit for the case where we've broken
+      // because this thread was just created and we're in StopOn thread_create
+      // mode.
+      //      LOG_GDB(error)
+      //          << "Attempting to send stop notification for unknown stop
+      //          reason";
       break;
 
     case SRT_THREAD_CREATED:

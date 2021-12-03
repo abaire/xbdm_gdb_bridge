@@ -131,7 +131,11 @@ Command::Result DebuggerCommandGetThreads::operator()(
     return HANDLED;
   }
 
+  auto active_thread_id = debugger->ActiveThreadID();
   for (auto &thread : debugger->Threads()) {
+    if (thread->thread_id == active_thread_id) {
+      std::cout << "[Active thread]" << std::endl;
+    }
     std::cout << *thread << std::endl;
   }
 
