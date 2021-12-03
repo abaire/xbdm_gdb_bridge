@@ -219,12 +219,7 @@ std::vector<int32_t> XBDMDebugger::GetThreadIDs() {
 }
 
 std::shared_ptr<Thread> XBDMDebugger::ActiveThread() {
-  const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
-  if (active_thread_index_ < 0 || active_thread_index_ > threads_.size()) {
-    return {};
-  }
-
-  return *std::next(threads_.begin(), active_thread_index_);
+  return GetThread(active_thread_id_);
 }
 
 std::shared_ptr<Thread> XBDMDebugger::GetAnyThread() {
@@ -232,40 +227,43 @@ std::shared_ptr<Thread> XBDMDebugger::GetAnyThread() {
 }
 
 std::shared_ptr<Thread> XBDMDebugger::GetThread(int thread_id) {
+  if (thread_id < 0) {
+    return nullptr;
+  }
+
   const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
-  for (auto &it : threads_) {
-    if (it->thread_id == thread_id) {
-      return it;
+  for (auto thread : threads_) {
+    if (thread->thread_id == thread_id) {
+      return thread;
     }
   }
-  return {};
+  return nullptr;
 }
 
 std::shared_ptr<Thread> XBDMDebugger::GetFirstStoppedThread() {
-  std::vector<std::shared_ptr<Thread>> threads;
+  LOG_DEBUGGER(trace) << "Looking for first stopped thread";
+  std::list<std::shared_ptr<Thread>> threads;
+  int active_thread_id;
   {
     const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
     if (threads_.empty()) {
       return nullptr;
     }
-    threads.assign(threads_.begin(), threads_.end());
+    threads = threads_;
+    active_thread_id = active_thread_id_;
   }
 
   // Prefer the active active_thread if it's still stopped.
-  if (active_thread_index_ >= 0 && active_thread_index_ < threads_.size()) {
-    std::shared_ptr<Thread> active_thread = ActiveThread();
-    if (active_thread->FetchStopReasonSync(*context_) &&
-        active_thread->stopped) {
-      return active_thread;
-    }
+  std::shared_ptr<Thread> active_thread = ActiveThread();
+  if (active_thread && active_thread->FetchStopReasonSync(*context_) &&
+      active_thread->stopped) {
+    return active_thread;
   }
 
-  for (int i = 0; i < threads.size(); ++i) {
-    if (i == active_thread_index_) {
+  for (auto thread : threads) {
+    if (thread->thread_id == active_thread_id) {
       continue;
     }
-
-    auto thread = threads[i];
     if (thread->FetchStopReasonSync(*context_) && thread->stopped) {
       return thread;
     }
@@ -276,16 +274,14 @@ std::shared_ptr<Thread> XBDMDebugger::GetFirstStoppedThread() {
 
 bool XBDMDebugger::SetActiveThread(int thread_id) {
   const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
-  int i = 0;
-  for (auto &thread : threads_) {
+  for (auto thread : threads_) {
     if (thread->thread_id == thread_id) {
-      active_thread_index_ = i;
+      active_thread_id_ = thread_id;
       return true;
     }
-    ++i;
   }
 
-  active_thread_index_ = -1;
+  active_thread_id_ = -1;
   return false;
 }
 
@@ -430,17 +426,12 @@ void XBDMDebugger::OnThreadTerminated(
     const std::shared_ptr<NotificationThreadTerminated> &msg) {
   LOG_DEBUGGER(info) << "Thread terminated: " << msg->thread_id;
   const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
-  auto active_thread_id = ActiveThreadID();
   for (auto it = threads_.begin(); it != threads_.end(); ++it) {
     auto &thread = *it;
     if (thread->thread_id == msg->thread_id) {
       threads_.erase(it);
-      if (thread->thread_id == active_thread_id) {
-        active_thread_index_ = -1;
-      } else {
-        if (!SetActiveThread(active_thread_id)) {
-          LOG_DEBUGGER(error) << "Failed to update active thread";
-        }
+      if (thread->thread_id == active_thread_id_) {
+        active_thread_id_ = -1;
       }
       return;
     }
@@ -490,6 +481,9 @@ void XBDMDebugger::OnBreakpoint(
 
 void XBDMDebugger::OnWatchpoint(
     const std::shared_ptr<NotificationWatchpoint> &msg) {
+  LOG_DEBUGGER(trace) << "Watchpoint " << msg->thread_id << "@" << std::hex
+                      << msg->address << std::dec;
+
   auto thread = GetThread(msg->thread_id);
   if (!thread) {
     LOG_DEBUGGER(warning)
@@ -498,10 +492,38 @@ void XBDMDebugger::OnWatchpoint(
     return;
   }
 
+  if (msg->should_break) {
+    if (!Stop()) {
+      LOG_DEBUGGER(debug) << "Failed to Stop on watchpoint.";
+    }
+
+    if (!thread->FetchInfoSync(*context_)) {
+      LOG_DEBUGGER(error) << "Failed to fetch info on watchpoint thread "
+                          << msg->thread_id;
+    } else if (thread->suspend_count) {
+      if (!thread->Resume(*context_)) {
+        LOG_DEBUGGER(error) << "Failed to resume suspended watchpoint thread "
+                            << msg->thread_id;
+      }
+    }
+    if (!thread->Halt(*context_)) {
+      LOG_DEBUGGER(error) << "Failed to halt watchpoint thread "
+                          << msg->thread_id;
+    }
+
+    if (!Go()) {
+      // This can fail if the remote is not in a stopped state.
+      LOG_DEBUGGER(debug) << "Failed to Go on watchpoint.";
+    }
+  }
+
   SetActiveThread(thread->thread_id);
   thread->last_known_address = msg->address;
-  // TODO: Set the stop reason from the notification content.
-  thread->FetchStopReasonSync(*context_);
+
+  if (thread->FetchStopReasonSync(*context_)) {
+    LOG_DEBUGGER(error) << "Failed to fetch stop reason after halt for thread "
+                        << msg->thread_id;
+  }
 }
 
 void XBDMDebugger::OnSingleStep(

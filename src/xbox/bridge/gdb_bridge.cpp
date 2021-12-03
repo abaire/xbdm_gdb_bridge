@@ -1271,7 +1271,7 @@ void GDBBridge::HandleVCont(const std::string& args) {
 
   MarkWaitingForStopPacket();
   if (!debugger_->Go()) {
-    LOG_GDB(error) << "Go failed in vCont handler.";
+    LOG_GDB(warning) << "Go failed in vCont handler.";
   }
 }
 

@@ -52,7 +52,7 @@ class XBDMDebugger {
   std::vector<int32_t> GetThreadIDs();
 
   [[nodiscard]] int ActiveThreadID() {
-    auto thread = ActiveThread();
+    std::shared_ptr<Thread> thread = ActiveThread();
     if (thread) {
       return thread->thread_id;
     }
@@ -154,7 +154,7 @@ class XBDMDebugger {
   std::condition_variable state_condition_variable_;
   ExecutionState state_{S_INVALID};
 
-  int active_thread_index_{-1};
+  int active_thread_id_{-1};
 
   std::recursive_mutex threads_lock_;
   std::list<std::shared_ptr<Thread>> threads_;
