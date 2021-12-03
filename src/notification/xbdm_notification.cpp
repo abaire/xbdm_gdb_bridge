@@ -223,7 +223,12 @@ NotificationWatchpoint::NotificationWatchpoint(const char *buffer_start,
     type = AT_INVALID;
     address = 0;
   }
+
   flags = parsed.valueless_keys;
+  if (flags.find("stop") != flags.end()) {
+    should_break = true;
+    flags.erase("stop");
+  }
 }
 
 std::ostream &NotificationWatchpoint::WriteStream(std::ostream &os) const {

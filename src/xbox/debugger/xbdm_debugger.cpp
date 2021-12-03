@@ -227,25 +227,30 @@ std::shared_ptr<Thread> XBDMDebugger::GetThread(int thread_id) {
 }
 
 std::shared_ptr<Thread> XBDMDebugger::GetFirstStoppedThread() {
-  std::list<std::shared_ptr<Thread>> threads;
+  std::vector<std::shared_ptr<Thread>> threads;
   {
     const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
-    threads = threads_;
+    if (threads_.empty()) {
+      return nullptr;
+    }
+    threads.assign(threads_.begin(), threads_.end());
   }
 
   // Prefer the active active_thread if it's still stopped.
-  auto active_thread = ActiveThread();
-  if (active_thread && active_thread->FetchStopReasonSync(*context_) &&
-      active_thread->stopped) {
-    return active_thread;
+  if (active_thread_index_ >= 0 && active_thread_index_ < threads_.size()) {
+    std::shared_ptr<Thread> active_thread = ActiveThread();
+    if (active_thread->FetchStopReasonSync(*context_) &&
+        active_thread->stopped) {
+      return active_thread;
+    }
   }
 
-  auto active_thread_id = ActiveThreadID();
-  for (auto &thread : threads) {
-    if (thread->thread_id == active_thread_id) {
+  for (int i = 0; i < threads.size(); ++i) {
+    if (i == active_thread_index_) {
       continue;
     }
 
+    auto thread = threads[i];
     if (thread->FetchStopReasonSync(*context_) && thread->stopped) {
       return thread;
     }
