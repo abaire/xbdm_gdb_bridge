@@ -13,6 +13,27 @@ static constexpr uint32_t kRestartStoppedMaxAtStartWaitMilliseconds = 1 * 1000;
 XBDMDebugger::XBDMDebugger(std::shared_ptr<XBDMContext> context)
     : context_(std::move(context)) {}
 
+static bool RequestDebugNotifications(uint16_t port,
+                                      std::shared_ptr<XBDMContext> context) {
+  // Attempt to unregister any previous notifications on the given port.
+  {
+    auto request = std::make_shared<NotifyAt>(port, true, true);
+    context->SendCommandSync(request);
+  }
+
+  {
+    auto request = std::make_shared<NotifyAt>(port, false, true);
+    context->SendCommandSync(request);
+    if (!request->IsOK()) {
+      LOG_DEBUGGER(error) << "Failed to request notifications "
+                          << request->status << " " << request->message;
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool XBDMDebugger::Attach() {
   IPAddress address;
   if (!context_->GetNotificationServerAddress(address)) {
@@ -32,15 +53,9 @@ bool XBDMDebugger::Attach() {
         this->OnNotification(notification);
       });
 
-  {
-    auto request = std::make_shared<NotifyAt>(address.Port(), false, true);
-    context_->SendCommandSync(request);
-    if (!request->IsOK()) {
-      LOG_DEBUGGER(error) << "Failed to request notifications "
-                          << request->status << " " << request->message;
-      context_->UnregisterNotificationHandler(notification_handler_id_);
-      return false;
-    }
+  if (!RequestDebugNotifications(address.Port(), context_)) {
+    context_->UnregisterNotificationHandler(notification_handler_id_);
+    return false;
   }
 
   if (!SetDebugger(true)) {
