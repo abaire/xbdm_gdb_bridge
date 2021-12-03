@@ -70,7 +70,7 @@ struct BreakRange_ : public BreakBase_ {
               bool clear = false)
       : BreakBase_() {
     if (clear) {
-      SetData(" clear");
+      SetData(" clear ");
     } else {
       SetData(" ");
     }
