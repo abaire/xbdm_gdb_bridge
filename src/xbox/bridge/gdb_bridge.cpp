@@ -837,7 +837,7 @@ bool GDBBridge::SendThreadStopPacket(const std::shared_ptr<Thread>& thread) {
           break;
       }
       if (!access_type.empty()) {
-        snprintf(buffer + len, 63 - len, ";%s:%08x;", access_type.c_str(),
+        snprintf(buffer + len, 63 - len, "%s:%08x;", access_type.c_str(),
                  reason->address);
       }
     } break;
@@ -856,6 +856,7 @@ bool GDBBridge::SendThreadStopPacket(const std::shared_ptr<Thread>& thread) {
       break;
   }
 
+  waiting_on_stop_packet_.store(false);
   gdb_->Send(GDBPacket(buffer));
   return true;
 }
@@ -1268,8 +1269,19 @@ void GDBBridge::HandleVCont(const std::string& args) {
     SendEmpty();
   }
 
+  MarkWaitingForStopPacket();
   if (!debugger_->Go()) {
     LOG_GDB(error) << "Go failed in vCont handler.";
+  }
+}
+
+void GDBBridge::MarkWaitingForStopPacket() {
+  auto thread = debugger_->GetFirstStoppedThread();
+  if (thread) {
+    SendThreadStopPacket(thread);
+    waiting_on_stop_packet_.store(false);
+  } else {
+    waiting_on_stop_packet_.store(true);
   }
 }
 
@@ -1345,34 +1357,43 @@ void GDBBridge::OnExecutionStateChanged(
     return;
   }
 
-  auto thread = debugger_->ActiveThread();
+  if (!waiting_on_stop_packet_) {
+    return;
+  }
+
+  auto thread = debugger_->GetFirstStoppedThread();
   if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
     LOG_GDB(error) << "Stop state received by bridge with no active thread.";
     return;
   }
-
   SendThreadStopPacket(thread);
 }
 
 void GDBBridge::OnBreakpoint(
     const std::shared_ptr<NotificationBreakpoint>& msg) {
-  auto thread = debugger_->ActiveThread();
+  if (!waiting_on_stop_packet_) {
+    return;
+  }
+
+  auto thread = debugger_->GetFirstStoppedThread();
   if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
     LOG_GDB(error) << "Breakpoint received by bridge with no active thread.";
     return;
   }
-
   SendThreadStopPacket(thread);
 }
 
 void GDBBridge::OnWatchpoint(
     const std::shared_ptr<NotificationWatchpoint>& msg) {
-  auto thread = debugger_->ActiveThread();
+  if (!waiting_on_stop_packet_) {
+    return;
+  }
+
+  auto thread = debugger_->GetFirstStoppedThread();
   if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
     LOG_GDB(error) << "Watchpoint received by bridge with no active thread.";
     return;
   }
-
   SendThreadStopPacket(thread);
 }
 

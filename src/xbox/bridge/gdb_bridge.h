@@ -1,6 +1,7 @@
 #ifndef XBDM_GDB_BRIDGE_GDB_BRIDGE_H
 #define XBDM_GDB_BRIDGE_GDB_BRIDGE_H
 
+#include <atomic>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -105,6 +106,8 @@ class GDBBridge {
   void OnSingleStep(const std::shared_ptr<NotificationSingleStep> &);
   void OnException(const std::shared_ptr<NotificationException> &);
 
+  void MarkWaitingForStopPacket();
+
  private:
   std::shared_ptr<GDBTransport> gdb_;
   std::shared_ptr<XBDMDebugger> debugger_;
@@ -117,6 +120,7 @@ class GDBBridge {
   int notification_handler_id_{0};
 
   bool send_thread_events_{false};
+  std::atomic<bool> waiting_on_stop_packet_{false};
 };
 
 #endif  // XBDM_GDB_BRIDGE_GDB_BRIDGE_H

@@ -235,7 +235,8 @@ std::shared_ptr<Thread> XBDMDebugger::GetFirstStoppedThread() {
 
   // Prefer the active active_thread if it's still stopped.
   auto active_thread = ActiveThread();
-  if (active_thread && active_thread->FetchStopReasonSync(*context_)) {
+  if (active_thread && active_thread->FetchStopReasonSync(*context_) &&
+      active_thread->stopped) {
     return active_thread;
   }
 
@@ -245,7 +246,7 @@ std::shared_ptr<Thread> XBDMDebugger::GetFirstStoppedThread() {
       continue;
     }
 
-    if (thread->FetchStopReasonSync(*context_)) {
+    if (thread->FetchStopReasonSync(*context_) && thread->stopped) {
       return thread;
     }
   }
