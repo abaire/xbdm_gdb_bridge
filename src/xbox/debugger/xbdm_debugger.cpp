@@ -276,6 +276,7 @@ bool XBDMDebugger::SetActiveThread(int thread_id) {
 
 void XBDMDebugger::OnNotification(
     const std::shared_ptr<XBDMNotification> &notification) {
+  LOG_DEBUGGER(trace) << "Notification received " << *notification;
   switch (notification->Type()) {
     case NT_VX:
       OnVX(std::dynamic_pointer_cast<NotificationVX>(notification));
@@ -399,6 +400,14 @@ void XBDMDebugger::OnThreadCreated(
     const std::shared_ptr<NotificationThreadCreated> &msg) {
   LOG_DEBUGGER(info) << "Thread created: " << msg->thread_id;
   const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
+  for (auto thread : threads_) {
+    if (thread->thread_id == msg->thread_id) {
+      LOG_DEBUGGER(warning)
+          << "Ignoring duplicate thread creation for " << msg->thread_id;
+      return;
+    }
+  }
+
   threads_.push_back(std::make_shared<Thread>(msg->thread_id));
 }
 
@@ -437,11 +446,12 @@ void XBDMDebugger::OnExecutionStateChanged(
     if (state_ == ExecutionState::S_REBOOTING) {
       modules_.clear();
       sections_.clear();
-    } else if (state_ == ExecutionState::S_STOPPED) {
-      auto stopped_thread = GetFirstStoppedThread();
-      if (stopped_thread) {
-        SetActiveThread(stopped_thread->thread_id);
-      }
+    }
+  }
+  if (state_ == ExecutionState::S_STOPPED) {
+    auto stopped_thread = GetFirstStoppedThread();
+    if (stopped_thread) {
+      SetActiveThread(stopped_thread->thread_id);
     }
   }
   state_condition_variable_.notify_all();
@@ -751,24 +761,12 @@ bool XBDMDebugger::HaltAll(uint32_t optimistic_max_wait) {
     return false;
   }
 
-  auto active_thread = ActiveThread();
-  if (active_thread) {
-    active_thread->FetchStopReasonSync(*context_);
-  } else {
-    for (auto &thread : threads) {
-      if (!thread->FetchStopReasonSync(*context_)) {
-        continue;
-      }
-      if (thread->stopped) {
-        SetActiveThread(thread->thread_id);
-        active_thread = thread;
-        break;
-      }
-    }
-    if (!active_thread) {
-      active_thread = threads.front();
-    }
+  auto active_thread = GetFirstStoppedThread();
+  if (!active_thread) {
+    LOG_DEBUGGER(warning) << "No threads stopped after HaltAll";
+    active_thread = threads.front();
   }
+  SetActiveThread(active_thread->thread_id);
 
   // TODO: Verify that this state is possible.
   // If the active_thread is not stopped, poll until it stops.
@@ -777,12 +775,16 @@ bool XBDMDebugger::HaltAll(uint32_t optimistic_max_wait) {
   constexpr uint32_t kDelayPerLoopMilliseconds = 10;
   while (!active_thread->stopped && optimistic_max_wait) {
     WaitMilliseconds(kDelayPerLoopMilliseconds);
+    LOG_DEBUGGER(trace) << "Polling for thread stop state...";
     active_thread->FetchStopReasonSync(*context_);
 
     if (kDelayPerLoopMilliseconds > optimistic_max_wait) {
       break;
     }
     optimistic_max_wait -= kDelayPerLoopMilliseconds;
+  }
+  if (!active_thread->stopped) {
+    LOG_DEBUGGER(warning) << "No threads stopped after HaltAll";
   }
 
   return active_thread->stopped;

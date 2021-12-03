@@ -263,8 +263,8 @@ void GDBBridge::HandleEnableExtendedMode(const GDBPacket& packet) {
 }
 
 void GDBBridge::HandleQueryHaltReason(const GDBPacket& packet) {
-  auto thread = debugger_->ActiveThread();
-  if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
+  auto thread = debugger_->GetFirstStoppedThread();
+  if (!thread || !thread->stopped) {
     SendOK();
     return;
   }
@@ -1394,18 +1394,20 @@ void GDBBridge::OnWatchpoint(
       return;
     }
 
-    if (!thread->stopped && !thread->Halt(*xbdm_)) {
-      LOG_GDB(error) << "Failed to halt watchpoint thread " << msg->thread_id;
-    }
+    if (!thread->stopped) {
+      if (!thread->Halt(*xbdm_)) {
+        LOG_GDB(error) << "Failed to halt watchpoint thread " << msg->thread_id;
+      }
 
-    if (!debugger_->Go()) {
-      // This can fail if the remote is not in a stopped state.
-      LOG_GDB(warning) << "Failed to Go on watchpoint with stop flag";
-    }
+      if (!debugger_->Go()) {
+        // This can fail if the remote is not in a stopped state.
+        LOG_GDB(warning) << "Failed to Go on watchpoint with stop flag";
+      }
 
-    if (!thread->stopped && thread->FetchStopReasonSync(*xbdm_)) {
-      LOG_GDB(error) << "Failed to fetch stop reason after halt for thread "
-                     << msg->thread_id;
+      if (thread->FetchStopReasonSync(*xbdm_)) {
+        LOG_GDB(error) << "Failed to fetch stop reason after halt for thread "
+                       << msg->thread_id;
+      }
     }
   }
 
@@ -1418,33 +1420,29 @@ void GDBBridge::OnWatchpoint(
 
 void GDBBridge::OnSingleStep(
     const std::shared_ptr<NotificationSingleStep>& msg) {
-  LOG_GDB(error) << "FINISHME " << msg;
-  //  auto thread = GetThread(msg->thread_id);
-  //  if (!thread) {
-  //    LOG_GDB(warning)
-  //      << "XBDMNotif: Received breakpoint message for unknown thread "
-  //      << msg->thread_id;
-  //    return;
-  //  }
-  //
-  //  SetActiveThread(thread->thread_id);
-  //  thread->last_known_address = msg->address;
-  //  // TODO: Set the stop reason from the notification content.
-  //  thread->FetchStopReasonSync(*context_);
+  LOG_GDB(warning) << "SingleStep: " << *msg;
+  if (!waiting_on_stop_packet_) {
+    return;
+  }
+
+  auto thread = debugger_->GetFirstStoppedThread();
+  if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
+    LOG_GDB(error) << "Breakpoint received by bridge with no active thread.";
+    return;
+  }
+  SendThreadStopPacket(thread);
 }
 
 void GDBBridge::OnException(const std::shared_ptr<NotificationException>& msg) {
-  //  LOG_GDB(warning) << "Received exception: " << *msg;
-  //  auto thread = GetThread(msg->thread_id);
-  //  if (!thread) {
-  //    LOG_GDB(warning)
-  //      << "XBDMNotif: Received breakpoint message for unknown thread "
-  //      << msg->thread_id;
-  //    return;
-  //  }
-  //
-  //  SetActiveThread(thread->thread_id);
-  //  thread->last_known_address = msg->address;
-  //  // TODO: Set the stop reason from the notification content.
-  //  thread->FetchStopReasonSync(*context_);
+  LOG_GDB(warning) << "Received exception: " << *msg;
+  if (!waiting_on_stop_packet_) {
+    return;
+  }
+
+  auto thread = debugger_->GetFirstStoppedThread();
+  if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
+    LOG_GDB(error) << "Breakpoint received by bridge with no active thread.";
+    return;
+  }
+  SendThreadStopPacket(thread);
 }
