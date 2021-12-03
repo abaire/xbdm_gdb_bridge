@@ -119,7 +119,7 @@ struct StopReasonDataBreakpoint : StopReasonTrapBase_ {
   explicit StopReasonDataBreakpoint(RDCPMapResponse &parsed)
       : StopReasonTrapBase_(SRT_WATCHPOINT) {
     thread_id = parsed.GetDWORD("thread");
-    address = parsed.GetUInt32("Address");
+    address = parsed.GetUInt32("addr");
 
     auto value = parsed.GetOptionalDWORD("read");
     if (value.has_value()) {
