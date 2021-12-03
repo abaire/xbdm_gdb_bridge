@@ -71,6 +71,8 @@ struct BreakRange_ : public BreakBase_ {
       : BreakBase_() {
     if (clear) {
       SetData(" clear");
+    } else {
+      SetData(" ");
     }
 
     AppendData(type);
