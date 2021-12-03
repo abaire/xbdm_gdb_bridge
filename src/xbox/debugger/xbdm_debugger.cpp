@@ -125,6 +125,45 @@ bool XBDMDebugger::DebugXBE(const std::string &path,
     LOG_DEBUGGER(warning)
         << "Failed to fetch threads while at start breakpoint.";
   }
+
+  // Wait until the first application thread is created.
+  {
+    auto request = std::make_shared<StopOn>(StopOn::kCreateThread |
+                                            StopOn::kFirstChanceException);
+    context_->SendCommandSync(request);
+    if (!request->IsOK()) {
+      LOG_DEBUGGER(error) << "Failed to enable StopOn CreateThread "
+                          << request->status << " " << request->message;
+      return false;
+    }
+  }
+
+  if (!ContinueAll()) {
+    LOG_DEBUGGER(error) << "Failed to ContinueAll waiting on first app thread.";
+  }
+
+  if (!Go()) {
+    LOG_DEBUGGER(error) << "Failed to Go waiting on first app thread.";
+    return false;
+  }
+
+  if (!WaitForState(S_STOPPED, kRestartStoppedMaxAtStartWaitMilliseconds)) {
+    LOG_DEBUGGER(warning) << "Timed out waiting for first app thread.";
+  }
+
+  // Stop breaking on threads.
+  {
+    auto request = std::make_shared<StopOn>(StopOn::kFirstChanceException);
+    context_->SendCommandSync(request);
+    if (!request->IsOK()) {
+      LOG_DEBUGGER(error) << "Failed to enable StopOn CreateThread "
+                          << request->status << " " << request->message;
+      return false;
+    }
+  }
+
+  FetchMemoryMap();
+
   return true;
 }
 
@@ -315,12 +354,14 @@ void XBDMDebugger::OnSectionUnloaded(
 
 void XBDMDebugger::OnThreadCreated(
     const std::shared_ptr<NotificationThreadCreated> &msg) {
+  LOG_DEBUGGER(info) << "Thread created: " << msg->thread_id;
   const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
   threads_.push_back(std::make_shared<Thread>(msg->thread_id));
 }
 
 void XBDMDebugger::OnThreadTerminated(
     const std::shared_ptr<NotificationThreadTerminated> &msg) {
+  LOG_DEBUGGER(info) << "Thread terminated: " << msg->thread_id;
   const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
   auto active_thread_id = ActiveThreadID();
   for (auto it = threads_.begin(); it != threads_.end(); ++it) {
