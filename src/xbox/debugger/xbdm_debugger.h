@@ -51,7 +51,7 @@ class XBDMDebugger {
 
   std::vector<int32_t> GetThreadIDs();
 
-  [[nodiscard]] int ActiveThreadID() const {
+  [[nodiscard]] int ActiveThreadID() {
     auto thread = ActiveThread();
     if (thread) {
       return thread->thread_id;
@@ -59,16 +59,10 @@ class XBDMDebugger {
     return -1;
   }
 
-  [[nodiscard]] std::shared_ptr<Thread> ActiveThread() const {
-    if (active_thread_index_ < 0 || active_thread_index_ > threads_.size()) {
-      return {};
-    }
-
-    return *std::next(threads_.begin(), active_thread_index_);
-  }
+  [[nodiscard]] std::shared_ptr<Thread> ActiveThread();
 
   //! Returns an arbitrary thread ID, preferring the active thread.
-  [[nodiscard]] int AnyThreadID() const {
+  [[nodiscard]] int AnyThreadID() {
     if (threads_.empty()) {
       return -1;
     }

@@ -203,6 +203,15 @@ std::vector<int32_t> XBDMDebugger::GetThreadIDs() {
   return std::move(ret);
 }
 
+std::shared_ptr<Thread> XBDMDebugger::ActiveThread() {
+  const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
+  if (active_thread_index_ < 0 || active_thread_index_ > threads_.size()) {
+    return {};
+  }
+
+  return *std::next(threads_.begin(), active_thread_index_);
+}
+
 std::shared_ptr<Thread> XBDMDebugger::GetAnyThread() {
   return GetThread(AnyThreadID());
 }
