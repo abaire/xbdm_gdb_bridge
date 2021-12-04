@@ -71,6 +71,14 @@ bool XBDMContext::GetNotificationServerAddress(IPAddress& address) const {
 
 void XBDMContext::OnNotificationChannelConnected(int sock, IPAddress& address) {
   LOG_XBDM(trace) << "Notification channel established from " << address;
+
+  // After a reboot, XBDM will no longer send an initial empty message
+  // indicating that the connection is fully established, and will instead
+  // reconnect the notification channel.
+  if (!xbdm_transport_->CanProcessCommands()) {
+    Reconnect();
+  }
+
   // TODO: Hold on to the transport so it can be shut down gracefully.
   auto transport = std::make_shared<XBDMNotificationTransport>(
       logging::kLoggingTagXBDM, sock, address,
@@ -155,6 +163,8 @@ bool XBDMContext::XBDMConnect(int max_wait_millis) {
     max_wait_millis -= busywait_millis;
   }
 
+  LOG_XBDM(warning)
+      << "Timeout waiting for command processing to become available.";
   return false;
 }
 int XBDMContext::RegisterNotificationHandler(
