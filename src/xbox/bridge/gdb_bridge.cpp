@@ -1361,12 +1361,7 @@ void GDBBridge::OnExecutionStateChanged(
     return;
   }
 
-  auto thread = debugger_->GetFirstStoppedThread();
-  if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
-    LOG_GDB(error) << "Stop state received by bridge with no active thread.";
-    return;
-  }
-  SendThreadStopPacket(thread);
+  SendThreadStopPacket(debugger_->ActiveThread());
 }
 
 void GDBBridge::OnBreakpoint(
@@ -1375,47 +1370,15 @@ void GDBBridge::OnBreakpoint(
     return;
   }
 
-  auto thread = debugger_->GetFirstStoppedThread();
-  if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
-    LOG_GDB(error) << "Breakpoint received by bridge with no active thread.";
-    return;
-  }
-  SendThreadStopPacket(thread);
+  SendThreadStopPacket(debugger_->ActiveThread());
 }
 
 void GDBBridge::OnWatchpoint(
     const std::shared_ptr<NotificationWatchpoint>& msg) {
-  LOG_GDB(trace) << "Watchpoint " << msg->thread_id << "@" << std::hex
-                 << msg->address << std::dec;
-  auto thread = debugger_->GetThread(msg->thread_id);
-  if (msg->should_break) {
-    if (!thread) {
-      LOG_GDB(error) << "Watchpoint on unknown thread " << msg->thread_id;
-      return;
-    }
-
-    if (!thread->stopped) {
-      if (!thread->Halt(*xbdm_)) {
-        LOG_GDB(error) << "Failed to halt watchpoint thread " << msg->thread_id;
-      }
-
-      if (!debugger_->Go()) {
-        // This can fail if the remote is not in a stopped state.
-        LOG_GDB(warning) << "Failed to Go on watchpoint with stop flag";
-      }
-
-      if (thread->FetchStopReasonSync(*xbdm_)) {
-        LOG_GDB(error) << "Failed to fetch stop reason after halt for thread "
-                       << msg->thread_id;
-      }
-    }
-  }
-
   if (!waiting_on_stop_packet_) {
     return;
   }
-
-  SendThreadStopPacket(thread);
+  SendThreadStopPacket(debugger_->ActiveThread());
 }
 
 void GDBBridge::OnSingleStep(
@@ -1424,13 +1387,7 @@ void GDBBridge::OnSingleStep(
   if (!waiting_on_stop_packet_) {
     return;
   }
-
-  auto thread = debugger_->GetFirstStoppedThread();
-  if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
-    LOG_GDB(error) << "Breakpoint received by bridge with no active thread.";
-    return;
-  }
-  SendThreadStopPacket(thread);
+  SendThreadStopPacket(debugger_->ActiveThread());
 }
 
 void GDBBridge::OnException(const std::shared_ptr<NotificationException>& msg) {
@@ -1438,11 +1395,5 @@ void GDBBridge::OnException(const std::shared_ptr<NotificationException>& msg) {
   if (!waiting_on_stop_packet_) {
     return;
   }
-
-  auto thread = debugger_->GetFirstStoppedThread();
-  if (!thread || !thread->FetchStopReasonSync(*xbdm_)) {
-    LOG_GDB(error) << "Breakpoint received by bridge with no active thread.";
-    return;
-  }
-  SendThreadStopPacket(thread);
+  SendThreadStopPacket(debugger_->ActiveThread());
 }

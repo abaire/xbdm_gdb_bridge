@@ -489,39 +489,8 @@ void XBDMDebugger::OnBreakpoint(
 void XBDMDebugger::OnWatchpoint(
     const std::shared_ptr<NotificationWatchpoint> &msg) {
   LOG_DEBUGGER(trace) << "Watchpoint " << msg->thread_id << "@" << std::hex
-                      << msg->address << std::dec;
-
-  auto thread = GetThread(msg->thread_id);
-  if (!thread) {
-    LOG_DEBUGGER(warning)
-        << "XBDMNotif: Received breakpoint message for unknown thread "
-        << msg->thread_id;
-    return;
-  }
-
-  if (msg->should_break) {
-    if (!Stop()) {
-      LOG_DEBUGGER(debug) << "Failed to Stop on watchpoint.";
-    }
-
-    if (!thread->Halt(*context_)) {
-      LOG_DEBUGGER(error) << "Failed to halt watchpoint thread "
-                          << msg->thread_id;
-    }
-
-    if (!Go()) {
-      // This can fail if the remote is not in a stopped state.
-      LOG_DEBUGGER(debug) << "Failed to Go on watchpoint.";
-    }
-  }
-
-  SetActiveThread(thread->thread_id);
-  thread->last_known_address = msg->address;
-
-  if (thread->FetchStopReasonSync(*context_)) {
-    LOG_DEBUGGER(error) << "Failed to fetch stop reason after halt for thread "
-                        << msg->thread_id;
-  }
+                      << msg->address << " accessing " << msg->watched_address
+                      << std::dec;
 }
 
 void XBDMDebugger::OnSingleStep(
