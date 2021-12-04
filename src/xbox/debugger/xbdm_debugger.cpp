@@ -477,6 +477,13 @@ void XBDMDebugger::OnBreakpoint(
   thread->last_known_address = msg->address;
   // TODO: Set the stop reason from the notification content.
   thread->FetchStopReasonSync(*context_);
+
+  // Threads created with StopOn CreateThread will be started in a suspended
+  // state and should be resumed here.
+  thread->FetchInfoSync(*context_);
+  if (thread->suspend_count > 0) {
+    thread->Resume(*context_);
+  }
 }
 
 void XBDMDebugger::OnWatchpoint(
@@ -497,15 +504,6 @@ void XBDMDebugger::OnWatchpoint(
       LOG_DEBUGGER(debug) << "Failed to Stop on watchpoint.";
     }
 
-    if (!thread->FetchInfoSync(*context_)) {
-      LOG_DEBUGGER(error) << "Failed to fetch info on watchpoint thread "
-                          << msg->thread_id;
-    } else if (thread->suspend_count) {
-      if (!thread->Resume(*context_)) {
-        LOG_DEBUGGER(error) << "Failed to resume suspended watchpoint thread "
-                            << msg->thread_id;
-      }
-    }
     if (!thread->Halt(*context_)) {
       LOG_DEBUGGER(error) << "Failed to halt watchpoint thread "
                           << msg->thread_id;
