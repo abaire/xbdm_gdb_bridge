@@ -209,19 +209,19 @@ NotificationWatchpoint::NotificationWatchpoint(const char *buffer_start,
                                                const char *buffer_end) {
   RDCPMapResponse parsed(buffer_start, buffer_end);
   thread_id = parsed.GetDWORD("thread");
-  accessed_address = parsed.GetUInt32("addr");
+  address = parsed.GetUInt32("addr");
   if (parsed.HasKey("read")) {
     type = AT_READ;
-    address = parsed.GetUInt32("read");
+    watched_address = parsed.GetUInt32("read");
   } else if (parsed.HasKey("write")) {
     type = AT_WRITE;
-    address = parsed.GetUInt32("write");
+    watched_address = parsed.GetUInt32("write");
   } else if (parsed.HasKey("execute")) {
     type = AT_EXECUTE;
-    address = parsed.GetUInt32("execute");
+    watched_address = parsed.GetUInt32("execute");
   } else {
     type = AT_INVALID;
-    address = 0;
+    watched_address = 0;
   }
 
   flags = parsed.valueless_keys;
@@ -234,7 +234,7 @@ NotificationWatchpoint::NotificationWatchpoint(const char *buffer_start,
 std::ostream &NotificationWatchpoint::WriteStream(std::ostream &os) const {
   os << "Watchpoint type: " << type << " thread_id: " << thread_id
      << " address: 0x" << std::setw(8) << std::setfill('0') << std::hex
-     << address << " accessed_address: 0x" << accessed_address;
+     << address << " watched_address: 0x" << watched_address;
 
   if (!flags.empty()) {
     os << " flags:";

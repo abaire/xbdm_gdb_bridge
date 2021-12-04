@@ -135,7 +135,7 @@ struct NotificationWatchpoint : XBDMNotification {
   AccessType type;
   int thread_id;
   uint32_t address;
-  uint32_t accessed_address;
+  uint32_t watched_address;
   bool should_break{false};
   std::set<std::string> flags;
 };
