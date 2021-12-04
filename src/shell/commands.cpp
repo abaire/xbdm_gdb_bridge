@@ -8,6 +8,9 @@
 
 #include "util/parsing.h"
 
+static bool CheckRemoteFile(XBOXInterface &interface, const std::string &path,
+                            bool &exists, bool &is_dir);
+
 static void SendAndPrintMessage(
     XBOXInterface &interface,
     const std::shared_ptr<RDCPProcessedRequest> &request) {
@@ -147,21 +150,7 @@ Command::Result CommandDebugMode::operator()(
   return HANDLED;
 }
 
-Command::Result CommandDelete::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
-  ArgParser parser(args);
-  std::string path;
-  if (!parser.Parse(0, path)) {
-    std::cout << "Missing required path argument." << std::endl;
-    PrintUsage();
-    return HANDLED;
-  }
-  bool recursive = parser.ArgExists("-r");
-  SendAndPrintMessage(interface, std::make_shared<Delete>(path, recursive));
-  return HANDLED;
-}
-
-static bool FetchDirectoryEntires(XBOXInterface &interface,
+static bool FetchDirectoryEntries(XBOXInterface &interface,
                                   const std::string &path,
                                   std::list<DirList::Entry> &directories,
                                   std::list<DirList::Entry> &files) {
@@ -186,6 +175,76 @@ static bool FetchDirectoryEntires(XBOXInterface &interface,
   return true;
 }
 
+static bool DeleteRecursively(XBOXInterface &interface,
+                              const std::string &path) {
+  std::list<DirList::Entry> directories;
+  std::list<DirList::Entry> files;
+  if (!FetchDirectoryEntries(interface, path, directories, files)) {
+    return false;
+  }
+
+  std::string root_path = path;
+  if (root_path.back() != '\\') {
+    root_path += "\\";
+  }
+
+  for (auto &file : files) {
+    std::string full_path = root_path + file.name;
+    auto request = std::make_shared<Delete>(full_path, false);
+    interface.SendCommandSync(request);
+    if (!request->IsOK()) {
+      std::cout << *request << std::endl;
+      return false;
+    }
+
+    std::cout << "rm " << full_path << std::endl;
+  }
+
+  for (auto &dir : directories) {
+    std::string full_path = root_path + dir.name;
+    if (!DeleteRecursively(interface, full_path)) {
+      return false;
+    }
+  }
+
+  {
+    auto request = std::make_shared<Delete>(path, true);
+    interface.SendCommandSync(request);
+    if (!request->IsOK()) {
+      std::cout << *request << std::endl;
+      return false;
+    }
+
+    std::cout << "rm " << path << std::endl;
+  }
+
+  return true;
+}
+
+Command::Result CommandDelete::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &args) {
+  ArgParser parser(args);
+  std::string path;
+  if (!parser.Parse(0, path)) {
+    std::cout << "Missing required path argument." << std::endl;
+    PrintUsage();
+    return HANDLED;
+  }
+  bool recursive = parser.ArgExists("-r");
+  if (recursive) {
+    bool exists;
+    bool is_directory;
+    if (CheckRemoteFile(interface, path, exists, is_directory) &&
+        is_directory) {
+      DeleteRecursively(interface, path);
+      return HANDLED;
+    }
+  }
+
+  SendAndPrintMessage(interface, std::make_shared<Delete>(path, recursive));
+  return HANDLED;
+}
+
 Command::Result CommandDirList::operator()(
     XBOXInterface &interface, const std::vector<std::string> &args) {
   ArgParser parser(args);
@@ -203,7 +262,7 @@ Command::Result CommandDirList::operator()(
 
   std::list<DirList::Entry> directories;
   std::list<DirList::Entry> files;
-  if (!FetchDirectoryEntires(interface, path, directories, files)) {
+  if (!FetchDirectoryEntries(interface, path, directories, files)) {
     return HANDLED;
   }
   auto comparator = [](const DirList::Entry &a, const DirList::Entry &b) {
@@ -397,7 +456,7 @@ static bool SaveDirectory(XBOXInterface &interface, const std::string &remote,
                           const std::filesystem::path &local) {
   std::list<DirList::Entry> directories;
   std::list<DirList::Entry> files;
-  if (!FetchDirectoryEntires(interface, remote, directories, files)) {
+  if (!FetchDirectoryEntries(interface, remote, directories, files)) {
     return false;
   }
 
@@ -429,8 +488,8 @@ static bool SaveDirectory(XBOXInterface &interface, const std::string &remote,
   return true;
 }
 
-bool CheckRemoteFile(XBOXInterface &interface, const std::string &path,
-                     bool &exists, bool &is_dir) {
+static bool CheckRemoteFile(XBOXInterface &interface, const std::string &path,
+                            bool &exists, bool &is_dir) {
   auto request = std::make_shared<GetFileAttributes>(path);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
