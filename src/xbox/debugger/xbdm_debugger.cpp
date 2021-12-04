@@ -386,12 +386,14 @@ void XBDMDebugger::OnModuleLoaded(
   LOG_DEBUGGER(info) << "Module loaded";
   std::unique_lock<std::recursive_mutex> lock(modules_lock_);
   modules_.push_back(std::make_shared<Module>(msg->module));
+  FetchMemoryMap();
 }
 
 void XBDMDebugger::OnSectionLoaded(
     const std::shared_ptr<NotificationSectionLoaded> &msg) {
   std::unique_lock<std::recursive_mutex> lock(sections_lock_);
   sections_.push_back(std::make_shared<Section>(msg->section));
+  FetchMemoryMap();
 }
 
 void XBDMDebugger::OnSectionUnloaded(
@@ -405,6 +407,7 @@ void XBDMDebugger::OnSectionUnloaded(
 
     return other->base_address == section.base_address;
   });
+  FetchMemoryMap();
 }
 
 void XBDMDebugger::OnThreadCreated(
