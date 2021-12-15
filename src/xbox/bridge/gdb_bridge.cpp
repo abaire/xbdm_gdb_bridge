@@ -838,7 +838,7 @@ bool GDBBridge::SendThreadStopPacket(const std::shared_ptr<Thread>& thread) {
       }
       if (!access_type.empty()) {
         snprintf(buffer + len, 63 - len, "%s:%08x;", access_type.c_str(),
-                 reason->address);
+                 reason->access_address);
       }
     } break;
 
