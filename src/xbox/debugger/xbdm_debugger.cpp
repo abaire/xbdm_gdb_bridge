@@ -462,6 +462,7 @@ void XBDMDebugger::OnExecutionStateChanged(
     if (stopped_thread) {
       SetActiveThread(stopped_thread->thread_id);
     }
+    FetchMemoryMap();
   }
   state_condition_variable_.notify_all();
 }
