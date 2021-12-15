@@ -1057,10 +1057,10 @@ void GDBBridge::HandleThreadInfoStart() {
   }
 
   thread_info_buffer_ = debugger_->GetThreadIDs();
-  SendThreadInfoBuffer();
+  SendThreadInfoBuffer(false);
 }
 
-void GDBBridge::HandleThreadInfoContinue() { SendThreadInfoBuffer(false); }
+void GDBBridge::HandleThreadInfoContinue() { SendThreadInfoBuffer(); }
 
 void GDBBridge::SendThreadInfoBuffer(bool send_all) {
   if (thread_info_buffer_.empty()) {
@@ -1084,7 +1084,6 @@ void GDBBridge::SendThreadInfoBuffer(bool send_all) {
 
   if (it == thread_info_buffer_.end()) {
     thread_info_buffer_.clear();
-    send_buffer[0] = 'l';
   } else {
     thread_info_buffer_.erase(thread_info_buffer_.begin(), it);
   }
