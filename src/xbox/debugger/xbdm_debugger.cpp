@@ -644,6 +644,10 @@ bool XBDMDebugger::FetchMemoryMap() {
   for (auto &region : request->regions) {
     memory_regions_.emplace_back(std::make_shared<MemoryRegion>(region));
   }
+  memory_regions_.sort([](const std::shared_ptr<MemoryRegion> &a,
+                          const std::shared_ptr<MemoryRegion> &b) {
+    return a->start < b->start;
+  });
 
   return true;
 }
@@ -879,10 +883,17 @@ bool XBDMDebugger::ValidateMemoryAccess(uint32_t address, uint32_t length,
     return true;
   }
 
+  uint32_t start = address;
+  uint32_t end = address + length;
   for (auto &region : memory_regions_) {
-    // TODO: Validate that the region is writable.
-    if (region->Contains(address, length)) {
-      return true;
+    if (region->Contains(start)) {
+      if (region->Contains(end)) {
+        if (is_write && !region->IsWritable()) {
+          return false;
+        }
+        return true;
+      }
+      start = region->end;
     }
   }
 

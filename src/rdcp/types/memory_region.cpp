@@ -21,3 +21,26 @@ MemoryRegion::MemoryRegion(const RDCPMapResponse &parsed) {
 bool MemoryRegion::Contains(uint32_t address, uint32_t length) const {
   return address >= start && (address + length) < end;
 }
+
+bool MemoryRegion::IsWritable() const {
+  if (protect & PAGE_READWRITE) {
+    return true;
+  }
+  if (protect & PAGE_WRITECOPY) {
+    return true;
+  }
+  if (protect & PAGE_EXECUTE) {
+    return true;
+  }
+  if (protect & PAGE_EXECUTE_READ) {
+    return true;
+  }
+  if (protect & PAGE_EXECUTE_READWRITE) {
+    return true;
+  }
+  if (protect & PAGE_EXECUTE_WRITECOPY) {
+    return true;
+  }
+
+  return false;
+}
