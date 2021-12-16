@@ -141,11 +141,11 @@ struct DebuggerCommandHalt : Command {
 struct DebuggerCommandContinueAll : Command {
   DebuggerCommandContinueAll()
       : Command(
-            "[no_break_on_exceptions]\n"
+            "['n'o_break_on_exceptions]\n"
             "\n"
             "Continues all halted threads in the debugger.\n"
             "\n"
-            "no_break_on_exceptions - if true, do not break on exceptions when "
+            "no_break_on_exceptions - if 'n', do not break on exceptions when "
             "continuing.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
@@ -154,11 +154,11 @@ struct DebuggerCommandContinueAll : Command {
 struct DebuggerCommandContinue : Command {
   DebuggerCommandContinue()
       : Command(
-            "[no_break_on_exceptions]\n"
+            "['n'o_break_on_exceptions]\n"
             "\n"
             "Continues the active thread.\n"
             "\n"
-            "no_break_on_exceptions - if true, do not break on exceptions when "
+            "no_break_on_exceptions - if 'n', do not break on exceptions when "
             "continuing.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;

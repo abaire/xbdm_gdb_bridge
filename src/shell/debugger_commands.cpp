@@ -203,7 +203,8 @@ Command::Result DebuggerCommandHalt::operator()(
 Command::Result DebuggerCommandContinueAll::operator()(
     XBOXInterface &interface, const std::vector<std::string> &args) {
   ArgParser parser(args);
-  bool no_break_on_exception = parser.ArgExists("nobreak", "n", "false", "no");
+  bool no_break_on_exception =
+      parser.ArgExists("nobreak", "n", "false", "no", "no_break_on_exception");
 
   auto debugger = interface.Debugger();
   if (!debugger) {
