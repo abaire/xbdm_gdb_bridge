@@ -495,15 +495,8 @@ rdcp_response.RDCPResponse.STATUS_BINARY_RESPONSE
 */
 
 struct GetExtContext : public RDCPProcessedRequest {
-  explicit GetExtContext(int thread_id)
-      : RDCPProcessedRequest("getextcontext") {
-    SetData(" thread=");
-    AppendHexString(thread_id);
-  }
+  explicit GetExtContext(int thread_id);
 
-  [[nodiscard]] long ExpectedBinaryResponseSize() const override {
-    return RDCPResponse::kBinaryInt32SizePrefix;
-  }
   [[nodiscard]] bool IsOK() const override {
     return status == StatusCode::OK_BINARY_RESPONSE;
   }
@@ -520,25 +513,9 @@ struct GetExtContext : public RDCPProcessedRequest {
 };
 
 struct GetFile : public RDCPProcessedRequest {
-  explicit GetFile(const std::string& path) : RDCPProcessedRequest("getfile") {
-    SetData(" name=\"");
-    AppendData(path);
-    AppendData("\"");
-  }
+  explicit GetFile(const std::string& path);
+  GetFile(const std::string& path, int32_t offset, int32_t size);
 
-  GetFile(const std::string& path, int32_t offset, int32_t size)
-      : RDCPProcessedRequest("getfile") {
-    SetData(" name=\"");
-    AppendData(path);
-    AppendData("\" offset=");
-    AppendHexString(offset);
-    AppendData(" size=");
-    AppendHexString(size);
-  }
-
-  [[nodiscard]] long ExpectedBinaryResponseSize() const override {
-    return RDCPResponse::kBinaryInt32SizePrefix;
-  }
   [[nodiscard]] bool IsOK() const override {
     return status == StatusCode::OK_BINARY_RESPONSE;
   }
@@ -592,9 +569,8 @@ struct GetFileAttributes : public RDCPProcessedRequest {
 };
 
 struct GetGamma : public RDCPProcessedRequest {
-  GetGamma() : RDCPProcessedRequest("getgamma") {}
+  GetGamma();
 
-  [[nodiscard]] long ExpectedBinaryResponseSize() const override { return 768; }
   [[nodiscard]] bool IsOK() const override {
     return status == StatusCode::OK_BINARY_RESPONSE;
   }
@@ -644,17 +620,8 @@ rdcp_response.RDCPResponse.STATUS_MULTILINE_RESPONSE
 */
 
 struct GetMemBinary : public RDCPProcessedRequest {
-  GetMemBinary(uint32_t addr, uint32_t length)
-      : RDCPProcessedRequest("getmem2"), length(length) {
-    SetData(" ADDR=");
-    AppendHexString(addr);
-    AppendData(" LENGTH=");
-    AppendHexString(length);
-  }
+  GetMemBinary(uint32_t addr, uint32_t length);
 
-  [[nodiscard]] long ExpectedBinaryResponseSize() const override {
-    return length;
-  }
   [[nodiscard]] bool IsOK() const override {
     return status == StatusCode::OK_BINARY_RESPONSE;
   }
@@ -701,25 +668,8 @@ struct GetProcessID : public RDCPProcessedRequest {
 };
 
 struct GetChecksum : public RDCPProcessedRequest {
-  GetChecksum(uint32_t addr, uint32_t len, uint32_t blocksize)
-      : RDCPProcessedRequest("getsum") {
-    assert((addr & 0x07) == 0);
-    assert((len & 0x07) == 0);
-    assert((blocksize & 0x07) == 0);
+  GetChecksum(uint32_t addr, uint32_t len, uint32_t blocksize);
 
-    SetData(" ADDR=");
-    AppendHexString(addr);
-    AppendData(" LENGTH=");
-    AppendHexString(len);
-    AppendData(" BLOCKSIZE=");
-    AppendHexString(blocksize);
-
-    length = len / blocksize * 4;
-  }
-
-  [[nodiscard]] long ExpectedBinaryResponseSize() const override {
-    return length;
-  }
   [[nodiscard]] bool IsOK() const override {
     return status == StatusCode::OK_BINARY_RESPONSE;
   }
@@ -1481,34 +1431,33 @@ struct Resume : public RDCPProcessedRequest {
   }
 };
 
-/*
 struct Screenshot : public RDCPProcessedRequest {
-    """Captures a screenshot from the device."""
+  Screenshot();
 
-    struct Response(_ProcessedResponse):
-        construct(response: rdcp_response.RDCPResponse):
-            RDCPProcessedRequest(response)
+  [[nodiscard]] bool IsOK() const override {
+    return status == StatusCode::OK_BINARY_RESPONSE;
+  }
 
-            self.printable_data = ""
-            self.data = bytes()
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
+    if (!IsOK()) {
+      return;
+    }
 
-            if not self.ok:
-                return
+    auto chunk = response->Data();
+    data.assign(chunk.begin(), chunk.end());
+  }
 
-            self.printable_data, self.data = response.parse_hex_data()
+  uint32_t width{0};
+  uint32_t height{0};
+  uint32_t format{0};
+  uint32_t pitch{0};
 
-        @property
-        def ok(self):
-            return self.status ==
-rdcp_response.RDCPResponse.STATUS_MULTILINE_RESPONSE
+  std::vector<uint8_t> data;
 
-        @property
-        def _body_str(self) -> str:
-            return f"{self.printable_data}"
-
-    construct():
-        RDCPProcessedRequest("screenshot") {
-*/
+ private:
+  bool ParseSize(uint8_t const* buffer, uint32_t buffer_size, long& binary_size,
+                 uint32_t& bytes_consumed);
+};
 
 struct SendFile : public RDCPProcessedRequest {
   SendFile(const std::string& name, std::vector<uint8_t> buffer)

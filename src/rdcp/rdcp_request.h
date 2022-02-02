@@ -21,8 +21,8 @@ class RDCPRequest {
   virtual void Complete(const std::shared_ptr<RDCPResponse> &response) = 0;
   virtual void Abandon() = 0;
 
-  [[nodiscard]] virtual long ExpectedBinaryResponseSize() const {
-    return RDCPResponse::kBinaryNotAllowed;
+  RDCPResponse::ReadBinarySizeFunc BinaryResponseSizeParser() const {
+    return binary_response_size_parser_;
   }
 
   [[nodiscard]] virtual const std::vector<uint8_t> *BinaryPayload() {
@@ -75,6 +75,7 @@ class RDCPRequest {
  protected:
   std::string command_;
   std::vector<uint8_t> data_;
+  RDCPResponse::ReadBinarySizeFunc binary_response_size_parser_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_RDCP_RDCP_REQUEST_H_

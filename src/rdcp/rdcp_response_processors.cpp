@@ -22,6 +22,7 @@ static std::vector<std::vector<char>> SplitMultiline(
 
   return ret;
 }
+
 RDCPMultilineResponse::RDCPMultilineResponse(const std::vector<char> &data) {
   lines = SplitMultiline(data);
 }

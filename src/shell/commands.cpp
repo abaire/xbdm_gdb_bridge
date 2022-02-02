@@ -1,11 +1,14 @@
 #include "commands.h"
 
+#include <SDL_image.h>
+
 #include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <string>
 #include <vector>
 
+#include "screenshot_converter.h"
 #include "util/parsing.h"
 
 static bool CheckRemoteFile(XBOXInterface &interface, const std::string &path,
@@ -1089,6 +1092,77 @@ Command::Result CommandResume::operator()(
   }
 
   SendAndPrintMessage(interface, std::make_shared<Resume>(thread_id));
+  return HANDLED;
+}
+
+static bool SaveRawFile(const std::string &filename_root, uint32_t width,
+                        uint32_t height, uint32_t bpp, uint32_t format,
+                        const std::vector<uint8_t> &data) {
+  char buf[256] = {0};
+  snprintf(buf, 255, "%s-w%d_h%d_bpp%d_fmt%d.bin", filename_root.c_str(), width,
+           height, bpp, format);
+
+  // TODO: Check to see if the file already exists and dedup.
+  std::ofstream of(buf, std::ofstream::binary | std::ofstream::trunc);
+  if (!of) {
+    std::cout << "Failed to create local file " << buf << std::endl;
+    return false;
+  }
+
+  of.write(reinterpret_cast<const char *>(data.data()),
+           static_cast<std::streamsize>(data.size()));
+  of.close();
+
+  if (!of.good()) {
+    std::cout << "Failed to save local file " << buf << std::endl;
+  }
+  return of.good();
+}
+
+Command::Result CommandScreenshot::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &args) {
+  auto request = std::make_shared<Screenshot>();
+  interface.SendCommandSync(request);
+  if (!request->IsOK()) {
+    std::cout << *request << std::endl;
+    return HANDLED;
+  }
+
+  std::string target_file = "Screenshot_";
+
+  std::time_t result = std::time(nullptr);
+  char buf[32] = {0};
+  strftime(buf, 31, "%FT%T", std::localtime(&result));
+  target_file += buf;
+
+  uint32_t width = request->width;
+  uint32_t height = request->height;
+  uint32_t bpp = request->pitch / request->width;
+  uint32_t format = request->format;
+
+  auto &info = GetTextureFormatInfo(format);
+  if (!info.IsValid()) {
+    printf(
+        "Unsupported screenshot format 0x%X - saving as .raw w:%d h:%d "
+        "bytes_per_pixel:%d\n",
+        format, width, height, bpp);
+    SaveRawFile(target_file, width, height, bpp, format, request->data);
+    return HANDLED;
+  }
+
+  SDL_Surface *surface =
+      info.Convert(request->data, request->width, request->height);
+  if (!surface) {
+    std::cout << "Conversion to PNG failed." << std::endl;
+    return HANDLED;
+  }
+
+  target_file += ".png";
+  if (IMG_SavePNG(surface, target_file.c_str())) {
+    std::cout << "Failed to save PNG file " << target_file << std::endl;
+  }
+  SDL_FreeSurface(surface);
+
   return HANDLED;
 }
 

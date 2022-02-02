@@ -404,6 +404,12 @@ struct CommandResume : Command {
                     const std::vector<std::string> &args) override;
 };
 
+struct CommandScreenshot : Command {
+  CommandScreenshot() : Command("Captures a screenshot") {}
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &args) override;
+};
+
 struct CommandSetMem : Command {
   CommandSetMem()
       : Command(

@@ -86,13 +86,14 @@ void XBDMTransport::OnBytesRead() {
     request = request_queue_.front();
   }
   std::shared_ptr<RDCPResponse> response;
-  long binary_response_size = 0;
+
+  RDCPResponse::ReadBinarySizeFunc size_parser;
   if (request) {
-    binary_response_size = request->ExpectedBinaryResponseSize();
+    size_parser = request->BinaryResponseSizeParser();
   }
 
-  auto bytes_consumed = RDCPResponse::Parse(
-      response, char_buffer, read_buffer_.size(), binary_response_size);
+  auto bytes_consumed = RDCPResponse::Parse(response, char_buffer,
+                                            read_buffer_.size(), size_parser);
   if (!bytes_consumed) {
     return;
   }

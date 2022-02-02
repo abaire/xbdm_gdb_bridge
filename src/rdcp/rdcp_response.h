@@ -2,6 +2,7 @@
 #define XBDM_GDB_BRIDGE_SRC_RDCP_RDCP_RESPONSE_H_
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -10,12 +11,16 @@
 
 class RDCPResponse {
  public:
-  //! Indicates that a binary response is expected and that the size of the
-  //! binary will be provided as the first 4 bytes in the response.
-  static constexpr long kBinaryInt32SizePrefix = -2;
-  //! Indicates that a response cannot contain binary data.
-  static constexpr long kBinaryNotAllowed = -1;
+  // Function used to determine the full size of a binary response.
+  // Returns: false if more binary data is necessary to determine the size
+  // uint8_t const *binary_buffer [IN]
+  // uint32_t buffer_size [IN]
+  // long &binary_size [OUT]
+  // uint32_t bytes_consumed [OUT]
+  typedef std::function<bool(uint8_t const *, uint32_t, long &, uint32_t &)>
+      ReadBinarySizeFunc;
 
+ public:
   static constexpr uint8_t kTerminator[] = {'\r', '\n'};
   static constexpr long kTerminatorLen =
       sizeof(kTerminator) / sizeof(kTerminator[0]);
@@ -38,7 +43,7 @@ class RDCPResponse {
 
   static long Parse(std::shared_ptr<RDCPResponse> &response, const char *buffer,
                     size_t buffer_length,
-                    long binary_response_size = kBinaryNotAllowed);
+                    const ReadBinarySizeFunc &size_parser);
 
  private:
   friend std::ostream &operator<<(std::ostream &, RDCPResponse const &);

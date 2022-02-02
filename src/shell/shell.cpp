@@ -85,6 +85,7 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   REGISTER("putfile", CommandPutFile);
   REGISTER("reboot", CommandReboot);
   REGISTER("resume", CommandResume);
+  REGISTER("screenshot", CommandScreenshot);
   //  REGISTER("setcontext", CommandSetContext);
   REGISTER("setmem", CommandSetMem);
   REGISTER("stop", CommandStop);

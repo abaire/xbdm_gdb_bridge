@@ -15,6 +15,12 @@ find_package(
         REQUIRED
 )
 
+INCLUDE(FindPkgConfig)
+PKG_SEARCH_MODULE(SDL2 REQUIRED sdl2)
+PKG_SEARCH_MODULE(SDL2IMAGE REQUIRED SDL2_image>=2.0.0)
+
+include_directories(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS})
+
 option(ENABLE_HIGH_VERBOSITY_LOGGING "Enable low level, highly verbose logging")
 
 set(GENERATED_FILES_DIR "${CMAKE_BINARY_DIR}/generated")
@@ -71,6 +77,7 @@ add_executable(
         src/rdcp/rdcp_response.h
         src/rdcp/rdcp_response_processors.cpp
         src/rdcp/rdcp_response_processors.h
+        src/rdcp/xbdm_requests.cpp
         src/rdcp/xbdm_requests.h
         src/rdcp/xbdm_stop_reasons.h
         src/rdcp/types/thread_context.h
@@ -82,6 +89,8 @@ add_executable(
         src/shell/commands.h
         src/shell/debugger_commands.cpp
         src/shell/debugger_commands.h
+        src/shell/screenshot_converter.cpp
+        src/shell/screenshot_converter.h
         src/shell/shell.cpp
         src/shell/shell.h
         src/shell/shell_commands.h
@@ -124,6 +133,8 @@ target_link_libraries(
         xbdm_gdb_bridge
         LINK_PUBLIC
         ${Boost_LIBRARIES}
+        ${SDL2_LIBRARIES}
+        ${SDL2IMAGE_LIBRARIES}
 )
 
 # Tests ----------------------------------------------

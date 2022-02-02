@@ -27,39 +27,41 @@ static const char *ParseMultilineResponse(std::vector<char> &data,
   return terminator + RDCPResponse::kMultilineTerminatorLen;
 }
 
-static const char *ParseBinaryResponse(std::vector<char> &data,
-                                       const char *buffer,
-                                       const char *buffer_end,
-                                       long binary_response_size) {
-  if (binary_response_size == RDCPResponse::kBinaryNotAllowed) {
+static const char *ParseBinaryResponse(
+    std::vector<char> &data, const char *buffer, const char *buffer_end,
+    const RDCPResponse::ReadBinarySizeFunc &size_parser) {
+  if (!size_parser) {
     LOG_XBDM(error) << "Invalid RDCP packet, response contains binary data but "
                        "no binary was expected.";
     return nullptr;
   }
 
-  auto bytes_available = buffer_end - buffer;
-  if (binary_response_size == RDCPResponse::kBinaryInt32SizePrefix) {
-    if (bytes_available < 4) {
-      return nullptr;
-    }
+  assert(buffer_end >= buffer);
+  uint32_t bytes_available = buffer_end - buffer;
 
-    binary_response_size = *reinterpret_cast<uint32_t const *>(buffer);
-    bytes_available -= 4;
-    buffer += 4;
-  }
-
-  if (bytes_available < binary_response_size) {
+  long size;
+  uint32_t consumed;
+  bool parsed = size_parser(reinterpret_cast<const uint8_t *>(buffer),
+                            bytes_available, size, consumed);
+  if (!parsed) {
     return nullptr;
   }
 
-  const char *body_end = buffer + binary_response_size;
+  bytes_available -= consumed;
+  buffer += consumed;
+
+  if (bytes_available < size) {
+    return nullptr;
+  }
+
+  const char *body_end = buffer + size;
   data.assign(buffer, body_end);
   return body_end;
 }
 
 long RDCPResponse::Parse(std::shared_ptr<RDCPResponse> &response,
                          const char *buffer, size_t buffer_length,
-                         long binary_response_size) {
+                         const ReadBinarySizeFunc &size_parser) {
   response.reset();
   if (buffer_length < 4) {
     return 0;
@@ -112,7 +114,7 @@ long RDCPResponse::Parse(std::shared_ptr<RDCPResponse> &response,
 
     case OK_BINARY_RESPONSE:
       after_body_end = ParseBinaryResponse(data, buffer + packet_size,
-                                           buffer_end, binary_response_size);
+                                           buffer_end, size_parser);
       break;
 
     default:
