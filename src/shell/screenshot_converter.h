@@ -5,8 +5,6 @@
 
 #include <vector>
 
-#define NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_X8R8G8B8 0x1E
-
 typedef struct TextureFormatInfo {
   SDL_PixelFormatEnum sdl_format{SDL_PIXELFORMAT_UNKNOWN};
   uint32_t xbox_format{0};

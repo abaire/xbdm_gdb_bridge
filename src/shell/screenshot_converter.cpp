@@ -4,10 +4,15 @@
 
 const TextureFormatInfo kInvalidTextureFormatInfo{};
 
+#define NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8R8G8B8 0x12
+#define NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_X8R8G8B8 0x1E
+
+// clang-format off
 constexpr TextureFormatInfo kTextureFormats[] = {
-    {SDL_PIXELFORMAT_XRGB8888, NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_X8R8G8B8,
-     4, false, false, "X8R8G8B8"},
+{SDL_PIXELFORMAT_ARGB8888, NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8R8G8B8, 4, false, false, "X8R8G8B8"},
+{SDL_PIXELFORMAT_XRGB8888, NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_X8R8G8B8, 4, false, false, "X8R8G8B8"},
 };
+// clang-format on
 
 constexpr int kNumFormats =
     sizeof(kTextureFormats) / sizeof(kTextureFormats[0]);
