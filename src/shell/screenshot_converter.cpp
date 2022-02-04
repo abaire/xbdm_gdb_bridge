@@ -10,7 +10,9 @@ const TextureFormatInfo kInvalidTextureFormatInfo{};
 // clang-format off
 constexpr TextureFormatInfo kTextureFormats[] = {
 {SDL_PIXELFORMAT_ARGB8888, NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8R8G8B8, 4, false, false, "X8R8G8B8"},
-{SDL_PIXELFORMAT_XRGB8888, NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_X8R8G8B8, 4, false, false, "X8R8G8B8"},
+// TOOD: Rename to SDL_PIXELFORMAT_XRGB8888 when the GitHub ubuntu image is
+// updated such that SDL2 >= 2.0.14.
+{SDL_PIXELFORMAT_RGB888, NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_X8R8G8B8, 4, false, false, "X8R8G8B8"},
 };
 // clang-format on
 

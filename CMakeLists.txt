@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.18)
 project(xbdm_gdb_bridge)
 
+set(CMAKE_VERBOSE_MAKEFILE TRUE)
+
 enable_testing()
 set(CMAKE_CXX_STANDARD 17)
 include (CMakePushCheckState)
@@ -133,9 +135,11 @@ target_link_libraries(
         xbdm_gdb_bridge
         LINK_PUBLIC
         ${Boost_LIBRARIES}
-        ${SDL2_LIBRARIES}
-        ${SDL2IMAGE_LIBRARIES}
+        ${SDL2_LINK_LIBRARIES}
+        ${SDL2IMAGE_LINK_LIBRARIES}
 )
+
+
 
 # Tests ----------------------------------------------
 

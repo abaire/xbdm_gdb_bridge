@@ -15,7 +15,11 @@ enable them.
 
 # Building
 
-## `cmake` options
+## Dependencies
+
+* SDL2 and SDL_Image for screenshot support.
+
+## `cmake`
 
 * `cmake -S . -B build && cmake --build build --verbose`
 * `ENABLE_HIGH_VERBOSITY_LOGGING` - Enables low level logging of socket traffic. May have a negative impact on performance.
