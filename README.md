@@ -17,7 +17,7 @@ enable them.
 
 ## `cmake` options
 
-* ``
+* `cmake -S . -B build && cmake --build build --verbose`
 * `ENABLE_HIGH_VERBOSITY_LOGGING` - Enables low level logging of socket traffic. May have a negative impact on performance.
 
 # Design
