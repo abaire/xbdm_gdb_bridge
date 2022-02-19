@@ -111,6 +111,7 @@ class XBDMDebugger {
 
   std::optional<std::vector<uint8_t>> GetMemory(uint32_t address,
                                                 uint32_t length);
+  std::optional<uint32_t> GetDWORD(uint32_t address);
   bool SetMemory(uint32_t address, const std::vector<uint8_t> &data);
 
   bool AddBreakpoint(uint32_t address);

@@ -29,7 +29,8 @@ jobs:
           cmake \
           libboost-all-dev \
           libsdl2-dev \
-          libsdl2-image-dev
+          libsdl2-image-dev \
+          nasm
     - name: Compile
       run: |
         cd xbdm_gdb_bridge
@@ -62,7 +63,8 @@ jobs:
             cmake \
             boost \
             sdl2 \
-            sdl2_image
+            sdl2_image \
+            nasm
       - name: Compile
         run: |
           cd xbdm_gdb_bridge

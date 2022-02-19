@@ -7,6 +7,7 @@
 
 #include "commands.h"
 #include "debugger_commands.h"
+#include "handler_commands.h"
 #include "shell_commands.h"
 #include "util/logging.h"
 
@@ -46,6 +47,8 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   auto step_function = std::make_shared<DebuggerCommandStepFunction>();
   commands_["/stepf"] = step_function;
   commands_["/stepfun"] = step_function;
+
+  REGISTER("@bootstrap", HandlerCommandLoadBootstrap);
 
   REGISTER("altaddr", CommandAltAddr);
   REGISTER("break", CommandBreak);

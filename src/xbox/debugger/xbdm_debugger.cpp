@@ -828,6 +828,15 @@ std::optional<std::vector<uint8_t>> XBDMDebugger::GetMemory(uint32_t address,
   return request->data;
 }
 
+std::optional<uint32_t> XBDMDebugger::GetDWORD(uint32_t address) {
+  auto raw = GetMemory(address, 4);
+  if (!raw.has_value()) {
+    return std::nullopt;
+  }
+
+  return *reinterpret_cast<uint32_t *>(raw->data());
+}
+
 bool XBDMDebugger::SetMemory(uint32_t address,
                              const std::vector<uint8_t> &data) {
   if (!ValidateMemoryAccess(address, data.size(), true)) {

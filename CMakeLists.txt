@@ -46,6 +46,37 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 configure_file("src/configure.h.cmake" "${GENERATED_FILES_DIR}/configure.h")
 
+# Resource packer ------------------------------------
+add_executable(resource_packer util/resource_packer/resource_packer.cpp)
+
+# L1 bootstrap ---------------------------------------
+set(
+        BOOTSTRAP_INSTALLER_SOURCE_FILES
+        handler_loader_bootstrap/bootstrap_l1.asm
+)
+
+# Produce a raw binary.
+# Note that this must be done before `enable_language`.
+set(CMAKE_ASM_NASM_OBJECT_FORMAT bin)
+enable_language(ASM_NASM)
+set_source_files_properties(${BOOTSTRAP_INSTALLER_SOURCE_FILES} PROPERTIES LANGUAGE ASM_NASM)
+add_library(bootstrap_l1 STATIC ${BOOTSTRAP_INSTALLER_SOURCE_FILES})
+set_target_properties(
+        bootstrap_l1
+        PROPERTIES
+        RULE_LAUNCH_LINK
+        "${CMAKE_SOURCE_DIR}/handler_loader_bootstrap/generate_raw_binary.sh ${CMAKE_BINARY_DIR} <OBJECTS> --"
+)
+
+add_custom_command(
+        OUTPUT "${GENERATED_FILES_DIR}/bootstrap_l1.h"
+        COMMAND resource_packer "${CMAKE_BINARY_DIR}/bootstrap_l1.asm.o" "${GENERATED_FILES_DIR}/bootstrap_l1.h" "kBootstrapL1"
+        DEPENDS "${CMAKE_BINARY_DIR}/bootstrap_l1.asm.o"
+        VERBATIM
+)
+
+# xbdm executable ------------------------------------
+
 add_executable(
         xbdm_gdb_bridge
         src/main.cpp
@@ -55,6 +86,8 @@ add_executable(
         src/gdb/gdb_packet.h
         src/gdb/gdb_transport.cpp
         src/gdb/gdb_transport.h
+        src/handler_loader/handler_loader.cpp
+        src/handler_loader/handler_loader.h
         src/net/ip_address.cpp
         src/net/ip_address.h
         src/net/delegating_server.cpp
@@ -91,6 +124,8 @@ add_executable(
         src/shell/commands.h
         src/shell/debugger_commands.cpp
         src/shell/debugger_commands.h
+        src/shell/handler_commands.cpp
+        src/shell/handler_commands.h
         src/shell/screenshot_converter.cpp
         src/shell/screenshot_converter.h
         src/shell/shell.cpp
@@ -124,6 +159,7 @@ add_executable(
         src/xbox/debugger/thread.h
         src/xbox/debugger/xbdm_debugger.cpp
         src/xbox/debugger/xbdm_debugger.h
+        ${GENERATED_FILES_DIR}/bootstrap_l1.h
 )
 
 target_include_directories(
@@ -139,7 +175,7 @@ target_link_libraries(
         ${SDL2IMAGE_LINK_LIBRARIES}
 )
 
-
+add_dependencies(xbdm_gdb_bridge bootstrap_l1)
 
 # Tests ----------------------------------------------
 

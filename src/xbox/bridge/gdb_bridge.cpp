@@ -970,7 +970,7 @@ void GDBBridge::HandleQueryThreadExtraInfo(const GDBPacket& packet) {
 
   auto thread = debugger_->GetThread(thread_id);
   if (!thread) {
-    LOG_GDB(error) << "TheradExtraInfo query for non-existent thread id: "
+    LOG_GDB(error) << "ThreadExtraInfo query for non-existent thread id: "
                    << thread_id;
     SendError(EBADMSG);
     return;
