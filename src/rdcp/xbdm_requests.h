@@ -20,6 +20,9 @@
 #include "rdcp/xbdm_stop_reasons.h"
 #include "util/parsing.h"
 
+// The maximum size of an RDCP command string.
+#define MAXIMUM_SEND_LENGTH 512
+
 struct AltAddr : public RDCPProcessedRequest {
   AltAddr() : RDCPProcessedRequest("altaddr") {}
 
@@ -1586,8 +1589,10 @@ struct SetFileAttributes : public RDCPProcessedRequest {
 };
 
 struct SetMem : public RDCPProcessedRequest {
+  static constexpr uint32_t kMaximumDataSize = (MAXIMUM_SEND_LENGTH - 32) / 4;
   SetMem(uint32_t address, const std::vector<uint8_t>& data)
       : RDCPProcessedRequest("setmem") {
+    assert(data.size() <= kMaximumDataSize);
     SetData(" addr=");
     AppendHexString(address);
     AppendData(" data=");
@@ -1596,6 +1601,7 @@ struct SetMem : public RDCPProcessedRequest {
 
   SetMem(uint32_t address, const std::string& hex_data)
       : RDCPProcessedRequest("setmem") {
+    assert(hex_data.size() <= (MAXIMUM_SEND_LENGTH - 32));
     SetData(" addr=");
     AppendHexString(address);
     AppendData(" data=");

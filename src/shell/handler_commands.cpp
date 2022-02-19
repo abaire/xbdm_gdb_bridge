@@ -1,6 +1,7 @@
 #include "handler_commands.h"
 
 #include "handler_loader/handler_loader.h"
+#include "handler_loader/handler_requests.h"
 #include "xbox/debugger/xbdm_debugger.h"
 
 Command::Result HandlerCommandLoadBootstrap::operator()(
@@ -28,6 +29,18 @@ cleanup:
 
   if (!debugger->Go()) {
     std::cout << "Failed to go." << std::endl;
+  }
+
+  return HANDLED;
+}
+
+Command::Result HandlerCommandHello::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &) {
+  auto request = std::make_shared<HandlerHello>();
+  interface.SendCommandSync(request);
+  if (!request->IsOK()) {
+    std::cout << *request << std::endl;
+    return HANDLED;
   }
 
   return HANDLED;

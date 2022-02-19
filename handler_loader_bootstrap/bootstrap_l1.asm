@@ -3,49 +3,49 @@
 
 bits 32
 
+%include "macros.asm.inc"
+
 %define BOOTSTRAP_STAGE_2_POOL '2lsB'
 %define BOOTSTRAP_STAGE_2_SIZE 0x400
 
+org 0x0000
+section .text
+
+; HRESULT bootstrap(void *DmAllocatePoolWithTagAddress)
 bootstrap:
 
-push ebp
-mov ebp, esp
+    push ebp
+    mov ebp, esp
 
-; The address of DmAllocatePoolWithTag
-mov edx, dword [ebp+8]
+    ; The address of DmAllocatePoolWithTag
+    mov edx, dword [ebp+8]
 
-; DmAllocatePoolWithTag(BOOTSTRAP_STAGE_2_SIZE, BOOTSTRAP_STAGE_2_POOL);
-push BOOTSTRAP_STAGE_2_POOL
-push BOOTSTRAP_STAGE_2_SIZE
-call edx
+    ; DmAllocatePoolWithTag(BOOTSTRAP_STAGE_2_SIZE, BOOTSTRAP_STAGE_2_POOL);
+    push BOOTSTRAP_STAGE_2_POOL
+    push BOOTSTRAP_STAGE_2_SIZE
+    call edx
 
-; Disable memory protection to allow writing within this code segment.
-mov edx, cr0
-push edx
-and edx, 0xFFFEFFFF
-mov cr0, edx
+    ; Disable memory protection to allow writing within this code segment.
+    mov edx, cr0
+    push edx
+    and edx, 0xFFFEFFFF
+    mov cr0, edx
 
-; Get the relocated address of the result DWORD.
-call get_eip
-base_address: add ecx, result - base_address
-mov [ecx], eax
+    relocate_address ecx, result
+    mov [ecx], eax
 
-; Reenable memory protection
-pop edx
-mov cr0, edx
+    ; Reenable memory protection
+    pop edx
+    mov cr0, edx
 
-; Return a successful HRESULT
-mov eax, 0x02DB0000
+    ; Return a successful HRESULT
+    mov eax, 0x02DB0000
 
-mov esp, ebp
-pop ebp
-ret 4
-
-; Set ecx to just past the point of the call.
-get_eip:
-mov ecx, [esp]
-ret
+    mov esp, ebp
+    pop ebp
+    ret 4
 
 ; Reserve space for the address of the allocated pool.
+section .data
 align 4
 result DD 0

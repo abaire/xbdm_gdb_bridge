@@ -37,6 +37,7 @@ jobs:
         cmake -B build -DCMAKE_BUILD_TYPE=Release
         cmake --build build -- -j$(grep -c processor /proc/cpuinfo)
     - name: Create release
+      if: github.ref == 'refs/heads/main'
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -71,6 +72,7 @@ jobs:
           cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build -- -j$(grep -c processor /proc/cpuinfo)
       - name: Create release
+        if: github.ref == 'refs/heads/main'
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"

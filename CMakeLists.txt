@@ -5,8 +5,10 @@ set(CMAKE_VERBOSE_MAKEFILE TRUE)
 
 enable_testing()
 set(CMAKE_CXX_STANDARD 17)
-include (CMakePushCheckState)
+include(CMakePushCheckState)
+set(_CMAKE_PROCESSING_LANGUAGE "C")
 include(CheckSymbolExists)
+include(FindPkgConfig)
 
 find_package(
         Boost 1.70
@@ -17,15 +19,16 @@ find_package(
         REQUIRED
 )
 
-INCLUDE(FindPkgConfig)
 PKG_SEARCH_MODULE(SDL2 REQUIRED sdl2)
 PKG_SEARCH_MODULE(SDL2IMAGE REQUIRED SDL2_image>=2.0.0)
 
+set(GENERATED_FILES_DIR "${CMAKE_BINARY_DIR}/generated")
+
+add_subdirectory(handler_loader_bootstrap)
 include_directories(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS})
 
-option(ENABLE_HIGH_VERBOSITY_LOGGING "Enable low level, highly verbose logging")
+option(ENABLE_HIGH_VERBOSITY_LOGGING  "Enable low level, highly verbose logging")
 
-set(GENERATED_FILES_DIR "${CMAKE_BINARY_DIR}/generated")
 include_directories("${Boost_INCLUDE_DIR}" "${GENERATED_FILES_DIR}")
 
 cmake_push_check_state(RESET)
@@ -47,31 +50,37 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 configure_file("src/configure.h.cmake" "${GENERATED_FILES_DIR}/configure.h")
 
 # Resource packer ------------------------------------
-add_executable(resource_packer util/resource_packer/resource_packer.cpp)
+add_executable(resource_packer EXCLUDE_FROM_ALL util/resource_packer/resource_packer.cpp)
 
-# L1 bootstrap ---------------------------------------
-set(
-        BOOTSTRAP_INSTALLER_SOURCE_FILES
-        handler_loader_bootstrap/bootstrap_l1.asm
-)
-
-# Produce a raw binary.
-# Note that this must be done before `enable_language`.
-set(CMAKE_ASM_NASM_OBJECT_FORMAT bin)
-enable_language(ASM_NASM)
-set_source_files_properties(${BOOTSTRAP_INSTALLER_SOURCE_FILES} PROPERTIES LANGUAGE ASM_NASM)
-add_library(bootstrap_l1 STATIC ${BOOTSTRAP_INSTALLER_SOURCE_FILES})
-set_target_properties(
-        bootstrap_l1
-        PROPERTIES
-        RULE_LAUNCH_LINK
-        "${CMAKE_SOURCE_DIR}/handler_loader_bootstrap/generate_raw_binary.sh ${CMAKE_BINARY_DIR} <OBJECTS> --"
-)
+# Bootstrap packing ----------------------------------
 
 add_custom_command(
         OUTPUT "${GENERATED_FILES_DIR}/bootstrap_l1.h"
-        COMMAND resource_packer "${CMAKE_BINARY_DIR}/bootstrap_l1.asm.o" "${GENERATED_FILES_DIR}/bootstrap_l1.h" "kBootstrapL1"
+        COMMAND resource_packer
+            "${CMAKE_BINARY_DIR}/bootstrap_l1.asm.o"
+            "${GENERATED_FILES_DIR}/bootstrap_l1.h"
+            "kBootstrapL1"
         DEPENDS "${CMAKE_BINARY_DIR}/bootstrap_l1.asm.o"
+        VERBATIM
+)
+
+add_custom_command(
+        OUTPUT "${GENERATED_FILES_DIR}/bootstrap_l2_thunk.h"
+        COMMAND resource_packer
+            "${CMAKE_BINARY_DIR}/bootstrap_l2_thunk.asm.o"
+            "${GENERATED_FILES_DIR}/bootstrap_l2_thunk.h"
+            "kBootstrapL2Thunk"
+        DEPENDS "${CMAKE_BINARY_DIR}/bootstrap_l2_thunk.asm.o"
+        VERBATIM
+)
+
+add_custom_command(
+        OUTPUT "${GENERATED_FILES_DIR}/bootstrap_l2.h"
+        COMMAND resource_packer
+            "${CMAKE_BINARY_DIR}/bootstrap_l2.asm.o"
+            "${GENERATED_FILES_DIR}/bootstrap_l2.h"
+            "kBootstrapL2"
+        DEPENDS "${CMAKE_BINARY_DIR}/bootstrap_l2.asm.o"
         VERBATIM
 )
 
@@ -79,6 +88,7 @@ add_custom_command(
 
 add_executable(
         xbdm_gdb_bridge
+        handler_loader_bootstrap/bootstrap_l2_imports.h
         src/main.cpp
         src/discovery/discoverer.cpp
         src/discovery/discoverer.h
@@ -88,6 +98,9 @@ add_executable(
         src/gdb/gdb_transport.h
         src/handler_loader/handler_loader.cpp
         src/handler_loader/handler_loader.h
+        src/handler_loader/handler_requests.h
+        src/handler_loader/xbdm_exports.h
+        src/handler_loader/xboxkrnl_exports.h
         src/net/ip_address.cpp
         src/net/ip_address.h
         src/net/delegating_server.cpp
@@ -160,11 +173,15 @@ add_executable(
         src/xbox/debugger/xbdm_debugger.cpp
         src/xbox/debugger/xbdm_debugger.h
         ${GENERATED_FILES_DIR}/bootstrap_l1.h
+        ${GENERATED_FILES_DIR}/bootstrap_l2_thunk.h
+        ${GENERATED_FILES_DIR}/bootstrap_l2.h
 )
 
 target_include_directories(
         xbdm_gdb_bridge
-        PRIVATE src
+        PRIVATE
+        handler_loader_bootstrap
+        src
 )
 
 target_link_libraries(
@@ -175,7 +192,7 @@ target_link_libraries(
         ${SDL2IMAGE_LINK_LIBRARIES}
 )
 
-add_dependencies(xbdm_gdb_bridge bootstrap_l1)
+add_dependencies(xbdm_gdb_bridge bootstrap_l1 bootstrap_l2_thunk bootstrap_l2)
 
 # Tests ----------------------------------------------
 

@@ -16,4 +16,11 @@ struct HandlerCommandLoadBootstrap : Command {
                     const std::vector<std::string> &) override;
 };
 
+struct HandlerCommandHello : Command {
+  HandlerCommandHello()
+      : Command("Verifies that the handler loader is running properly.") {}
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &args) override;
+};
+
 #endif  // XBDM_GDB_BRIDGE_HANDLER_COMMANDS_H

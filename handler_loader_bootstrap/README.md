@@ -1,5 +1,8 @@
 # Handler loader
 
+*Technique inspired by https://github.com/XboxDev/xboxpy*
+
+
 The handler loader is responsible for dynamically installing arbitrary XBDM command
 processors.
 
