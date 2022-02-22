@@ -1,4 +1,4 @@
-# xbdm_util
+# xbdm_gdb_bridge
 
 Provides utilities to interface with an XBOX running XBDM.
 

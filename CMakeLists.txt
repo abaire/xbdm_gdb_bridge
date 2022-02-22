@@ -24,7 +24,6 @@ PKG_SEARCH_MODULE(SDL2IMAGE REQUIRED SDL2_image>=2.0.0)
 
 set(GENERATED_FILES_DIR "${CMAKE_BINARY_DIR}/generated")
 
-add_subdirectory(handler_loader_bootstrap)
 include_directories(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS})
 
 option(ENABLE_HIGH_VERBOSITY_LOGGING  "Enable low level, highly verbose logging")
@@ -44,7 +43,7 @@ cmake_push_check_state(RESET)
 check_symbol_exists(be64toh endian.h HAVE_BE64TOH)
 cmake_pop_check_state()
 
-set(CMAKE_CXX_FLAGS_DEBUG "-g -Og")
+set(CMAKE_CXX_FLAGS_DEBUG "-ggdb -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 configure_file("src/configure.h.cmake" "${GENERATED_FILES_DIR}/configure.h")
@@ -74,21 +73,10 @@ add_custom_command(
         VERBATIM
 )
 
-add_custom_command(
-        OUTPUT "${GENERATED_FILES_DIR}/bootstrap_l2.h"
-        COMMAND resource_packer
-            "${CMAKE_BINARY_DIR}/bootstrap_l2.asm.o"
-            "${GENERATED_FILES_DIR}/bootstrap_l2.h"
-            "kBootstrapL2"
-        DEPENDS "${CMAKE_BINARY_DIR}/bootstrap_l2.asm.o"
-        VERBATIM
-)
-
 # xbdm executable ------------------------------------
 
 add_executable(
         xbdm_gdb_bridge
-        handler_loader_bootstrap/bootstrap_l2_imports.h
         src/main.cpp
         src/discovery/discoverer.cpp
         src/discovery/discoverer.h
@@ -96,10 +84,18 @@ add_executable(
         src/gdb/gdb_packet.h
         src/gdb/gdb_transport.cpp
         src/gdb/gdb_transport.h
+        src/handler_loader/coff_loader.cpp
+        src/handler_loader/coff_loader.h
+        src/handler_loader/dxt_library.cpp
+        src/handler_loader/dxt_library.h
         src/handler_loader/handler_loader.cpp
         src/handler_loader/handler_loader.h
         src/handler_loader/handler_requests.h
+        src/handler_loader/xbdm_exports.cpp
+        src/handler_loader/xbdm_exports.def.h
         src/handler_loader/xbdm_exports.h
+        src/handler_loader/xboxkrnl_exports.cpp
+        src/handler_loader/xboxkrnl_exports.def.h
         src/handler_loader/xboxkrnl_exports.h
         src/net/ip_address.cpp
         src/net/ip_address.h
@@ -172,9 +168,10 @@ add_executable(
         src/xbox/debugger/thread.h
         src/xbox/debugger/xbdm_debugger.cpp
         src/xbox/debugger/xbdm_debugger.h
+        third_party/nxdk/winapi/winnt.h
+        third_party/nxdk/xboxkrnl/xboxdef.h
         ${GENERATED_FILES_DIR}/bootstrap_l1.h
         ${GENERATED_FILES_DIR}/bootstrap_l2_thunk.h
-        ${GENERATED_FILES_DIR}/bootstrap_l2.h
 )
 
 target_include_directories(
@@ -182,6 +179,7 @@ target_include_directories(
         PRIVATE
         handler_loader_bootstrap
         src
+        third_party/nxdk
 )
 
 target_link_libraries(
@@ -192,7 +190,7 @@ target_link_libraries(
         ${SDL2IMAGE_LINK_LIBRARIES}
 )
 
-add_dependencies(xbdm_gdb_bridge bootstrap_l1 bootstrap_l2_thunk bootstrap_l2)
+add_dependencies(xbdm_gdb_bridge bootstrap_l1 bootstrap_l2_thunk)
 
 # Tests ----------------------------------------------
 
@@ -202,6 +200,7 @@ add_library(
         test/test_util/vector.h
 )
 
+# rdcp_tests
 add_executable(
         rdcp_tests
         test/rdcp/test_main.cpp
@@ -230,6 +229,7 @@ target_link_libraries(
 )
 add_test(NAME rdcp_tests COMMAND rdcp_tests)
 
+# util_tests
 add_executable(
         util_tests
         test/util/test_main.cpp
@@ -253,3 +253,28 @@ target_link_libraries(
         test_util
 )
 add_test(NAME util_tests COMMAND util_tests)
+
+# coff_loader_tests
+add_executable(
+        coff_loader_tests
+        test/coff_loader/test_coff_loader.cpp
+        test/coff_loader/test_main.cpp
+        src/handler_loader/coff_loader.cpp
+        src/handler_loader/coff_loader.h
+        src/handler_loader/dxt_library.cpp
+        src/handler_loader/dxt_library.h
+)
+target_include_directories(
+        coff_loader_tests
+        PRIVATE src
+        PRIVATE test
+        PRIVATE third_party/nxdk
+)
+target_link_libraries(
+        coff_loader_tests
+        LINK_PRIVATE
+        ${Boost_LIBRARIES}
+        LINK_PRIVATE
+        test_util
+)
+add_test(NAME coff_loader_tests COMMAND coff_loader_tests)
