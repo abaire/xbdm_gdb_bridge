@@ -1,4 +1,4 @@
-# xbdm_util
+# xbdm_gdb_bridge
 
 Provides utilities to interface with an XBOX running XBDM.
 
@@ -21,8 +21,21 @@ enable them.
 
 ## `cmake`
 
+* The `NXDK_DIR` environment variable must be set to the root of the [nxdk](https://github.com/XboxDev/nxdk)
 * `cmake -S . -B build && cmake --build build --verbose`
-* `ENABLE_HIGH_VERBOSITY_LOGGING` - Enables low level logging of socket traffic. May have a negative impact on performance.
+
+### Configuration variables
+* `ENABLE_HIGH_VERBOSITY_LOGGING` - Enables low level logging of socket traffic. May have a negative impact on
+   performance. E.g., `-DENABLE_HIGH_VERBOSITY_LOGGING=ON`
+
+## CLion
+
+The CMake target can be configured to set the `NXDK_DIR` env var via the properties page:
+
+* Environment
+
+  `NXDK_DIR=<absolute_path_to_nxdk>`
+
 
 # Design
 
@@ -38,4 +51,5 @@ enable them.
     * `xbdm_control_executor_` is a `thread_pool` instance that sequences XBDM requests.
     * `gdb_control_executor_` is a `thread_pool` instance that sequences GDB requests. Generally a GDB request will 
       spawn one or more XBDM requests that will be processed by the `xbdm_control_executor_`.
-    * During a debugging session, a `notification_executor_` `thread_pool` is created to handle push notifications from XBDM.
+    * During a debugging session, a `notification_executor_` `thread_pool` is created to handle push notifications from
+      XBDM.

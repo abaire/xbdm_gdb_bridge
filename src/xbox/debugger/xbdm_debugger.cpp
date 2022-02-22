@@ -908,3 +908,14 @@ bool XBDMDebugger::ValidateMemoryAccess(uint32_t address, uint32_t length,
 
   return false;
 }
+
+std::shared_ptr<Module> XBDMDebugger::GetModule(
+    const std::string &module_name) const {
+  auto modules = Modules();
+  for (auto &module : modules) {
+    if (module->name == module_name) {
+      return module;
+    }
+  }
+  return nullptr;
+}

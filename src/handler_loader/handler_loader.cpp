@@ -1,24 +1,21 @@
 #include "handler_loader.h"
 
 #include <boost/endian/conversion.hpp>
+#include <boost/interprocess/streams/bufferstream.hpp>
 #include <iostream>
 
 #include "bootstrap_l1.h"
-#include "bootstrap_l2.h"
-#include "bootstrap_l2_imports.h"
 #include "bootstrap_l2_thunk.h"
+#include "dll_linker.h"
+#include "dxt_library.h"
+#include "dyndxt_loader.h"
 #include "util/logging.h"
+#include "winapi/winnt.h"
 #include "xbdm_exports.h"
 #include "xbox/debugger/xbdm_debugger.h"
 #include "xbox/xbdm_context.h"
 #include "xbox/xbox_interface.h"
 #include "xboxkrnl_exports.h"
-
-static constexpr uint32_t kPEHeaderPointer = 0x3C;
-static constexpr uint32_t kExportTableOffset = 0x78;
-// https://doxygen.reactos.org/de/d20/struct__IMAGE__EXPORT__DIRECTORY.html
-static constexpr uint32_t kExportNumFunctionsOffset = 0x14;
-static constexpr uint32_t kExportDirectoryAddressOfFunctionsOffset = 0x1C;
 
 static constexpr uint32_t kDmAllocatePoolWithTagOrdinal = 2;
 static constexpr uint32_t kDmFreePoolOrdinal = 9;
@@ -28,16 +25,19 @@ static constexpr uint32_t kDmRegisterCommandProcessorOrdinal = 30;
 // parameter and does minimal processing of the input and response.
 static constexpr uint32_t kDmResumeThreadOrdinal = 35;
 
-static std::optional<uint32_t> GetExportAddress(
-    const std::shared_ptr<XBDMDebugger>& debugger, uint32_t ordinal,
-    uint32_t image_base);
-static std::shared_ptr<Module> GetModule(
-    const std::shared_ptr<XBDMDebugger>& debugger,
-    const std::string& module_name);
 static bool SetMemoryUnsafe(const std::shared_ptr<XBDMContext>& context,
                             uint32_t address, const std::vector<uint8_t>& data);
 static bool InvokeBootstrap(const std::shared_ptr<XBDMContext>& context,
                             uint32_t parameter);
+
+static bool FetchExport(const std::shared_ptr<XBDMDebugger>& debugger,
+                        uint32_t ordinal,
+                        std::map<uint32_t, uint32_t>& ordinal_to_address,
+                        uint32_t image_base);
+static bool FetchExport(const std::shared_ptr<XBDMDebugger>& debugger,
+                        uint32_t ordinal,
+                        std::map<uint32_t, uint32_t>& ordinal_to_address,
+                        uint32_t image_base, uint32_t& resolved_address);
 
 HandlerLoader* HandlerLoader::singleton_ = nullptr;
 
@@ -55,21 +55,30 @@ bool HandlerLoader::InjectLoader(XBOXInterface& interface) {
     return false;
   }
 
-  {
-    auto module = GetModule(debugger, "xbdm.dll");
-    if (!module) {
-      LOG(error) << "Failed to retrieve XBDM module info.";
-      return false;
-    }
-    ResolveXBDMExports(debugger, module->base_address);
+  if (!FetchBaseAddress(debugger, "xbdm.dll")) {
+    return false;
   }
+  if (!FetchBaseAddress(debugger, "xboxkrnl.exe")) {
+    return false;
+  }
+
+  module_export_names_["xbdm.dll"] = XBDM_Exports;
+  module_export_names_["xboxkrnl.exe"] = XBOXKRNL_Exports;
+
   {
-    auto module = GetModule(debugger, "xboxkrnl.exe");
-    if (!module) {
-      LOG(error) << "Failed to retrieve xboxkrnl module info.";
-      return false;
-    }
-    ResolveKernelExports(debugger, module->base_address);
+#define RESOLVE(ordinal, table, base)                   \
+  if (!FetchExport(debugger, ordinal, table, base)) {   \
+    LOG(error) << "Failed to resolve export " #ordinal; \
+    return false;                                       \
+  }
+
+    auto xbdm_base_addr = module_base_addresses_["xbdm.dll"];
+    auto& xbdm_exports = module_exports_["xbdm.dll"];
+
+    RESOLVE(XBDM_DmResumeThread, xbdm_exports, xbdm_base_addr)
+    RESOLVE(XBDM_DmAllocatePoolWithTag, xbdm_exports, xbdm_base_addr)
+
+#undef RESOLVE
   }
 
   auto xbdm = interface.Context();
@@ -85,36 +94,42 @@ bool HandlerLoader::InjectLoader(XBOXInterface& interface) {
   uint32_t max_overwrite =
       std::max(bootstrap_l1.size(), bootstrap_l2_thunk.size());
 
-  auto original_function = debugger->GetMemory(resume_thread_, max_overwrite);
+  const uint32_t kDmResumeThread = GetExport("xbdm.dll", XBDM_DmResumeThread);
+  auto original_function = debugger->GetMemory(kDmResumeThread, max_overwrite);
   if (!original_function.has_value()) {
     LOG(error) << "Failed to fetch target function.";
     return false;
   }
 
-  if (!SetMemoryUnsafe(xbdm, resume_thread_, bootstrap_l1)) {
+  if (!SetMemoryUnsafe(xbdm, kDmResumeThread, bootstrap_l1)) {
     LOG(error) << "Failed to patch target function with l1 bootstrap.";
     return false;
   }
 
-  bool ret = InstallL2Bootstrap(debugger, xbdm);
-  if (!ret) {
-    goto cleanup;
-  }
+  bool ret = true;
 
-  if (!SetMemoryUnsafe(xbdm, resume_thread_, bootstrap_l2_thunk)) {
-    LOG(error) << "Failed to patch target function with l2 thunk.";
+  uint32_t loader_entrypoint = InstallDynamicDXTLoader(debugger, xbdm);
+  if (!loader_entrypoint) {
     ret = false;
     goto cleanup;
   }
 
-  if (!InvokeBootstrap(xbdm, l2_bootstrap_addr_)) {
-    LOG(error) << "Failed to initialize L2 bootstrap.";
+  if (!SetMemoryUnsafe(xbdm, kDmResumeThread, bootstrap_l2_thunk)) {
+    LOG(error) << "Failed to patch target function with Dynamic DXT thunk.";
+    ret = false;
+    goto cleanup;
+  }
+
+  LOG(info) << "Invoking Dynamic DXT at 0x" << std::hex << loader_entrypoint;
+
+  if (!InvokeBootstrap(xbdm, loader_entrypoint)) {
+    LOG(error) << "Failed to initialize Dynamic DXT loader.";
     ret = false;
     goto cleanup;
   }
 
 cleanup:
-  if (!SetMemoryUnsafe(xbdm, resume_thread_, original_function.value())) {
+  if (!SetMemoryUnsafe(xbdm, kDmResumeThread, original_function.value())) {
     LOG(error) << "Failed to restore target function.";
     return false;
   }
@@ -122,161 +137,167 @@ cleanup:
   return ret;
 }
 
-#define RESOLVE(export, variable)                                    \
-  {                                                                  \
-    auto address = GetExportAddress(debugger, (export), image_base); \
-    if (!address.has_value()) {                                      \
-      LOG(error) << "Failed to fetch " #export;                      \
-      return false;                                                  \
-    }                                                                \
-    (variable) = address.value();                                    \
-  }
-
-bool HandlerLoader::ResolveXBDMExports(
-    const std::shared_ptr<XBDMDebugger>& debugger, uint32_t image_base) {
-  RESOLVE(XBDM_DmResumeThread, resume_thread_)
-  RESOLVE(XBDM_DmAllocatePoolWithTag, allocate_pool_with_tag_)
-  RESOLVE(XBDM_DmFreePool, free_pool_)
-  RESOLVE(XBDM_DmRegisterCommandProcessor, register_command_processor_)
-
-  return true;
-}
-
-bool HandlerLoader::ResolveKernelExports(
-    const std::shared_ptr<XBDMDebugger>& debugger, uint32_t image_base) {
-  RESOLVE(XBOX_XeLoadSection, xe_load_section_)
-  RESOLVE(XBOX_XeUnloadSection, xe_unload_section_)
-  RESOLVE(XBOX_MmDbgAllocateMemory, mm_dbg_allocate_memory_)
-  RESOLVE(XBOX_MmDbgFreeMemory, mm_dbg_free_memory_)
-
-  return true;
-}
-
-#undef RESOLVE
-
-bool HandlerLoader::InstallL2Bootstrap(
+uint32_t HandlerLoader::InstallDynamicDXTLoader(
     const std::shared_ptr<XBDMDebugger>& debugger,
     const std::shared_ptr<XBDMContext>& context) {
-  // Invoke the L1 bootstrap to allocate a new memory block into which the L2
-  // bootstrap can be loaded. Note that this assumes the `resume` command has
-  // already been patched with the L1 bootstrap.
-  if (!InvokeBootstrap(context, allocate_pool_with_tag_)) {
-    LOG(error) << "Failed to allocate memory for L2 bootstrap.";
-    return false;
+  auto stream = std::make_shared<boost::interprocess::bufferstream>(
+      (char*)kDynDXTLoader, sizeof(kDynDXTLoader));
+  DXTLibrary lib(std::dynamic_pointer_cast<std::istream>(stream),
+                 "BundledDXTLoader");
+  if (!lib.Parse()) {
+    LOG(error) << "Failed to load dynamic dxt loader.";
+    return 0;
+  }
+
+  for (auto& dll_imports : lib.GetImports()) {
+    if (!ResolveImports(debugger, dll_imports.first, dll_imports.second)) {
+      return 0;
+    }
+  }
+
+  uint32_t image_size = lib.GetImageSize();
+  uint32_t target = AllocatePool(debugger, context, image_size);
+  if (!target) {
+    LOG(error) << "Failed to allocate memory for dxt loader.";
+    return 0;
+  }
+
+  if (!lib.Relocate(target)) {
+    // TODO: Free pool.
+    return 0;
+  }
+
+  if (!SetMemoryUnsafe(context, target, lib.GetImage())) {
+    LOG(error) << "Failed to upload dxt loader.";
+    return 0;
+  }
+
+  for (auto callback : lib.GetTLSInitializers()) {
+    LOG(error) << "TLS callback functionality not implemented.";
+    // TODO: Free pool.
+    return 0;
+  }
+
+  return lib.GetEntrypoint();
+}
+
+uint32_t HandlerLoader::AllocatePool(
+    const std::shared_ptr<XBDMDebugger>& debugger,
+    const std::shared_ptr<XBDMContext>& context, uint32_t size) const {
+  // The requested size and target address is stored in the last 4 bytes of the
+  // L1 bootloader.
+  const uint32_t io_address =
+      GetExport("xbdm.dll", XBDM_DmResumeThread) + sizeof(kBootstrapL1) - 4;
+
+  {
+    auto data = reinterpret_cast<uint8_t*>(&size);
+    std::vector<uint8_t> size_request(data, data + 4);
+    if (!SetMemoryUnsafe(context, io_address, size_request)) {
+      LOG(error) << "Failed to set allocation size.";
+      return 0;
+    }
+  }
+
+  if (!InvokeBootstrap(context,
+                       GetExport("xbdm.dll", XBDM_DmAllocatePoolWithTag))) {
+    LOG(error) << "Failed to allocate memory.";
+    return 0;
   }
 
   // The target address is stored in the last 4 bytes of the L1 bootloader.
-  const uint32_t result_address = resume_thread_ + sizeof(kBootstrapL1) - 4;
-  auto target_address = debugger->GetDWORD(result_address);
+  auto target_address = debugger->GetDWORD(io_address);
   if (!target_address.has_value()) {
-    LOG(error) << "Failed to fetch L2 bootstrap target address.";
+    LOG(error) << "Failed to fetch allocated memory address.";
+    return 0;
+  }
+
+  uint32_t address = target_address.value();
+  return address;
+}
+
+bool HandlerLoader::ResolveImports(
+    const std::shared_ptr<XBDMDebugger>& debugger,
+    const std::string& module_name, std::vector<DXTLibraryImport>& imports) {
+  if (!FetchBaseAddress(debugger, module_name)) {
     return false;
   }
 
-  std::vector<uint8_t> bootstrap_l2(
-      kBootstrapL2,
-      kBootstrapL2 + (sizeof(kBootstrapL2) / sizeof(kBootstrapL2[0])));
+  uint32_t base_address = module_base_addresses_[module_name];
+  auto exports = module_exports_.find(module_name);
 
-  l2_bootstrap_addr_ = target_address.value();
+  // FetchBaseAddress is expected to populate the export table with an empty
+  // vector.
+  assert(exports != module_exports_.end());
 
-  if (!SetMemoryUnsafe(context, l2_bootstrap_addr_, bootstrap_l2)) {
-    LOG(error) << "Failed to load l2 bootstrap at " << std::hex
-               << l2_bootstrap_addr_;
-    return false;
-  }
+  auto& export_table = exports->second;
+  for (auto& import : imports) {
+    uint32_t ordinal = import.ordinal;
 
-  LOG(info) << "L2 loader installed at " << std::hex << l2_bootstrap_addr_;
+    // Resolve name to ordinal.
+    if (!import.import_name.empty()) {
+      auto name_to_ordinal_table = module_export_names_.find(module_name);
+      if (name_to_ordinal_table == module_export_names_.end()) {
+        LOG(error) << "Import from " << module_name << " by name "
+                   << import.import_name
+                   << " but no name mapping table exists for that module.";
+        return false;
+      }
 
-  // Populate the bootstrap import table.
-  uint32_t import_table[BOOTSTRAP_L2_IMPORT_TABLE_SIZE] = {0};
-#define IMPORT(offset, value) \
-  import_table[offset] = boost::endian::native_to_little(value)
-  IMPORT(DmAllocatePoolWithTagOffset, allocate_pool_with_tag_);
-  IMPORT(DmFreePoolOffset, free_pool_);
-  IMPORT(DmRegisterCommandProcessorOffset, register_command_processor_);
+      auto entry = name_to_ordinal_table->second.find(import.import_name);
+      if (entry == name_to_ordinal_table->second.end()) {
+        LOG(error) << "Import from " << module_name << " by unknown name '"
+                   << import.import_name << "'.";
+      }
 
-  IMPORT(XeLoadSectionOffset, xe_load_section_);
-  IMPORT(XeUnloadSectionOffset, xe_unload_section_);
-  IMPORT(MmDbgAllocateMemoryOffset, mm_dbg_allocate_memory_);
-  IMPORT(MmDbgFreeMemoryOffset, mm_dbg_free_memory_);
+      ordinal = entry->second;
+    }
 
-#undef IMPORT
-
-  auto data = reinterpret_cast<uint8_t*>(import_table);
-  std::vector<uint8_t> import_data(data,
-                                   data + BOOTSTRAP_L2_IMPORT_TABLE_SIZE * 4);
-
-  const uint32_t import_address =
-      l2_bootstrap_addr_ + BOOTSTRAP_L2_IMPORT_TABLE_START;
-  if (!SetMemoryUnsafe(context, import_address, import_data)) {
-    LOG(error) << "Failed to populate l2 bootstrap imports at " << std::hex
-               << import_address;
-    return false;
+    if (!FetchExport(debugger, ordinal, export_table, base_address,
+                     import.real_address)) {
+      LOG(error) << "Failed to resolve import " << module_name << " " << import;
+      return false;
+    }
   }
 
   return true;
 }
 
-static std::optional<uint32_t> GetExportAddress(
-    const std::shared_ptr<XBDMDebugger>& debugger, uint32_t ordinal,
-    uint32_t image_base) {
-  assert(ordinal > 0);
-  auto pe_header = debugger->GetDWORD(image_base + kPEHeaderPointer);
-  if (!pe_header.has_value()) {
-    LOG(error) << "Failed to load PE header offset.";
-    return std::nullopt;
-  }
-
-  auto export_table =
-      debugger->GetDWORD(image_base + pe_header.value() + kExportTableOffset);
-  if (!export_table.has_value()) {
-    LOG(error) << "Failed to load export table offset.";
-    return std::nullopt;
-  }
-
-  uint32_t export_table_base = image_base + export_table.value();
-
-  auto export_count =
-      debugger->GetDWORD(export_table_base + kExportNumFunctionsOffset);
-  if (!export_count.has_value()) {
-    LOG(error) << "Failed to load export table count.";
-    return std::nullopt;
-  }
-
-  uint32_t num_exports = export_count.value();
-  uint32_t index = ordinal - 1;
-  if (index >= num_exports) {
-    LOG(error) << "Invalid export ordinal " << ordinal
-               << " larger than table size " << export_count.value();
-    return std::nullopt;
-  }
-
-  auto export_address_offset = debugger->GetDWORD(
-      export_table_base + kExportDirectoryAddressOfFunctionsOffset);
-  if (!export_address_offset.has_value()) {
-    LOG(error) << "Failed to load export table address table.";
-    return std::nullopt;
-  }
-
-  auto function_address = debugger->GetDWORD(
-      image_base + export_address_offset.value() + index * 4);
-  if (!function_address.has_value()) {
-    LOG(error) << "Failed to retrieve function address.";
-    return std::nullopt;
-  }
-  return image_base + function_address.value();
-}
-
-static std::shared_ptr<Module> GetModule(
+bool HandlerLoader::FetchBaseAddress(
     const std::shared_ptr<XBDMDebugger>& debugger,
     const std::string& module_name) {
-  auto modules = debugger->Modules();
-  for (auto& module : modules) {
-    if (module->name == module_name) {
-      return module;
-    }
+  if (module_base_addresses_.find(module_name) !=
+      module_base_addresses_.end()) {
+    return true;
   }
-  return nullptr;
+
+  auto module = debugger->GetModule(module_name);
+  if (!module) {
+    LOG(error) << "Failed to retrieve module info for '" << module_name << "'.";
+    return false;
+  }
+
+  module_base_addresses_[module_name] = module->base_address;
+  module_exports_[module_name] = {};
+  return true;
+}
+
+uint32_t HandlerLoader::GetExport(const std::string& module,
+                                  uint32_t ordinal) const {
+  auto module_export = module_exports_.find(module);
+  if (module_export == module_exports_.end()) {
+    LOG(error) << "Failed to look up export " << module << " @ " << ordinal
+               << " no such module.";
+    return 0;
+  }
+
+  auto entry = module_export->second.find(ordinal);
+  if (entry == module_export->second.end()) {
+    LOG(error) << "Failed to look up export " << module << " @ " << ordinal
+               << " no such entry.";
+    return 0;
+  }
+
+  return entry->second;
 }
 
 static bool SetMemoryUnsafe(const std::shared_ptr<XBDMContext>& context,
@@ -313,4 +334,34 @@ static bool InvokeBootstrap(const std::shared_ptr<XBDMContext>& context,
   auto request = std::make_shared<::Resume>(parameter);
   context->SendCommandSync(request);
   return request->IsOK();
+}
+
+static bool FetchExport(const std::shared_ptr<XBDMDebugger>& debugger,
+                        uint32_t ordinal,
+                        std::map<uint32_t, uint32_t>& ordinal_to_address,
+                        uint32_t image_base) {
+  uint32_t ignored;
+  return FetchExport(debugger, ordinal, ordinal_to_address, image_base,
+                     ignored);
+}
+
+static bool FetchExport(const std::shared_ptr<XBDMDebugger>& debugger,
+                        uint32_t ordinal,
+                        std::map<uint32_t, uint32_t>& ordinal_to_address,
+                        uint32_t image_base, uint32_t& resolved_address) {
+  auto existing_entry = ordinal_to_address.find(ordinal);
+  if (existing_entry != ordinal_to_address.end()) {
+    resolved_address = existing_entry->second;
+    return true;
+  }
+
+  auto address = GetExportAddress(debugger, ordinal, image_base);
+  if (!address.has_value()) {
+    return false;
+  }
+
+  resolved_address = address.value();
+  ordinal_to_address[ordinal] = resolved_address;
+
+  return true;
 }
