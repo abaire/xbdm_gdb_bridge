@@ -17,35 +17,55 @@ jobs:
     name: Build Linux
     runs-on: ubuntu-latest
     steps:
-    - name: Clone tree
-      uses: actions/checkout@v2
-      with:
-        submodules: recursive
-        path: xbdm_gdb_bridge
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          cmake \
-          libboost-all-dev \
-          libsdl2-dev \
-          libsdl2-image-dev \
-          nasm
-    - name: Compile
-      run: |
-        cd xbdm_gdb_bridge
-        cmake -B build -DCMAKE_BUILD_TYPE=Release
-        cmake --build build -- -j$(grep -c processor /proc/cpuinfo)
-    - name: Create release
-      if: github.ref == 'refs/heads/main'
-      uses: "marvinpinto/action-automatic-releases@latest"
-      with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "latest-linux"
-        prerelease: true
-        title: "Development Build - Linux"
-        files: |
-          xbdm_gdb_bridge/build/xbdm_gdb_bridge
+      - name: Clone tree
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          path: xbdm_gdb_bridge
+      - name: Clone nxdk
+        uses: actions/checkout@v2
+        with:
+          repository: XboxDev/nxdk
+          ref: f0534c1432327ac3e16a137f780cf21ed8d46ff7
+          submodules: recursive
+          path: nxdk
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            libboost-all-dev \
+            libsdl2-dev \
+            libsdl2-image-dev \
+            llvm \
+            lld \
+            nasm
+      - name: Precompile nxdk
+        run: |
+          echo "Precompiling nxdk to allow CMake to run correctly."
+          cd nxdk
+          eval $(./bin/activate -s)
+          for dir in samples/*/ ; do
+            pushd "${dir}"
+            make -j$(grep -c processor /proc/cpuinfo)
+            popd
+          done
+      - name: Compile
+        run: |
+          cd xbdm_gdb_bridge
+          export NXDK_DIR="${GITHUB_WORKSPACE}/nxdk"
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -- -j$(grep -c processor /proc/cpuinfo)
+      - name: Create release
+        if: github.ref == 'refs/heads/main'
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest-linux"
+          prerelease: true
+          title: "Development Build - Linux"
+          files: |
+            xbdm_gdb_bridge/build/xbdm_gdb_bridge
 
   BuildMacOS:
     name: Build macOS
@@ -56,21 +76,42 @@ jobs:
         with:
           submodules: recursive
           path: xbdm_gdb_bridge
+      - name: Clone nxdk
+        uses: actions/checkout@v2
+        with:
+          repository: XboxDev/nxdk
+          ref: f0534c1432327ac3e16a137f780cf21ed8d46ff7
+          submodules: recursive
+          path: nxdk
       - name: Install dependencies
         run: |
           export HOMEBREW_NO_AUTO_UPDATE=1
           export HOMEBREW_NO_INSTALL_CLEANUP=1
           brew install \
             cmake \
+            coreutils \
             boost \
+            llvm@11 \
             sdl2 \
             sdl2_image \
             nasm
+      - name: Precompile nxdk
+        run: |
+          echo "Precompiling nxdk to allow CMake to run correctly."
+          cd nxdk
+          eval $(./bin/activate -s)
+          for dir in samples/*/ ; do
+            pushd "${dir}"
+            make -j
+            popd
+          done
       - name: Compile
         run: |
           cd xbdm_gdb_bridge
+          export PATH="/usr/local/opt/llvm@11/bin:$PATH"
+          export NXDK_DIR="${GITHUB_WORKSPACE}/nxdk"
           cmake -B build -DCMAKE_BUILD_TYPE=Release
-          cmake --build build -- -j$(grep -c processor /proc/cpuinfo)
+          cmake --build build -- -j
       - name: Create release
         if: github.ref == 'refs/heads/main'
         uses: "marvinpinto/action-automatic-releases@latest"

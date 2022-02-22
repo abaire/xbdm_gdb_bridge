@@ -49,6 +49,8 @@ class XBDMDebugger {
   [[nodiscard]] std::list<std::shared_ptr<Module>> Modules();
   [[nodiscard]] std::list<std::shared_ptr<Section>> Sections();
 
+  std::shared_ptr<Module> GetModule(const std::string &module_name) const;
+
   std::vector<int32_t> GetThreadIDs();
 
   [[nodiscard]] int ActiveThreadID() {

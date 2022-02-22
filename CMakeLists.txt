@@ -8,7 +8,19 @@ set(CMAKE_CXX_STANDARD 17)
 include(CMakePushCheckState)
 set(_CMAKE_PROCESSING_LANGUAGE "C")
 include(CheckSymbolExists)
+include (ExternalProject)
 include(FindPkgConfig)
+
+set(ddxt_bin_dir ${CMAKE_CURRENT_BINARY_DIR}/ddxt-bin)
+ExternalProject_Add(
+        dynamic_dxt_loader
+        PREFIX ddxt
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dxt_loader/nxdk_dyndxt
+        BINARY_DIR ${ddxt_bin_dir}
+        CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
+        INSTALL_COMMAND ""
+        EXCLUDE_FROM_ALL
+)
 
 find_package(
         Boost 1.70
@@ -24,7 +36,6 @@ PKG_SEARCH_MODULE(SDL2IMAGE REQUIRED SDL2_image>=2.0.0)
 
 set(GENERATED_FILES_DIR "${CMAKE_BINARY_DIR}/generated")
 
-add_subdirectory(handler_loader_bootstrap)
 include_directories(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS})
 
 option(ENABLE_HIGH_VERBOSITY_LOGGING  "Enable low level, highly verbose logging")
@@ -44,7 +55,7 @@ cmake_push_check_state(RESET)
 check_symbol_exists(be64toh endian.h HAVE_BE64TOH)
 cmake_pop_check_state()
 
-set(CMAKE_CXX_FLAGS_DEBUG "-g -Og")
+set(CMAKE_CXX_FLAGS_DEBUG "-ggdb -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 configure_file("src/configure.h.cmake" "${GENERATED_FILES_DIR}/configure.h")
@@ -57,38 +68,51 @@ add_executable(resource_packer EXCLUDE_FROM_ALL util/resource_packer/resource_pa
 add_custom_command(
         OUTPUT "${GENERATED_FILES_DIR}/bootstrap_l1.h"
         COMMAND resource_packer
-            "${CMAKE_BINARY_DIR}/bootstrap_l1.asm.o"
+            "${ddxt_bin_dir}/bootstrap_l1.asm.obj"
             "${GENERATED_FILES_DIR}/bootstrap_l1.h"
             "kBootstrapL1"
-        DEPENDS "${CMAKE_BINARY_DIR}/bootstrap_l1.asm.o"
+        DEPENDS "${ddxt_bin_dir}/bootstrap_l1.asm.obj"
         VERBATIM
 )
 
 add_custom_command(
         OUTPUT "${GENERATED_FILES_DIR}/bootstrap_l2_thunk.h"
         COMMAND resource_packer
-            "${CMAKE_BINARY_DIR}/bootstrap_l2_thunk.asm.o"
+            "${ddxt_bin_dir}/bootstrap_l2_thunk.asm.obj"
             "${GENERATED_FILES_DIR}/bootstrap_l2_thunk.h"
             "kBootstrapL2Thunk"
-        DEPENDS "${CMAKE_BINARY_DIR}/bootstrap_l2_thunk.asm.o"
+        DEPENDS "${ddxt_bin_dir}/bootstrap_l2_thunk.asm.obj"
         VERBATIM
 )
 
-add_custom_command(
-        OUTPUT "${GENERATED_FILES_DIR}/bootstrap_l2.h"
-        COMMAND resource_packer
-            "${CMAKE_BINARY_DIR}/bootstrap_l2.asm.o"
-            "${GENERATED_FILES_DIR}/bootstrap_l2.h"
-            "kBootstrapL2"
-        DEPENDS "${CMAKE_BINARY_DIR}/bootstrap_l2.asm.o"
-        VERBATIM
+# Generate raw object files for inclusion in the target binary.
+set(RC_DEPENDS "")
+
+function(add_resource binary_target input)
+    string(MAKE_C_IDENTIFIER ${input} input_identifier)
+    set(output "${CMAKE_CURRENT_BINARY_DIR}/${input_identifier}.o")
+    add_custom_command(
+            OUTPUT ${output}
+            COMMAND ${CMAKE_LINKER} --relocatable --format binary --output ${output} ${input}
+            DEPENDS ${input}
+    )
+
+    set(RC_DEPENDS ${RC_DEPENDS} ${output} PARENT_SCOPE)
+endfunction()
+
+# Resource file list
+add_resource(xbdm_gdb_bridge ${CMAKE_CURRENT_BINARY_DIR}/ddxt-bin/libdynamic_dxt_loader.dll)
+
+add_custom_target(
+        rc
+        ALL
+        DEPENDS ${RC_DEPENDS}
 )
 
 # xbdm executable ------------------------------------
 
 add_executable(
         xbdm_gdb_bridge
-        handler_loader_bootstrap/bootstrap_l2_imports.h
         src/main.cpp
         src/discovery/discoverer.cpp
         src/discovery/discoverer.h
@@ -96,10 +120,18 @@ add_executable(
         src/gdb/gdb_packet.h
         src/gdb/gdb_transport.cpp
         src/gdb/gdb_transport.h
+        src/handler_loader/dll_linker.cpp
+        src/handler_loader/dll_linker.h
+        src/handler_loader/dxt_library.cpp
+        src/handler_loader/dxt_library.h
         src/handler_loader/handler_loader.cpp
         src/handler_loader/handler_loader.h
         src/handler_loader/handler_requests.h
+        src/handler_loader/xbdm_exports.cpp
+        src/handler_loader/xbdm_exports.def.h
         src/handler_loader/xbdm_exports.h
+        src/handler_loader/xboxkrnl_exports.cpp
+        src/handler_loader/xboxkrnl_exports.def.h
         src/handler_loader/xboxkrnl_exports.h
         src/net/ip_address.cpp
         src/net/ip_address.h
@@ -172,9 +204,10 @@ add_executable(
         src/xbox/debugger/thread.h
         src/xbox/debugger/xbdm_debugger.cpp
         src/xbox/debugger/xbdm_debugger.h
+        third_party/nxdk/winapi/winnt.h
+        third_party/nxdk/xboxkrnl/xboxdef.h
         ${GENERATED_FILES_DIR}/bootstrap_l1.h
         ${GENERATED_FILES_DIR}/bootstrap_l2_thunk.h
-        ${GENERATED_FILES_DIR}/bootstrap_l2.h
 )
 
 target_include_directories(
@@ -182,6 +215,7 @@ target_include_directories(
         PRIVATE
         handler_loader_bootstrap
         src
+        third_party/nxdk
 )
 
 target_link_libraries(
@@ -190,9 +224,10 @@ target_link_libraries(
         ${Boost_LIBRARIES}
         ${SDL2_LINK_LIBRARIES}
         ${SDL2IMAGE_LINK_LIBRARIES}
+        ${RC_DEPENDS}
 )
 
-add_dependencies(xbdm_gdb_bridge bootstrap_l1 bootstrap_l2_thunk bootstrap_l2)
+add_dependencies(xbdm_gdb_bridge dynamic_dxt_loader)
 
 # Tests ----------------------------------------------
 
@@ -202,6 +237,7 @@ add_library(
         test/test_util/vector.h
 )
 
+# rdcp_tests
 add_executable(
         rdcp_tests
         test/rdcp/test_main.cpp
@@ -230,6 +266,7 @@ target_link_libraries(
 )
 add_test(NAME rdcp_tests COMMAND rdcp_tests)
 
+# util_tests
 add_executable(
         util_tests
         test/util/test_main.cpp
@@ -253,3 +290,27 @@ target_link_libraries(
         test_util
 )
 add_test(NAME util_tests COMMAND util_tests)
+
+# dxt_library_loader_tests
+add_executable(
+        dxt_library_loader_tests
+        test/dxt_library_loader/test_dxt_library.cpp
+        test/dxt_library_loader/test_main.cpp
+        src/handler_loader/dxt_library.cpp
+        src/handler_loader/dxt_library.h
+)
+target_include_directories(
+        dxt_library_loader_tests
+        PRIVATE src
+        PRIVATE test
+        PRIVATE third_party/nxdk
+)
+target_link_libraries(
+        dxt_library_loader_tests
+        LINK_PRIVATE
+        ${Boost_LIBRARIES}
+        LINK_PRIVATE
+        test_util
+)
+add_dependencies(dxt_library_loader_tests dynamic_dxt_loader)
+add_test(NAME dxt_library_loader_tests COMMAND dxt_library_loader_tests)
