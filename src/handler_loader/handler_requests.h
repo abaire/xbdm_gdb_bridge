@@ -26,15 +26,15 @@ struct HandlerInvokeSimple : public RDCPProcessedRequest {
       : RDCPProcessedRequest(command) {}
 };
 
-struct HandlerBL2Reserve : public RDCPProcessedRequest {
-  explicit HandlerBL2Reserve(uint32_t image_size);
+struct HandlerDDXTReserve : public RDCPProcessedRequest {
+  explicit HandlerDDXTReserve(uint32_t image_size);
   void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override;
 
   uint32_t allocated_address{0};
 };
 
-struct HandlerBL2Load : public RDCPProcessedRequest {
-  HandlerBL2Load(uint32_t image_base, std::vector<uint8_t> buffer);
+struct HandlerDDXTLoad : public RDCPProcessedRequest {
+  HandlerDDXTLoad(uint32_t image_base, std::vector<uint8_t> buffer);
 
   [[nodiscard]] const std::vector<uint8_t>* BinaryPayload() override {
     return &binary_payload;

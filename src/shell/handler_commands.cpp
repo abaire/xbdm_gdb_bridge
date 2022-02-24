@@ -82,7 +82,7 @@ Command::Result HandlerCommandLoad::operator()(
 
   uint32_t address = 0;
   {
-    auto request = std::make_shared<HandlerBL2Reserve>(buffer.size());
+    auto request = std::make_shared<HandlerDDXTReserve>(buffer.size());
     interface.SendCommandSync(request);
     if (!request->IsOK()) {
       std::cout << *request << std::endl;
@@ -92,7 +92,7 @@ Command::Result HandlerCommandLoad::operator()(
   }
 
   {
-    auto request = std::make_shared<HandlerBL2Load>(address, buffer);
+    auto request = std::make_shared<HandlerDDXTLoad>(address, buffer);
     interface.SendCommandSync(request);
     if (!request->IsOK()) {
       // TODO: Free the remote allocated buffer.

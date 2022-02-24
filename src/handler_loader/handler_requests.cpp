@@ -1,12 +1,12 @@
 #include "handler_requests.h"
 
-HandlerBL2Reserve::HandlerBL2Reserve(uint32_t image_size)
-    : RDCPProcessedRequest("bl2!reserve") {
+HandlerDDXTReserve::HandlerDDXTReserve(uint32_t image_size)
+    : RDCPProcessedRequest("ddxt!reserve") {
   SetData(" size=");
   AppendHexString(image_size);
 }
 
-void HandlerBL2Reserve::ProcessResponse(
+void HandlerDDXTReserve::ProcessResponse(
     const std::shared_ptr<RDCPResponse>& response) {
   if (!IsOK()) {
     return;
@@ -15,8 +15,9 @@ void HandlerBL2Reserve::ProcessResponse(
   allocated_address = parsed.GetDWORD("address");
 }
 
-HandlerBL2Load::HandlerBL2Load(uint32_t image_base, std::vector<uint8_t> buffer)
-    : RDCPProcessedRequest("bl2!install"), binary_payload(std::move(buffer)) {
+HandlerDDXTLoad::HandlerDDXTLoad(uint32_t image_base,
+                                 std::vector<uint8_t> buffer)
+    : RDCPProcessedRequest("ddxt!install"), binary_payload(std::move(buffer)) {
   SetData(" base=");
   AppendHexString(image_base);
   AppendData(" length=");
