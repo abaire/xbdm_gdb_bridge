@@ -150,7 +150,9 @@ std::vector<uint32_t> DXTLibrary::GetTLSInitializers() const {
   while (callback && *callback) {
     ret.push_back(*callback++);
   }
-  assert(!"TODO: Implement me.");
+  if (!ret.empty()) {
+    assert(!"TODO: Implement me.");
+  }
   return ret;
 }
 

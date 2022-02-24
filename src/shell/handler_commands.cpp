@@ -36,6 +36,19 @@ cleanup:
   return HANDLED;
 }
 
+Command::Result HandlerCommandHello::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &) {
+  auto request = std::make_shared<HandlerInvokeSimple>("ddxt!hello");
+  interface.SendCommandSync(request);
+  if (!request->IsOK()) {
+    std::cout << *request << std::endl;
+    return HANDLED;
+  }
+
+  std::cout << *request << std::endl;
+  return HANDLED;
+}
+
 Command::Result HandlerCommandInvokeSimple::operator()(
     XBOXInterface &interface, const std::vector<std::string> &args) {
   ArgParser parser(args);

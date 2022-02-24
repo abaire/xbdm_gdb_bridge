@@ -12,7 +12,7 @@ void HandlerDDXTReserve::ProcessResponse(
     return;
   }
   auto parsed = RDCPMapResponse(response->Data());
-  allocated_address = parsed.GetDWORD("address");
+  allocated_address = parsed.GetDWORD("addr");
 }
 
 HandlerDDXTLoad::HandlerDDXTLoad(uint32_t image_base,

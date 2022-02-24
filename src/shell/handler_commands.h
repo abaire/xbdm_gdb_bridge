@@ -16,6 +16,15 @@ struct HandlerCommandLoadBootstrap : Command {
                     const std::vector<std::string> &) override;
 };
 
+struct HandlerCommandHello : Command {
+  HandlerCommandHello()
+      : Command(
+            "\n"
+            "Verifies that the XBDM handler injector is available.") {}
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &) override;
+};
+
 struct HandlerCommandInvokeSimple : Command {
   HandlerCommandInvokeSimple()
       : Command(
