@@ -34,7 +34,9 @@ struct HandlerDDXTReserve : public RDCPProcessedRequest {
 };
 
 struct HandlerDDXTLoad : public RDCPProcessedRequest {
-  HandlerDDXTLoad(uint32_t image_base, std::vector<uint8_t> buffer);
+  HandlerDDXTLoad(uint32_t image_base, std::vector<uint8_t> buffer,
+                  const std::vector<uint32_t>& tls_callbacks,
+                  uint32_t entrypoint);
 
   [[nodiscard]] const std::vector<uint8_t>* BinaryPayload() override {
     return &binary_payload;

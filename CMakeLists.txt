@@ -21,6 +21,7 @@ ExternalProject_Add(
         CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
         INSTALL_COMMAND ""
         EXCLUDE_FROM_ALL
+        BUILD_ALWAYS TRUE
 )
 
 find_package(

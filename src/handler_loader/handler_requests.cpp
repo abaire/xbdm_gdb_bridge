@@ -16,10 +16,17 @@ void HandlerDDXTReserve::ProcessResponse(
 }
 
 HandlerDDXTLoad::HandlerDDXTLoad(uint32_t image_base,
-                                 std::vector<uint8_t> buffer)
+                                 std::vector<uint8_t> buffer,
+                                 const std::vector<uint32_t>& tls_callbacks,
+                                 uint32_t entrypoint)
     : RDCPProcessedRequest("ddxt!install"), binary_payload(std::move(buffer)) {
   SetData(" base=");
   AppendHexString(image_base);
   AppendData(" length=");
   AppendHexString(static_cast<uint32_t>(binary_payload.size()));
+  AppendData(" entrypoint=");
+  AppendHexString(entrypoint);
+
+  // TODO: IMPLEMENT ME.
+  assert(tls_callbacks.empty() && "TLS Callback support not implemented.");
 }

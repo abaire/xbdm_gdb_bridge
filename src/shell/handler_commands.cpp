@@ -2,6 +2,7 @@
 
 #include <fstream>
 
+#include "handler_loader/dxt_library.h"
 #include "handler_loader/handler_loader.h"
 #include "handler_loader/handler_requests.h"
 #include "xbox/debugger/xbdm_debugger.h"
@@ -82,20 +83,15 @@ Command::Result HandlerCommandLoad::operator()(
     return HANDLED;
   }
 
-  std::ifstream infile;
-  infile.open(path, std::ios::binary);
-  if (!infile.is_open()) {
+  DXTLibrary lib(path);
+  if (!lib.Parse()) {
     std::cout << "Failed to load DXT DLL from '" << path << "'" << std::endl;
     return HANDLED;
   }
 
-  std::vector<uint8_t> buffer;
-  buffer.insert(buffer.begin(), std::istream_iterator<uint8_t>(infile),
-                std::istream_iterator<uint8_t>());
-
   uint32_t address = 0;
   {
-    auto request = std::make_shared<HandlerDDXTReserve>(buffer.size());
+    auto request = std::make_shared<HandlerDDXTReserve>(lib.GetImageSize());
     interface.SendCommandSync(request);
     if (!request->IsOK()) {
       std::cout << *request << std::endl;
@@ -104,8 +100,11 @@ Command::Result HandlerCommandLoad::operator()(
     std::cout << *request << std::endl;
   }
 
+  lib.Relocate(address);
+
   {
-    auto request = std::make_shared<HandlerDDXTLoad>(address, buffer);
+    auto request = std::make_shared<HandlerDDXTLoad>(
+        address, lib.GetImage(), lib.GetTLSInitializers(), lib.GetEntrypoint());
     interface.SendCommandSync(request);
     if (!request->IsOK()) {
       // TODO: Free the remote allocated buffer.
@@ -114,5 +113,6 @@ Command::Result HandlerCommandLoad::operator()(
     }
     std::cout << *request << std::endl;
   }
+
   return HANDLED;
 }
