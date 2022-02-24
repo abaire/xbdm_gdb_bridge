@@ -34,14 +34,26 @@ cleanup:
   return HANDLED;
 }
 
-Command::Result HandlerCommandHello::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
-  auto request = std::make_shared<HandlerHello>();
+Command::Result HandlerCommandInvokeSimple::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &args) {
+  ArgParser parser(args);
+  std::string command;
+  if (!parser.Parse(0, command)) {
+    std::cout << "Missing required `processor!command` argument." << std::endl;
+    return HANDLED;
+  }
+  std::string command_line_args;
+  parser.Parse(1, command_line_args);
+
+  auto request =
+      std::make_shared<HandlerInvokeSimple>(command, command_line_args);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
     std::cout << *request << std::endl;
     return HANDLED;
   }
+
+  std::cout << *request << std::endl;
 
   return HANDLED;
 }

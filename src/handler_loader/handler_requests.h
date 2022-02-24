@@ -20,16 +20,10 @@
 #include "rdcp/xbdm_stop_reasons.h"
 #include "util/parsing.h"
 
-// The maximum size of an RDCP command string.
-#define MAXIMUM_SEND_LENGTH 512
-
-struct HandlerRequest : public RDCPProcessedRequest {
-  explicit HandlerRequest(const std::string &command)
-      : RDCPProcessedRequest("bl2!" + command) {}
-};
-
-struct HandlerHello : public HandlerRequest {
-  HandlerHello() : HandlerRequest("hello") {}
+struct HandlerInvokeSimple : public RDCPProcessedRequest {
+  explicit HandlerInvokeSimple(const std::string &command,
+                               const std::string &args = "")
+      : RDCPProcessedRequest(command) {}
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_HANDLER_LOADER_HANDLER_REQUESTS_H_

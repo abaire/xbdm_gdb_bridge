@@ -16,9 +16,13 @@ struct HandlerCommandLoadBootstrap : Command {
                     const std::vector<std::string> &) override;
 };
 
-struct HandlerCommandHello : Command {
-  HandlerCommandHello()
-      : Command("Verifies that the handler loader is running properly.") {}
+struct HandlerCommandInvokeSimple : Command {
+  HandlerCommandInvokeSimple()
+      : Command(
+            "<processor>!<command> [args]\n"
+            "\n"
+            "Invokes an arbitrary debug command processor with the given "
+            "arguments.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
