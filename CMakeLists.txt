@@ -1,9 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
 
-# Prefer clang (specifically homebrew clang over AppleClang)
-set(CMAKE_C_COMPILER_NAMES clang gcc cc)
-set(CMAKE_CXX_COMPILER_NAMES clang++ g++ cxx)
-
 project(xbdm_gdb_bridge)
 
 set(CMAKE_VERBOSE_MAKEFILE TRUE)
@@ -117,6 +113,7 @@ add_executable(
         src/handler_loader/dxt_library.h
         src/handler_loader/handler_loader.cpp
         src/handler_loader/handler_loader.h
+        src/handler_loader/handler_requests.cpp
         src/handler_loader/handler_requests.h
         src/handler_loader/xbdm_exports.cpp
         src/handler_loader/xbdm_exports.def.h

@@ -1,5 +1,7 @@
 #include "handler_commands.h"
 
+#include <fstream>
+
 #include "handler_loader/handler_loader.h"
 #include "handler_loader/handler_requests.h"
 #include "xbox/debugger/xbdm_debugger.h"
@@ -55,5 +57,49 @@ Command::Result HandlerCommandInvokeSimple::operator()(
 
   std::cout << *request << std::endl;
 
+  return HANDLED;
+}
+
+Command::Result HandlerCommandLoad::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &args) {
+  ArgParser parser(args);
+  std::string path;
+  if (!parser.Parse(0, path)) {
+    std::cout << "Missing required <dll_path> argument." << std::endl;
+    return HANDLED;
+  }
+
+  std::ifstream infile;
+  infile.open(path, std::ios::binary);
+  if (!infile.is_open()) {
+    std::cout << "Failed to load DXT DLL from '" << path << "'" << std::endl;
+    return HANDLED;
+  }
+
+  std::vector<uint8_t> buffer;
+  buffer.insert(buffer.begin(), std::istream_iterator<uint8_t>(infile),
+                std::istream_iterator<uint8_t>());
+
+  uint32_t address = 0;
+  {
+    auto request = std::make_shared<HandlerBL2Reserve>(buffer.size());
+    interface.SendCommandSync(request);
+    if (!request->IsOK()) {
+      std::cout << *request << std::endl;
+      return HANDLED;
+    }
+    std::cout << *request << std::endl;
+  }
+
+  {
+    auto request = std::make_shared<HandlerBL2Load>(address, buffer);
+    interface.SendCommandSync(request);
+    if (!request->IsOK()) {
+      // TODO: Free the remote allocated buffer.
+      std::cout << *request << std::endl;
+      return HANDLED;
+    }
+    std::cout << *request << std::endl;
+  }
   return HANDLED;
 }

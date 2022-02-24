@@ -27,4 +27,14 @@ struct HandlerCommandInvokeSimple : Command {
                     const std::vector<std::string> &args) override;
 };
 
+struct HandlerCommandLoad : Command {
+  HandlerCommandLoad()
+      : Command(
+            "<dll_path>\n"
+            "\n"
+            "Load the given DXT DLL.") {}
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &) override;
+};
+
 #endif  // XBDM_GDB_BRIDGE_HANDLER_COMMANDS_H

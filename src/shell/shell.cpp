@@ -49,6 +49,7 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   commands_["/stepfun"] = step_function;
 
   REGISTER("@bootstrap", HandlerCommandLoadBootstrap);
+  REGISTER("@load", HandlerCommandLoad);
   REGISTER("@", HandlerCommandInvokeSimple);
 
   REGISTER("altaddr", CommandAltAddr);
