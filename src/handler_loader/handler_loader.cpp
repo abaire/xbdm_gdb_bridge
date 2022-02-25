@@ -181,7 +181,7 @@ bool HandlerLoader::LoadDLL(XBOXInterface& interface, const std::string& path) {
       LOG(error) << *request;
       return false;
     }
-    std::cout << *request << std::endl;
+    address = request->allocated_address;
   }
 
   for (auto& dll_imports : lib.GetImports()) {
