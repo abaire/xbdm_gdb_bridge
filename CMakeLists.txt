@@ -73,36 +73,36 @@ configure_file("src/configure.h.cmake" "${GENERATED_FILES_DIR}/configure.h")
 # Resource packer ------------------------------------
 add_executable(resource_packer EXCLUDE_FROM_ALL util/resource_packer/resource_packer.cpp)
 
+function(pack_resource input output symbol_name)
+    add_custom_command(
+            OUTPUT ${output}
+            COMMAND resource_packer
+            ${input}
+            ${output}
+            ${symbol_name}
+            DEPENDS ${input}
+            VERBATIM
+    )
+endfunction()
+
 # Bootstrap packing ----------------------------------
 
-add_custom_command(
-        OUTPUT "${GENERATED_FILES_DIR}/bootstrap_l1.h"
-        COMMAND resource_packer
-            "${dyndxt_lib_dir}/bootstrap_l1.asm.obj"
-            "${GENERATED_FILES_DIR}/bootstrap_l1.h"
-            "kBootstrapL1"
-        DEPENDS "${dyndxt_lib_dir}/bootstrap_l1.asm.obj"
-        VERBATIM
+pack_resource(
+        ${dyndxt_lib_dir}/bootstrap_l1.asm.obj
+        ${GENERATED_FILES_DIR}/bootstrap_l1.h
+        kBootstrapL1
 )
 
-add_custom_command(
-        OUTPUT "${GENERATED_FILES_DIR}/bootstrap_l2_thunk.h"
-        COMMAND resource_packer
-        "${dyndxt_lib_dir}/bootstrap_l2_thunk.asm.obj"
-        "${GENERATED_FILES_DIR}/bootstrap_l2_thunk.h"
-        "kBootstrapL2Thunk"
-        DEPENDS "${dyndxt_lib_dir}/bootstrap_l2_thunk.asm.obj"
-        VERBATIM
+pack_resource(
+        ${dyndxt_lib_dir}/bootstrap_l2_thunk.asm.obj
+        ${GENERATED_FILES_DIR}/bootstrap_l2_thunk.h
+        kBootstrapL2Thunk
 )
 
-add_custom_command(
-        OUTPUT "${GENERATED_FILES_DIR}/dyndxt_loader.h"
-        COMMAND resource_packer
-        "${dyndxt_lib_dir}/libdynamic_dxt_loader.dll"
-        "${GENERATED_FILES_DIR}/dyndxt_loader.h"
-        "kDynDXTLoader"
-        DEPENDS "${dyndxt_lib_dir}/libdynamic_dxt_loader.dll"
-        VERBATIM
+pack_resource(
+        ${dyndxt_lib_dir}/libdynamic_dxt_loader.dll
+        ${GENERATED_FILES_DIR}/dyndxt_loader.h
+        kDynDXTLoader
 )
 
 # xbdm executable ------------------------------------
