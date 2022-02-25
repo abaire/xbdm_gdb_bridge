@@ -9,6 +9,7 @@
 #include "dll_linker.h"
 #include "dxt_library.h"
 #include "dyndxt_loader.h"
+#include "handler_requests.h"
 #include "util/logging.h"
 #include "winapi/winnt.h"
 #include "xbdm_exports.h"
@@ -45,7 +46,28 @@ bool HandlerLoader::Bootstrap(XBOXInterface& interface) {
   if (!singleton_) {
     singleton_ = new HandlerLoader();
   }
-  return singleton_->InjectLoader(interface);
+
+  // See if the Dynamic DXT loader is already running.
+  auto request = std::make_shared<HandlerInvokeSimple>("ddxt!hello");
+  interface.SendCommandSync(request);
+  if (request->IsOK()) {
+    return true;
+  }
+
+  bool ret = singleton_->InjectLoader(interface);
+  if (!ret) {
+    delete singleton_;
+    singleton_ = nullptr;
+  }
+  return ret;
+}
+
+bool HandlerLoader::Load(XBOXInterface& interface, const std::string& path) {
+  if (!singleton_ && !Bootstrap(interface)) {
+    LOG(error) << "Failed to bootstrap handler loader.";
+    return false;
+  }
+  return singleton_->LoadDLL(interface, path);
 }
 
 bool HandlerLoader::InjectLoader(XBOXInterface& interface) {
@@ -120,7 +142,8 @@ bool HandlerLoader::InjectLoader(XBOXInterface& interface) {
     goto cleanup;
   }
 
-  LOG(info) << "Invoking Dynamic DXT at 0x" << std::hex << loader_entrypoint;
+  LOG(info) << "Invoking Dynamic DXT DxtMain at 0x" << std::hex
+            << loader_entrypoint;
 
   if (!InvokeBootstrap(xbdm, loader_entrypoint)) {
     LOG(error) << "Failed to initialize Dynamic DXT loader.";
@@ -135,6 +158,53 @@ cleanup:
   }
 
   return ret;
+}
+
+bool HandlerLoader::LoadDLL(XBOXInterface& interface, const std::string& path) {
+  auto debugger = interface.Debugger();
+  if (!debugger) {
+    LOG(error) << "Debugger not attached.";
+    return false;
+  }
+
+  DXTLibrary lib(path);
+  if (!lib.Parse()) {
+    LOG(error) << "Failed to load DXT DLL from '" << path << "'";
+    return false;
+  }
+
+  uint32_t address = 0;
+  {
+    auto request = std::make_shared<HandlerDDXTReserve>(lib.GetImageSize());
+    interface.SendCommandSync(request);
+    if (!request->IsOK()) {
+      LOG(error) << *request;
+      return false;
+    }
+    std::cout << *request << std::endl;
+  }
+
+  for (auto& dll_imports : lib.GetImports()) {
+    if (!ResolveImports(debugger, dll_imports.first, dll_imports.second)) {
+      return false;
+    }
+  }
+
+  lib.Relocate(address);
+
+  {
+    auto request = std::make_shared<HandlerDDXTLoad>(
+        address, lib.GetImage(), lib.GetTLSInitializers(), lib.GetEntrypoint());
+    interface.SendCommandSync(request);
+    if (!request->IsOK()) {
+      // TODO: Free the remote allocated buffer.
+      LOG(error) << *request;
+      return false;
+    }
+    std::cout << *request << std::endl;
+  }
+
+  return true;
 }
 
 uint32_t HandlerLoader::InstallDynamicDXTLoader(

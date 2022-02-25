@@ -17,8 +17,13 @@ class HandlerLoader {
   // Note: The target should be fully halted before calling this method.
   static bool Bootstrap(XBOXInterface& interface);
 
+  // Loads a dynamic DXT handler DLL.
+  static bool Load(XBOXInterface& interface, const std::string& path);
+
  private:
   bool InjectLoader(XBOXInterface& interface);
+
+  bool LoadDLL(XBOXInterface& interface, const std::string& path);
 
   // Injects the dynamic dxt loader, returning the address of the entrypoint
   // method or 0 on error.

@@ -83,35 +83,9 @@ Command::Result HandlerCommandLoad::operator()(
     return HANDLED;
   }
 
-  DXTLibrary lib(path);
-  if (!lib.Parse()) {
-    std::cout << "Failed to load DXT DLL from '" << path << "'" << std::endl;
+  if (!HandlerLoader::Load(interface, path)) {
+    std::cout << "Load failed." << std::endl;
     return HANDLED;
-  }
-
-  uint32_t address = 0;
-  {
-    auto request = std::make_shared<HandlerDDXTReserve>(lib.GetImageSize());
-    interface.SendCommandSync(request);
-    if (!request->IsOK()) {
-      std::cout << *request << std::endl;
-      return HANDLED;
-    }
-    std::cout << *request << std::endl;
-  }
-
-  lib.Relocate(address);
-
-  {
-    auto request = std::make_shared<HandlerDDXTLoad>(
-        address, lib.GetImage(), lib.GetTLSInitializers(), lib.GetEntrypoint());
-    interface.SendCommandSync(request);
-    if (!request->IsOK()) {
-      // TODO: Free the remote allocated buffer.
-      std::cout << *request << std::endl;
-      return HANDLED;
-    }
-    std::cout << *request << std::endl;
   }
 
   return HANDLED;
