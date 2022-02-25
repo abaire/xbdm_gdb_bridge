@@ -4,8 +4,10 @@
 #include <boost/asio/thread_pool.hpp>
 #include <future>
 #include <list>
+#include <map>
 #include <memory>
 #include <mutex>
+#include <string>
 
 #include "net/ip_address.h"
 
