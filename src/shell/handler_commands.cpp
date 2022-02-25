@@ -39,7 +39,12 @@ cleanup:
 
 Command::Result HandlerCommandHello::operator()(
     XBOXInterface &interface, const std::vector<std::string> &) {
-  auto request = std::make_shared<HandlerInvokeSimple>("ddxt!hello");
+  if (!HandlerLoader::Bootstrap(interface)) {
+    std::cout << "Failed to install Dynamic DXT loader.";
+    return HANDLED;
+  }
+
+  auto request = std::make_shared<HandlerInvokeMultiline>("ddxt!hello");
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
     std::cout << *request << std::endl;

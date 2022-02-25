@@ -26,6 +26,18 @@ struct HandlerInvokeSimple : public RDCPProcessedRequest {
       : RDCPProcessedRequest(command) {}
 };
 
+struct HandlerInvokeMultiline : public RDCPProcessedRequest {
+  explicit HandlerInvokeMultiline(const std::string& command,
+                                  const std::string& args = "")
+      : RDCPProcessedRequest(command) {}
+
+  [[nodiscard]] bool IsOK() const override {
+    return status == StatusCode::OK_MULTILINE_RESPONSE;
+  }
+
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override;
+};
+
 struct HandlerDDXTReserve : public RDCPProcessedRequest {
   explicit HandlerDDXTReserve(uint32_t image_size);
   void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override;

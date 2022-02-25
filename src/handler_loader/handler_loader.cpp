@@ -192,6 +192,9 @@ bool HandlerLoader::LoadDLL(XBOXInterface& interface, const std::string& path) {
 
   lib.Relocate(address);
 
+  LOG(info) << "Loading " << path << " at " << std::hex << address
+            << " with DxtMain at " << lib.GetEntrypoint();
+
   {
     auto request = std::make_shared<HandlerDDXTLoad>(
         address, lib.GetImage(), lib.GetTLSInitializers(), lib.GetEntrypoint());

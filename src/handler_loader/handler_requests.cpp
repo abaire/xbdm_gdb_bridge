@@ -1,5 +1,20 @@
 #include "handler_requests.h"
 
+#include <iostream>
+
+void HandlerInvokeMultiline::ProcessResponse(
+    const std::shared_ptr<RDCPResponse>& response) {
+  if (!IsOK()) {
+    return;
+  }
+
+  auto parsed = RDCPMultilineResponse(response->Data());
+  for (auto& line : parsed.lines) {
+    std::string as_string(line.begin(), line.end());
+    std::cout << as_string << std::endl;
+  }
+}
+
 HandlerDDXTReserve::HandlerDDXTReserve(uint32_t image_size)
     : RDCPProcessedRequest("ddxt!reserve") {
   SetData(" size=");
