@@ -12,17 +12,25 @@ include(CheckSymbolExists)
 include (ExternalProject)
 include(FindPkgConfig)
 
-set(ddxt_bin_dir ${CMAKE_CURRENT_BINARY_DIR}/ddxt-bin)
 ExternalProject_Add(
-        dynamic_dxt_loader
+        dyndxt_loader
         PREFIX ddxt
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dxt_loader/nxdk_dyndxt
-        BINARY_DIR ${ddxt_bin_dir}
-        CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
-        INSTALL_COMMAND ""
+        CMAKE_ARGS
+            -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
+            -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         EXCLUDE_FROM_ALL
+        BUILD_BYPRODUCTS
+        ddxt/lib/bootstrap_l1.asm.obj
+        ddxt/lib/bootstrap_l2_thunk.asm.obj
+        ddxt/lib/dynamic_dxt_loader.lib
+        ddxt/lib/libdynamic_dxt_loader.dll
+        ddxt/lib/xbdm.lib
         BUILD_ALWAYS TRUE
 )
+ExternalProject_Get_Property(dyndxt_loader INSTALL_DIR)
+set(dyndxt_lib_dir ${INSTALL_DIR}/lib)
+set(dyndxt_include_dir ${INSTALL_DIR}/include)
 
 find_package(
         Boost 1.70
@@ -70,30 +78,30 @@ add_executable(resource_packer EXCLUDE_FROM_ALL util/resource_packer/resource_pa
 add_custom_command(
         OUTPUT "${GENERATED_FILES_DIR}/bootstrap_l1.h"
         COMMAND resource_packer
-            "${ddxt_bin_dir}/bootstrap_l1.asm.obj"
+            "${dyndxt_lib_dir}/bootstrap_l1.asm.obj"
             "${GENERATED_FILES_DIR}/bootstrap_l1.h"
             "kBootstrapL1"
-        DEPENDS "${ddxt_bin_dir}/bootstrap_l1.asm.obj"
+        DEPENDS "${dyndxt_lib_dir}/bootstrap_l1.asm.obj"
         VERBATIM
 )
 
 add_custom_command(
         OUTPUT "${GENERATED_FILES_DIR}/bootstrap_l2_thunk.h"
         COMMAND resource_packer
-        "${ddxt_bin_dir}/bootstrap_l2_thunk.asm.obj"
+        "${dyndxt_lib_dir}/bootstrap_l2_thunk.asm.obj"
         "${GENERATED_FILES_DIR}/bootstrap_l2_thunk.h"
         "kBootstrapL2Thunk"
-        DEPENDS "${ddxt_bin_dir}/bootstrap_l2_thunk.asm.obj"
+        DEPENDS "${dyndxt_lib_dir}/bootstrap_l2_thunk.asm.obj"
         VERBATIM
 )
 
 add_custom_command(
         OUTPUT "${GENERATED_FILES_DIR}/dyndxt_loader.h"
         COMMAND resource_packer
-        "${ddxt_bin_dir}/libdynamic_dxt_loader.dll"
+        "${dyndxt_lib_dir}/libdynamic_dxt_loader.dll"
         "${GENERATED_FILES_DIR}/dyndxt_loader.h"
         "kDynDXTLoader"
-        DEPENDS "${ddxt_bin_dir}/libdynamic_dxt_loader.dll"
+        DEPENDS "${dyndxt_lib_dir}/libdynamic_dxt_loader.dll"
         VERBATIM
 )
 
@@ -217,7 +225,7 @@ target_link_libraries(
         ${RC_DEPENDS}
 )
 
-add_dependencies(xbdm_gdb_bridge dynamic_dxt_loader)
+add_dependencies(xbdm_gdb_bridge dyndxt_loader)
 
 # Tests ----------------------------------------------
 
@@ -302,5 +310,5 @@ target_link_libraries(
         LINK_PRIVATE
         test_util
 )
-add_dependencies(dxt_library_loader_tests dynamic_dxt_loader)
+add_dependencies(dxt_library_loader_tests dyndxt_loader)
 add_test(NAME dxt_library_loader_tests COMMAND dxt_library_loader_tests)
