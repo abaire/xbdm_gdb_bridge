@@ -47,6 +47,9 @@ class HandlerLoader {
   [[nodiscard]] uint32_t GetExport(const std::string& module,
                                    uint32_t ordinal) const;
 
+  bool FillLoaderExportRegistry(const std::shared_ptr<XBDMDebugger>& debugger,
+                                const std::shared_ptr<XBDMContext>& context);
+
  private:
   static HandlerLoader* singleton_;
 

@@ -23,7 +23,11 @@
 struct HandlerInvokeSimple : public RDCPProcessedRequest {
   explicit HandlerInvokeSimple(const std::string& command,
                                const std::string& args = "")
-      : RDCPProcessedRequest(command) {}
+      : RDCPProcessedRequest(command) {
+    if (!args.empty()) {
+      SetData(args);
+    }
+  }
 };
 
 struct HandlerInvokeMultiline : public RDCPProcessedRequest {
@@ -55,6 +59,11 @@ struct HandlerDDXTLoad : public RDCPProcessedRequest {
   }
 
   std::vector<uint8_t> binary_payload;
+};
+
+struct HandlerDDXTExport : public RDCPProcessedRequest {
+  HandlerDDXTExport(const std::string& module_name, uint32_t ordinal,
+                    uint32_t address, const std::string& export_name = "");
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_HANDLER_LOADER_HANDLER_REQUESTS_H_

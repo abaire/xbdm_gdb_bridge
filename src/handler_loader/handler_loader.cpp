@@ -1,6 +1,5 @@
 #include "handler_loader.h"
 
-#include <boost/endian/conversion.hpp>
 #include <boost/interprocess/streams/bufferstream.hpp>
 #include <iostream>
 
@@ -149,6 +148,10 @@ bool HandlerLoader::InjectLoader(XBOXInterface& interface) {
     LOG(error) << "Failed to initialize Dynamic DXT loader.";
     ret = false;
     goto cleanup;
+  }
+
+  if (!FillLoaderExportRegistry(debugger, xbdm)) {
+    LOG(warning) << "Failed to populate Dynamic DXT loader export registry.";
   }
 
 cleanup:
@@ -371,6 +374,54 @@ uint32_t HandlerLoader::GetExport(const std::string& module,
   }
 
   return entry->second;
+}
+
+bool HandlerLoader::FillLoaderExportRegistry(
+    const std::shared_ptr<XBDMDebugger>& debugger,
+    const std::shared_ptr<XBDMContext>& context) {
+#define RESOLVE(ordinal, table, base)                   \
+  if (!FetchExport(debugger, ordinal, table, base)) {   \
+    LOG(error) << "Failed to resolve export " #ordinal; \
+    return false;                                       \
+  }
+
+  for (auto& name_and_base : module_base_addresses_) {
+    const std::string& module_name = name_and_base.first;
+    const uint32_t base = name_and_base.second;
+
+    const auto& named_exports = module_export_names_.find(module_name);
+    const auto& ordinal_exports = module_exports_.find(module_name);
+    if (ordinal_exports == module_exports_.end()) {
+      continue;
+    }
+
+    auto& export_table = ordinal_exports->second;
+
+    if (named_exports != module_export_names_.end()) {
+      for (auto& export_name_and_ordinal : named_exports->second) {
+        const std::string& export_name = export_name_and_ordinal.first;
+        uint32_t ordinal = export_name_and_ordinal.second;
+
+        RESOLVE(ordinal, export_table, base);
+        const uint32_t address = GetExport(module_name, ordinal);
+
+        {
+          auto request = std::make_shared<HandlerDDXTExport>(
+              module_name, ordinal, address, export_name);
+          context->SendCommandSync(request);
+          if (!request->IsOK()) {
+            LOG(error) << "Failed to populate export entry " << *request;
+            return false;
+          }
+        }
+      }
+    }
+
+    // TODO: Add support for unnamed exports if necessary.
+  }
+#undef RESOLVE
+
+  return true;
 }
 
 static bool SetMemoryUnsafe(const std::shared_ptr<XBDMContext>& context,

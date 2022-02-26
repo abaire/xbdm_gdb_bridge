@@ -45,3 +45,21 @@ HandlerDDXTLoad::HandlerDDXTLoad(uint32_t image_base,
   // TODO: IMPLEMENT ME.
   assert(tls_callbacks.empty() && "TLS Callback support not implemented.");
 }
+
+HandlerDDXTExport::HandlerDDXTExport(const std::string& module_name,
+                                     uint32_t ordinal, uint32_t address,
+                                     const std::string& export_name)
+    : RDCPProcessedRequest("ddxt!export") {
+  SetData(" module=\"");
+  AppendData(module_name);
+  AppendData("\" ordinal=");
+  AppendHexString(ordinal);
+  AppendData(" addr=");
+  AppendHexString(address);
+
+  if (!export_name.empty()) {
+    AppendData(" name=\"");
+    AppendData(export_name);
+    AppendData("\"");
+  }
+}
