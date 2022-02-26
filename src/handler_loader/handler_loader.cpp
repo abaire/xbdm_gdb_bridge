@@ -5,7 +5,6 @@
 #include <iostream>
 
 #include "bootstrap_l1.h"
-#include "bootstrap_l2_thunk.h"
 #include "dll_linker.h"
 #include "dxt_library.h"
 #include "dyndxt_loader.h"
@@ -109,15 +108,9 @@ bool HandlerLoader::InjectLoader(XBOXInterface& interface) {
       kBootstrapL1,
       kBootstrapL1 + (sizeof(kBootstrapL1) / sizeof(kBootstrapL1[0])));
 
-  std::vector<uint8_t> bootstrap_l2_thunk(
-      kBootstrapL2Thunk, kBootstrapL2Thunk + (sizeof(kBootstrapL2Thunk) /
-                                              sizeof(kBootstrapL2Thunk[0])));
-
-  uint32_t max_overwrite =
-      std::max(bootstrap_l1.size(), bootstrap_l2_thunk.size());
-
   const uint32_t kDmResumeThread = GetExport("xbdm.dll", XBDM_DmResumeThread);
-  auto original_function = debugger->GetMemory(kDmResumeThread, max_overwrite);
+  auto original_function =
+      debugger->GetMemory(kDmResumeThread, bootstrap_l1.size());
   if (!original_function.has_value()) {
     LOG(error) << "Failed to fetch target function.";
     return false;
@@ -132,12 +125,6 @@ bool HandlerLoader::InjectLoader(XBOXInterface& interface) {
 
   uint32_t loader_entrypoint = InstallDynamicDXTLoader(debugger, xbdm);
   if (!loader_entrypoint) {
-    ret = false;
-    goto cleanup;
-  }
-
-  if (!SetMemoryUnsafe(xbdm, kDmResumeThread, bootstrap_l2_thunk)) {
-    LOG(error) << "Failed to patch target function with Dynamic DXT thunk.";
     ret = false;
     goto cleanup;
   }
@@ -242,6 +229,11 @@ uint32_t HandlerLoader::InstallDynamicDXTLoader(
     return 0;
   }
 
+  if (!SetL1LoaderExecuteMode(context)) {
+    // TODO: Free pool.
+    return 0;
+  }
+
   return lib.GetEntrypoint();
 }
 
@@ -277,6 +269,23 @@ uint32_t HandlerLoader::AllocatePool(
 
   uint32_t address = target_address.value();
   return address;
+}
+
+bool HandlerLoader::SetL1LoaderExecuteMode(
+    const std::shared_ptr<XBDMContext>& context) const {
+  // Set the L1 loader into execute mode.
+  const uint32_t io_address =
+      GetExport("xbdm.dll", XBDM_DmResumeThread) + sizeof(kBootstrapL1) - 4;
+
+  uint32_t size = 0;
+  auto data = reinterpret_cast<uint8_t*>(&size);
+  std::vector<uint8_t> size_request(data, data + 4);
+  if (!SetMemoryUnsafe(context, io_address, size_request)) {
+    LOG(error) << "Failed to set L1 loader to execute mode.";
+    return false;
+  }
+
+  return true;
 }
 
 bool HandlerLoader::ResolveImports(

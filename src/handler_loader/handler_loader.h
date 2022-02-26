@@ -37,6 +37,9 @@ class HandlerLoader {
       const std::shared_ptr<XBDMDebugger>& debugger,
       const std::shared_ptr<XBDMContext>& context, uint32_t size) const;
 
+  [[nodiscard]] bool SetL1LoaderExecuteMode(
+      const std::shared_ptr<XBDMContext>& context) const;
+
   bool ResolveImports(const std::shared_ptr<XBDMDebugger>& debugger,
                       const std::string& module_name,
                       std::vector<DXTLibraryImport>& imports);
