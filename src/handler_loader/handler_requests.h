@@ -42,6 +42,16 @@ struct HandlerInvokeMultiline : public RDCPProcessedRequest {
   void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override;
 };
 
+struct HandlerDDXTLoad : public RDCPProcessedRequest {
+  explicit HandlerDDXTLoad(std::vector<uint8_t> dll_image);
+
+  [[nodiscard]] const std::vector<uint8_t>* BinaryPayload() override {
+    return &binary_payload;
+  }
+
+  std::vector<uint8_t> binary_payload;
+};
+
 struct HandlerDDXTReserve : public RDCPProcessedRequest {
   explicit HandlerDDXTReserve(uint32_t image_size);
   void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override;
@@ -49,10 +59,10 @@ struct HandlerDDXTReserve : public RDCPProcessedRequest {
   uint32_t allocated_address{0};
 };
 
-struct HandlerDDXTLoad : public RDCPProcessedRequest {
-  HandlerDDXTLoad(uint32_t image_base, std::vector<uint8_t> buffer,
-                  const std::vector<uint32_t>& tls_callbacks,
-                  uint32_t entrypoint);
+struct HandlerDDXTInstall : public RDCPProcessedRequest {
+  HandlerDDXTInstall(uint32_t image_base, std::vector<uint8_t> buffer,
+                     const std::vector<uint32_t>& tls_callbacks,
+                     uint32_t entrypoint);
 
   [[nodiscard]] const std::vector<uint8_t>* BinaryPayload() override {
     return &binary_payload;

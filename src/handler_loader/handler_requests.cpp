@@ -15,6 +15,14 @@ void HandlerInvokeMultiline::ProcessResponse(
   }
 }
 
+HandlerDDXTLoad::HandlerDDXTLoad(std::vector<uint8_t> dll_image)
+    : RDCPProcessedRequest("ddxt!load"), binary_payload(std::move(dll_image)) {
+  SetData(" size=");
+  assert(binary_payload.size() < 0xFFFFFFFF);
+  uint32_t size = binary_payload.size();
+  AppendHexString(size);
+}
+
 HandlerDDXTReserve::HandlerDDXTReserve(uint32_t image_size)
     : RDCPProcessedRequest("ddxt!reserve") {
   SetData(" size=");
@@ -30,10 +38,9 @@ void HandlerDDXTReserve::ProcessResponse(
   allocated_address = parsed.GetDWORD("addr");
 }
 
-HandlerDDXTLoad::HandlerDDXTLoad(uint32_t image_base,
-                                 std::vector<uint8_t> buffer,
-                                 const std::vector<uint32_t>& tls_callbacks,
-                                 uint32_t entrypoint)
+HandlerDDXTInstall::HandlerDDXTInstall(
+    uint32_t image_base, std::vector<uint8_t> buffer,
+    const std::vector<uint32_t>& tls_callbacks, uint32_t entrypoint)
     : RDCPProcessedRequest("ddxt!install"), binary_payload(std::move(buffer)) {
   SetData(" base=");
   AppendHexString(image_base);

@@ -1,5 +1,6 @@
 #include "handler_loader.h"
 
+#include <algorithm>
 #include <boost/interprocess/streams/bufferstream.hpp>
 #include <iostream>
 
@@ -170,45 +171,32 @@ bool HandlerLoader::LoadDLL(XBOXInterface& interface, const std::string& path) {
     return false;
   }
 
-  DXTLibrary lib(path);
-  if (!lib.Parse()) {
-    LOG(error) << "Failed to load DXT DLL from '" << path << "'";
+  FILE* fp = fopen(path.c_str(), "rb");
+  if (!fp) {
+    LOG(error) << "Failed to open '" << path << "'";
     return false;
   }
 
-  uint32_t address = 0;
-  {
-    auto request = std::make_shared<HandlerDDXTReserve>(lib.GetImageSize());
-    interface.SendCommandSync(request);
-    if (!request->IsOK()) {
-      LOG(error) << *request;
-      return false;
-    }
-    address = request->allocated_address;
-  }
-
-  for (auto& dll_imports : lib.GetImports()) {
-    if (!ResolveImports(debugger, dll_imports.first, dll_imports.second)) {
+  std::vector<uint8_t> data;
+  uint8_t buf[4096];
+  while (!feof(fp)) {
+    size_t bytes_read = fread(buf, 1, sizeof(buf), fp);
+    if (bytes_read) {
+      std::copy(buf, buf + bytes_read, std::back_inserter(data));
+    } else if (!feof(fp) && ferror(fp)) {
+      LOG(error) << "Failed to read '" << path << "'";
       return false;
     }
   }
 
-  lib.Relocate(address);
-
-  LOG(info) << "Loading " << path << " at " << std::hex << address
-            << " with DxtMain at " << lib.GetEntrypoint();
-
-  {
-    auto request = std::make_shared<HandlerDDXTLoad>(
-        address, lib.GetImage(), lib.GetTLSInitializers(), lib.GetEntrypoint());
-    interface.SendCommandSync(request);
-    if (!request->IsOK()) {
-      // TODO: Free the remote allocated buffer.
-      LOG(error) << *request;
-      return false;
-    }
-    std::cout << *request << std::endl;
+  auto request = std::make_shared<HandlerDDXTLoad>(data);
+  interface.SendCommandSync(request);
+  if (!request->IsOK()) {
+    LOG(error) << *request;
+    return false;
   }
+
+  std::cout << *request << std::endl;
 
   return true;
 }
