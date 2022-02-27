@@ -51,7 +51,13 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   REGISTER("@bootstrap", HandlerCommandLoadBootstrap);
   REGISTER("@hello", HandlerCommandHello);
   REGISTER("@load", HandlerCommandLoad);
-  REGISTER("@", HandlerCommandInvokeSimple);
+  auto invoke_simple = std::make_shared<HandlerCommandInvokeSimple>();
+  commands_["@"] = invoke_simple;
+  commands_["@simple"] = invoke_simple;
+  REGISTER("@multiline", HandlerCommandInvokeMultiline);
+  REGISTER("@sendbin", HandlerCommandInvokeSendBinary);
+  REGISTER("@recvbin", HandlerCommandInvokeReceiveSizePrefixedBinary);
+  REGISTER("@recvbytes", HandlerCommandInvokeReceiveKnownSizedBinary);
 
   REGISTER("altaddr", CommandAltAddr);
   REGISTER("break", CommandBreak);

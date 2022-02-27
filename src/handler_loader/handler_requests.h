@@ -33,13 +33,56 @@ struct HandlerInvokeSimple : public RDCPProcessedRequest {
 struct HandlerInvokeMultiline : public RDCPProcessedRequest {
   explicit HandlerInvokeMultiline(const std::string& command,
                                   const std::string& args = "")
-      : RDCPProcessedRequest(command) {}
+      : RDCPProcessedRequest(command) {
+    if (!args.empty()) {
+      SetData(args);
+    }
+  }
 
   [[nodiscard]] bool IsOK() const override {
     return status == StatusCode::OK_MULTILINE_RESPONSE;
   }
 
   void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override;
+};
+
+struct HandlerInvokeSendBinary : public RDCPProcessedRequest {
+  explicit HandlerInvokeSendBinary(const std::string& command,
+                                   std::vector<uint8_t> binary,
+                                   const std::string& args = "");
+
+  [[nodiscard]] const std::vector<uint8_t>* BinaryPayload() override {
+    return &binary_payload;
+  }
+
+  std::vector<uint8_t> binary_payload;
+};
+
+struct HandlerInvokeReceiveSizePrefixedBinary : public RDCPProcessedRequest {
+  explicit HandlerInvokeReceiveSizePrefixedBinary(const std::string& command,
+                                                  const std::string& args = "");
+
+  [[nodiscard]] bool IsOK() const override {
+    return status == StatusCode::OK_BINARY_RESPONSE;
+  }
+
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override;
+
+  std::vector<uint8_t> response_data;
+};
+
+struct HandlerInvokeReceiveKnownSizedBinary : public RDCPProcessedRequest {
+  explicit HandlerInvokeReceiveKnownSizedBinary(const std::string& command,
+                                                uint32_t size,
+                                                const std::string& args = "");
+
+  [[nodiscard]] bool IsOK() const override {
+    return status == StatusCode::OK_BINARY_RESPONSE;
+  }
+
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override;
+
+  std::vector<uint8_t> response_data;
 };
 
 struct HandlerDDXTLoad : public RDCPProcessedRequest {
