@@ -90,6 +90,7 @@ struct NotificationThreadCreated : XBDMNotification {
   }
   std::ostream &WriteStream(std::ostream &os) const override;
   int thread_id;
+  uint32_t start_address;
 };
 
 struct NotificationThreadTerminated : XBDMNotification {

@@ -34,8 +34,6 @@ std::shared_ptr<XBDMNotification> ParseXBDMNotification(const char *buffer,
   SETIF("exception ", NotificationException)
 
 #undef SETIF
-  std::string notification(buffer, buffer_len);
-  LOG(warning) << "Unknown notification: " << notification;
   return {};
 }
 
@@ -125,10 +123,12 @@ NotificationThreadCreated::NotificationThreadCreated(const char *buffer_start,
                                                      const char *buffer_end) {
   RDCPMapResponse parsed(buffer_start, buffer_end);
   thread_id = parsed.GetDWORD("thread");
+  start_address = parsed.GetDWORD("start");
 }
 
 std::ostream &NotificationThreadCreated::WriteStream(std::ostream &os) const {
-  os << "Thread created: " << thread_id;
+  os << "Thread created: " << thread_id << " start address: 0x" << std::hex
+     << start_address;
   return os;
 }
 
