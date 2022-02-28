@@ -129,7 +129,7 @@ bool HandlerLoader::InjectLoader(XBOXInterface& interface) {
     goto cleanup;
   }
 
-  LOG(info) << "Invoking Dynamic DXT DxtMain at 0x" << std::hex
+  LOG(info) << "Invoking Dynamic DXT DXTMain at 0x" << std::hex
             << loader_entrypoint;
 
   if (!InvokeBootstrap(xbdm, loader_entrypoint)) {
