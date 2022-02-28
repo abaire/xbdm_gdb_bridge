@@ -35,8 +35,7 @@ std::shared_ptr<XBDMNotification> ParseXBDMNotification(const char *buffer,
 
 #undef SETIF
   std::string notification(buffer, buffer_len);
-  LOG(error) << "Uknown notification " << notification;
-  assert(false && "Unknown notification type");
+  LOG(warning) << "Unknown notification: " << notification;
   return {};
 }
 
