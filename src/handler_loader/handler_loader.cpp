@@ -123,6 +123,7 @@ bool HandlerLoader::InjectLoader(XBOXInterface& interface) {
 
   bool ret = true;
 
+  LOG(trace) << "Uploading and relocating loader";
   uint32_t loader_entrypoint = InstallDynamicDXTLoader(debugger, xbdm);
   if (!loader_entrypoint) {
     ret = false;
@@ -132,15 +133,18 @@ bool HandlerLoader::InjectLoader(XBOXInterface& interface) {
   LOG(info) << "Invoking Dynamic DXT DXTMain at 0x" << std::hex
             << loader_entrypoint;
 
+  LOG(trace) << "Initializing loader";
   if (!InvokeBootstrap(xbdm, loader_entrypoint)) {
     LOG(error) << "Failed to initialize Dynamic DXT loader.";
     ret = false;
     goto cleanup;
   }
 
+  LOG(trace) << "Populating loader export registry";
   if (!FillLoaderExportRegistry(debugger, xbdm)) {
     LOG(warning) << "Failed to populate Dynamic DXT loader export registry.";
   }
+  LOG(trace) << "Loader install completed";
 
 cleanup:
   if (!SetMemoryUnsafe(xbdm, kDmResumeThread, original_function.value())) {
