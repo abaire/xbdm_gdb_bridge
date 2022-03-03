@@ -139,10 +139,6 @@ bool HandlerLoader::InjectLoader(XBOXInterface& interface) {
     goto cleanup;
   }
 
-  if (!FillLoaderExportRegistry(debugger, xbdm)) {
-    LOG(warning) << "Failed to populate Dynamic DXT loader export registry.";
-  }
-
 cleanup:
   if (!SetMemoryUnsafe(xbdm, kDmResumeThread, original_function.value())) {
     LOG(error) << "Failed to restore target function.";
@@ -182,10 +178,10 @@ bool HandlerLoader::LoadDLL(XBOXInterface& interface, const std::string& path) {
   timer.Start();
   interface.SendCommandSync(request);
   int milliseconds_elapsed = static_cast<int>(timer.MillisecondsElapsed());
-  std::cout << "Loaded " << data.size() << " bytes in " << milliseconds_elapsed
-            << " ms "
-            << ((float)data.size() / ((float)milliseconds_elapsed / 1000.0f))
-            << " B/s" << std::endl;
+  LOG(debug) << "Loaded " << data.size() << " bytes in " << milliseconds_elapsed
+             << " ms "
+             << ((float)data.size() / ((float)milliseconds_elapsed / 1000.0f))
+             << " B/s" << std::endl;
   if (!request->IsOK()) {
     LOG(error) << *request;
     return false;
@@ -226,10 +222,18 @@ uint32_t HandlerLoader::InstallDynamicDXTLoader(
     return 0;
   }
 
-  if (!SetMemoryUnsafe(context, target, lib.GetImage())) {
+  Timer timer;
+  timer.Start();
+  const std::vector<uint8_t>& image = lib.GetImage();
+  if (!SetMemoryUnsafe(context, target, image)) {
     LOG(error) << "Failed to upload dxt loader.";
     return 0;
   }
+  int milliseconds_elapsed = static_cast<int>(timer.MillisecondsElapsed());
+  LOG(debug) << "setmem uploaded " << image.size() << " bytes in "
+             << milliseconds_elapsed << " ms "
+             << ((float)image.size() / ((float)milliseconds_elapsed / 1000.0f))
+             << " B/s" << std::endl;
 
   for (auto callback : lib.GetTLSInitializers()) {
     LOG(error) << "TLS callback functionality not implemented.";
@@ -379,54 +383,6 @@ uint32_t HandlerLoader::GetExport(const std::string& module,
   }
 
   return entry->second;
-}
-
-bool HandlerLoader::FillLoaderExportRegistry(
-    const std::shared_ptr<XBDMDebugger>& debugger,
-    const std::shared_ptr<XBDMContext>& context) {
-#define RESOLVE(ordinal, table, base)                   \
-  if (!FetchExport(debugger, ordinal, table, base)) {   \
-    LOG(error) << "Failed to resolve export " #ordinal; \
-    return false;                                       \
-  }
-
-  for (auto& name_and_base : module_base_addresses_) {
-    const std::string& module_name = name_and_base.first;
-    const uint32_t base = name_and_base.second;
-
-    const auto& named_exports = module_export_names_.find(module_name);
-    const auto& ordinal_exports = module_exports_.find(module_name);
-    if (ordinal_exports == module_exports_.end()) {
-      continue;
-    }
-
-    auto& export_table = ordinal_exports->second;
-
-    if (named_exports != module_export_names_.end()) {
-      for (auto& export_name_and_ordinal : named_exports->second) {
-        const std::string& export_name = export_name_and_ordinal.first;
-        uint32_t ordinal = export_name_and_ordinal.second;
-
-        RESOLVE(ordinal, export_table, base);
-        const uint32_t address = GetExport(module_name, ordinal);
-
-        {
-          auto request = std::make_shared<HandlerDDXTExport>(
-              module_name, ordinal, address, export_name);
-          context->SendCommandSync(request);
-          if (!request->IsOK()) {
-            LOG(error) << "Failed to populate export entry " << *request;
-            return false;
-          }
-        }
-      }
-    }
-
-    // TODO: Add support for unnamed exports if necessary.
-  }
-#undef RESOLVE
-
-  return true;
 }
 
 static bool SetMemoryUnsafe(const std::shared_ptr<XBDMContext>& context,
