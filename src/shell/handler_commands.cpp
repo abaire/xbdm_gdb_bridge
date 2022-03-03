@@ -5,6 +5,7 @@
 #include "handler_loader/dxt_library.h"
 #include "handler_loader/handler_loader.h"
 #include "handler_loader/handler_requests.h"
+#include "util/timer.h"
 #include "xbox/debugger/xbdm_debugger.h"
 
 Command::Result HandlerCommandLoadBootstrap::operator()(
@@ -139,12 +140,20 @@ Command::Result HandlerCommandInvokeSendBinary::operator()(
 
   auto request = std::make_shared<HandlerInvokeSendBinary>(command, data,
                                                            command_line_args);
+  Timer timer;
+  timer.Start();
   interface.SendCommandSync(request);
+  int milliseconds_elapsed = static_cast<int>(timer.MillisecondsElapsed());
+
   if (!request->IsOK()) {
     std::cout << *request << std::endl;
     return HANDLED;
   }
 
+  std::cout << "Sent " << data.size() << " bytes in " << milliseconds_elapsed
+            << " ms "
+            << ((float)data.size() / ((float)milliseconds_elapsed / 1000.0f))
+            << " B/s" << std::endl;
   std::cout << *request << std::endl;
 
   return HANDLED;

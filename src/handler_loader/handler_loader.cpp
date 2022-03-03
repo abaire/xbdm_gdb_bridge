@@ -10,6 +10,7 @@
 #include "dyndxt_loader.h"
 #include "handler_requests.h"
 #include "util/logging.h"
+#include "util/timer.h"
 #include "winapi/winnt.h"
 #include "xbdm_exports.h"
 #include "xbox/debugger/xbdm_debugger.h"
@@ -177,7 +178,14 @@ bool HandlerLoader::LoadDLL(XBOXInterface& interface, const std::string& path) {
   }
 
   auto request = std::make_shared<HandlerDDXTLoad>(data);
+  Timer timer;
+  timer.Start();
   interface.SendCommandSync(request);
+  int milliseconds_elapsed = static_cast<int>(timer.MillisecondsElapsed());
+  std::cout << "Loaded " << data.size() << " bytes in " << milliseconds_elapsed
+            << " ms "
+            << ((float)data.size() / ((float)milliseconds_elapsed / 1000.0f))
+            << " B/s" << std::endl;
   if (!request->IsOK()) {
     LOG(error) << *request;
     return false;
