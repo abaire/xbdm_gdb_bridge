@@ -50,7 +50,7 @@ struct ArgParser {
       return false;
     }
 
-    command.erase(0);
+    command.erase(0, 1);
     return true;
   }
 
