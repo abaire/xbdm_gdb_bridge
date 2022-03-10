@@ -602,7 +602,8 @@ Command::Result CommandGetMem::operator()(
   } else {
     int count = 0;
     for (auto &val : request->data) {
-      std::cout << std::hex << val << " ";
+      std::cout << std::hex << std::setw(2) << std::setfill('0')
+                << static_cast<uint32_t>(val) << " ";
       if (count && (count % 32) == 0) {
         std::cout << std::endl;
       }
