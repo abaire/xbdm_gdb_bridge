@@ -19,14 +19,14 @@ bool MaybeParseHexInt(T &ret, const std::vector<uint8_t> &data,
 
   char *end = nullptr;
 
-  ret = static_cast<T>(strtol(to_parse.c_str(), &end, 16));
+  ret = static_cast<T>(strtoull(to_parse.c_str(), &end, 16));
   return end != to_parse.c_str();
 }
 
 template <typename T>
 bool MaybeParseHexInt(T &ret, const std::string &data) {
   char *end = nullptr;
-  ret = static_cast<T>(strtol(data.c_str(), &end, 16));
+  ret = static_cast<T>(strtoull(data.c_str(), &end, 16));
   return end != data.c_str();
 }
 

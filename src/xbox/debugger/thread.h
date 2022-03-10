@@ -18,7 +18,9 @@ struct Thread {
 
   bool FetchInfoSync(XBDMContext &ctx);
   bool FetchContextSync(XBDMContext &ctx);
+  bool PushContextSync(XBDMContext &ctx);
   bool FetchFloatContextSync(XBDMContext &ctx);
+  bool PushFloatContextSync(XBDMContext &ctx);
   bool FetchStopReasonSync(XBDMContext &ctx);
 
   bool Halt(XBDMContext &ctx);

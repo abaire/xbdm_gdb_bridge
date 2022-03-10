@@ -79,6 +79,15 @@ bool Thread::FetchContextSync(XBDMContext &ctx) {
   return true;
 }
 
+bool Thread::PushContextSync(XBDMContext &ctx) {
+  if (!context.has_value()) {
+    return false;
+  }
+  auto request = std::make_shared<::SetContext>(thread_id, context.value());
+  ctx.SendCommandSync(request);
+  return request->IsOK();
+}
+
 bool Thread::FetchFloatContextSync(XBDMContext &ctx) {
   auto request = std::make_shared<GetExtContext>(thread_id);
   ctx.SendCommandSync(request);
@@ -88,6 +97,16 @@ bool Thread::FetchFloatContextSync(XBDMContext &ctx) {
   }
   float_context = request->context;
   return true;
+}
+
+bool Thread::PushFloatContextSync(XBDMContext &ctx) {
+  if (!float_context.has_value()) {
+    return false;
+  }
+  auto request =
+      std::make_shared<::SetContext>(thread_id, float_context.value());
+  ctx.SendCommandSync(request);
+  return request->IsOK();
 }
 
 bool Thread::FetchStopReasonSync(XBDMContext &ctx) {

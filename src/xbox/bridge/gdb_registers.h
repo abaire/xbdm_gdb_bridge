@@ -7,6 +7,9 @@
 class ThreadContext;
 class ThreadFloatContext;
 
+// GDB index of the first XBDM float context register
+#define FLOAT_REGISTER_OFFSET 19
+
 constexpr std::string_view kTargetXML =
     R"(<?xml version="1.0"?><!DOCTYPE target SYSTEM "gdb-target.dtd"><target>)"
     "<architecture>i386:intel</architecture>"
@@ -90,7 +93,16 @@ constexpr std::string_view kTargetXML =
     R"(<reg name="fop" bitsize="4" type="int" group="float"/>)"
     "</target>";
 
-std::string SerializeRegisters(std::optional<ThreadContext> context,
-                               std::optional<ThreadFloatContext> float_context);
+std::string SerializeRegisters(
+    const std::optional<ThreadContext> &context,
+    const std::optional<ThreadFloatContext> &float_context);
+
+std::optional<uint64_t> GetRegister(
+    uint32_t gdb_index, const std::optional<ThreadContext> &context,
+    const std::optional<ThreadFloatContext> &float_context);
+bool SetRegister(uint32_t gdb_index, uint32_t value,
+                 std::optional<ThreadContext> &context);
+bool SetRegister(uint32_t gdb_index, uint64_t value,
+                 std::optional<ThreadFloatContext> &context);
 
 #endif  // XBDM_GDB_BRIDGE_GDB_REGISTERS_H

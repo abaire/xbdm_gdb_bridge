@@ -39,9 +39,144 @@ static void Append10ByteRegister(std::string &output,
   output += buffer;
 }
 
+std::optional<uint64_t> GetRegister(
+    uint32_t gdb_index, const std::optional<ThreadContext> &context,
+    const std::optional<ThreadFloatContext> &float_context) {
+  if (!context) {
+    return {};
+  }
+
+  switch (gdb_index) {
+    case 0:
+      return context->eax;
+    case 1:
+      return context->ecx;
+    case 2:
+      return context->edx;
+    case 3:
+      return context->ebx;
+    case 4:
+      return context->esp;
+    case 5:
+      return context->ebp;
+    case 6:
+      return context->esi;
+    case 7:
+      return context->edi;
+    case 8:
+      return context->eip;
+    case 9:
+      return context->eflags;
+
+    case FLOAT_REGISTER_OFFSET:
+      return float_context->st0;
+    case FLOAT_REGISTER_OFFSET + 1:
+      return float_context->st1;
+    case FLOAT_REGISTER_OFFSET + 2:
+      return float_context->st2;
+    case FLOAT_REGISTER_OFFSET + 3:
+      return float_context->st3;
+    case FLOAT_REGISTER_OFFSET + 4:
+      return float_context->st4;
+    case FLOAT_REGISTER_OFFSET + 5:
+      return float_context->st5;
+    case FLOAT_REGISTER_OFFSET + 6:
+      return float_context->st6;
+    case FLOAT_REGISTER_OFFSET + 7:
+      return float_context->st7;
+
+    default:
+      break;
+  }
+
+  return {};
+}
+
+bool SetRegister(uint32_t gdb_index, uint32_t value,
+                 std::optional<ThreadContext> &context) {
+  if (!context) {
+    return false;
+  }
+
+  switch (gdb_index) {
+    case 0:
+      context->eax = value;
+      break;
+    case 1:
+      context->ecx = value;
+      break;
+    case 2:
+      context->edx = value;
+      break;
+    case 3:
+      context->ebx = value;
+      break;
+    case 4:
+      context->esp = value;
+      break;
+    case 5:
+      context->ebp = value;
+      break;
+    case 6:
+      context->esi = value;
+      break;
+    case 7:
+      context->edi = value;
+      break;
+    case 8:
+      context->eip = value;
+      break;
+    case 9:
+      context->eflags = value;
+      break;
+    default:
+      return false;
+  }
+
+  return true;
+}
+
+bool SetRegister(uint32_t gdb_index, uint64_t value,
+                 std::optional<ThreadFloatContext> &float_context) {
+  if (!float_context) {
+    return false;
+  }
+
+  switch (gdb_index) {
+    case FLOAT_REGISTER_OFFSET:
+      float_context->st0 = static_cast<int64_t>(value);
+      break;
+    case FLOAT_REGISTER_OFFSET + 1:
+      float_context->st1 = static_cast<int64_t>(value);
+      break;
+    case FLOAT_REGISTER_OFFSET + 2:
+      float_context->st2 = static_cast<int64_t>(value);
+      break;
+    case FLOAT_REGISTER_OFFSET + 3:
+      float_context->st3 = static_cast<int64_t>(value);
+      break;
+    case FLOAT_REGISTER_OFFSET + 4:
+      float_context->st4 = static_cast<int64_t>(value);
+      break;
+    case FLOAT_REGISTER_OFFSET + 5:
+      float_context->st5 = static_cast<int64_t>(value);
+      break;
+    case FLOAT_REGISTER_OFFSET + 6:
+      float_context->st6 = static_cast<int64_t>(value);
+      break;
+    case FLOAT_REGISTER_OFFSET + 7:
+      float_context->st7 = static_cast<int64_t>(value);
+      break;
+    default:
+      return false;
+  }
+
+  return true;
+}
+
 std::string SerializeRegisters(
-    std::optional<ThreadContext> context,
-    std::optional<ThreadFloatContext> float_context) {
+    const std::optional<ThreadContext> &context,
+    const std::optional<ThreadFloatContext> &float_context) {
   std::string ret;
 
   std::optional<int32_t> unsupported;

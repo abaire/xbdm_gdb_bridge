@@ -481,13 +481,130 @@ void GDBBridge::HandleWriteMemory(const GDBPacket& packet) {
 }
 
 void GDBBridge::HandleReadRegister(const GDBPacket& packet) {
-  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
-  SendEmpty();
+  int32_t register_index;
+  if (!MaybeParseHexInt(register_index, packet.Data(), 1)) {
+    LOG_GDB(error) << "Invalid read register message " << packet.DataString();
+    SendError(EINVAL);
+    return;
+  }
+
+  int32_t thread_id = GetThreadIDForCommand(packet.Command());
+  if (thread_id < 0) {
+    LOG_GDB(error) << "Unsupported read register query for all threads: "
+                   << packet.DataString();
+    SendEmpty();
+    return;
+  }
+
+  if (!thread_id) {
+    thread_id = debugger_->AnyThreadID();
+  }
+  auto thread = debugger_->GetThread(thread_id);
+  if (!thread) {
+    LOG_GDB(error) << "Attempt to read register for non-existent thread "
+                   << thread_id;
+    SendError(EBADMSG);
+    return;
+  }
+
+  if (register_index < FLOAT_REGISTER_OFFSET) {
+    if (!thread->FetchContextSync(*xbdm_)) {
+      LOG_GDB(error) << "Failed to retrieve register for thread " << thread_id;
+      SendError(EBUSY);
+      return;
+    }
+  } else {
+    thread->FetchFloatContextSync(*xbdm_);
+  }
+
+  auto value =
+      GetRegister(register_index, thread->context, thread->float_context);
+  if (!value.has_value()) {
+    SendEmpty();
+    return;
+  }
+  char response[32] = {0};
+  snprintf(response, 31, "%lx", value.value());
+  gdb_->Send(GDBPacket(response));
 }
 
 void GDBBridge::HandleWriteRegister(const GDBPacket& packet) {
-  LOG_GDB(error) << "Unsupported packet " << packet.DataString();
-  SendEmpty();
+  // P0=10270000
+  auto index_value_split = packet.FindFirst('=');
+  if (index_value_split == packet.Data().end()) {
+    LOG_GDB(error) << "Invalid write register message " << packet.DataString();
+    SendError(EINVAL);
+    return;
+  }
+
+  int32_t register_index;
+  if (!MaybeParseHexInt(register_index, packet.Data(), 1)) {
+    LOG_GDB(error) << "Failed to parse register index from "
+                   << packet.DataString();
+    SendError(EINVAL);
+    return;
+  }
+
+  uint64_t value;
+  if (!MaybeParseHexInt(value, packet.Data(),
+                        index_value_split - packet.Data().begin() + 1)) {
+    LOG_GDB(error) << "Failed to parse value from " << packet.DataString();
+    SendError(EINVAL);
+    return;
+  }
+
+  int32_t thread_id = GetThreadIDForCommand(packet.Command());
+  if (thread_id < 0) {
+    LOG_GDB(error) << "Unsupported read register query for all threads: "
+                   << packet.DataString();
+    SendEmpty();
+    return;
+  }
+
+  if (!thread_id) {
+    thread_id = debugger_->AnyThreadID();
+  }
+  auto thread = debugger_->GetThread(thread_id);
+  if (!thread) {
+    LOG_GDB(error) << "Attempt to read register for non-existent thread "
+                   << thread_id;
+    SendError(EBADMSG);
+    return;
+  }
+
+  if (register_index < FLOAT_REGISTER_OFFSET) {
+    if (!thread->FetchContextSync(*xbdm_)) {
+      LOG_GDB(error) << "Failed to retrieve register for thread " << thread_id;
+      SendError(EBUSY);
+      return;
+    }
+    if (!SetRegister(register_index, value & 0xFFFFFFFF, thread->context)) {
+      LOG_GDB(error) << "Failed to update context for register "
+                     << register_index << " for thread " << thread_id;
+      SendError(EBUSY);
+      return;
+    }
+    if (!thread->PushContextSync(*xbdm_)) {
+      LOG_GDB(error) << "Failed to push context for thread " << thread_id;
+      SendError(EBUSY);
+      return;
+    }
+  } else {
+    thread->FetchFloatContextSync(*xbdm_);
+    if (!SetRegister(register_index, value, thread->float_context)) {
+      LOG_GDB(error) << "Failed to update context for register "
+                     << register_index << " for thread " << thread_id;
+      SendError(EBUSY);
+      return;
+    }
+    if (!thread->PushFloatContextSync(*xbdm_)) {
+      LOG_GDB(error) << "Failed to push context for thread " << thread_id;
+      SendError(EBUSY);
+      return;
+    }
+  }
+
+  SendOK();
 }
 
 void GDBBridge::HandleReadQuery(const GDBPacket& packet) {
