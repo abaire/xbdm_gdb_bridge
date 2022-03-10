@@ -54,10 +54,25 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   auto invoke_simple = std::make_shared<HandlerCommandInvokeSimple>();
   commands_["@"] = invoke_simple;
   commands_["@simple"] = invoke_simple;
-  REGISTER("@multiline", HandlerCommandInvokeMultiline);
-  REGISTER("@sendbin", HandlerCommandInvokeSendBinary);
-  REGISTER("@recvbin", HandlerCommandInvokeReceiveSizePrefixedBinary);
-  REGISTER("@recvbytes", HandlerCommandInvokeReceiveKnownSizedBinary);
+
+  auto invoke_multiline = std::make_shared<HandlerCommandInvokeMultiline>();
+  commands_["@multiline"] = invoke_multiline;
+  commands_["@m"] = invoke_multiline;
+
+  auto invoke_sendbin = std::make_shared<HandlerCommandInvokeSendBinary>();
+  commands_["@sendbin"] = invoke_sendbin;
+  commands_["@sb"] = invoke_sendbin;
+
+  auto invoke_recvbin =
+      std::make_shared<HandlerCommandInvokeReceiveSizePrefixedBinary>();
+  commands_["@recvbin"] = invoke_recvbin;
+  commands_["@rbin"] = invoke_recvbin;
+
+  auto invoke_recvbytes =
+      std::make_shared<HandlerCommandInvokeReceiveKnownSizedBinary>();
+  commands_["@recvbytes"] = invoke_recvbytes;
+  commands_["@rby"] = invoke_recvbytes;
+  commands_["@rbytes"] = invoke_recvbytes;
 
   REGISTER("altaddr", CommandAltAddr);
   REGISTER("break", CommandBreak);
