@@ -123,7 +123,7 @@ void XBOXInterface::AttachDebugNotificationHandler() {
   }
 
   debug_notification_handler_id_ = xbdm_context_->RegisterNotificationHandler(
-      [](const std::shared_ptr<XBDMNotification>& notification) {
+      [](const std::shared_ptr<XBDMNotification>& notification, XBDMContext&) {
         std::cout << *notification << std::endl;
       });
 }

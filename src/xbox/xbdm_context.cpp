@@ -184,9 +184,16 @@ void XBDMContext::UnregisterNotificationHandler(int id) {
 }
 
 void XBDMContext::DispatchNotification(
-    std::shared_ptr<XBDMNotification> notification) {
-  const std::lock_guard<std::recursive_mutex> lock(notification_handler_lock_);
-  for (auto& handler : notification_handlers_) {
-    handler.second(notification);
+    const std::shared_ptr<XBDMNotification>& notification) {
+  std::map<int, NotificationHandler> handlers;
+
+  {
+    const std::lock_guard<std::recursive_mutex> lock(
+        notification_handler_lock_);
+    handlers = notification_handlers_;
+  }
+
+  for (auto& handler : handlers) {
+    handler.second(notification, *this);
   }
 }

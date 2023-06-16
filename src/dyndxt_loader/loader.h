@@ -22,14 +22,17 @@ class Loader {
   // Loads a dynamic DXT handler DLL.
   static bool Load(XBOXInterface& interface, const std::string& path);
 
+  // Installs a preloaded dynamic DXT handler DLL
   static bool Install(XBOXInterface& interface,
                       const std::vector<uint8_t>& data);
 
  private:
   bool InjectLoader(XBOXInterface& interface);
 
+  //! Installs a DynDXT DLL from the given path.
   bool InstallDynDXT(XBOXInterface& interface, const std::string& path);
 
+  //! Installs a DynDXT DLL from memory.
   bool InstallDynDXT(XBOXInterface& interface,
                      const std::vector<uint8_t>& data);
 

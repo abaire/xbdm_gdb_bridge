@@ -37,9 +37,8 @@ bool GDBBridge::AddTransport(std::shared_ptr<GDBTransport> transport) {
   // be notified once it has finished processing notifications from the context.
   xbdm_->UnregisterNotificationHandler(notification_handler_id_);
   notification_handler_id_ = xbdm_->RegisterNotificationHandler(
-      [this](const std::shared_ptr<XBDMNotification>& notification) {
-        this->OnNotification(notification);
-      });
+      [this](const std::shared_ptr<XBDMNotification>& notification,
+             XBDMContext&) { this->OnNotification(notification); });
 
   return true;
 }
@@ -1467,6 +1466,7 @@ void GDBBridge::OnNotification(
       LOG_GDB(error) << "XBDMNotif: Received invalid notification type.";
       break;
 
+    case NT_CUSTOM:
     default:
       // Other types are not interesting to GDB.
       break;

@@ -59,9 +59,8 @@ bool XBDMDebugger::Attach() {
 
   context_->UnregisterNotificationHandler(notification_handler_id_);
   notification_handler_id_ = context_->RegisterNotificationHandler(
-      [this](const std::shared_ptr<XBDMNotification> &notification) {
-        this->OnNotification(notification);
-      });
+      [this](const std::shared_ptr<XBDMNotification> &notification,
+             XBDMContext &) { this->OnNotification(notification); });
 
   if (!RequestDebugNotifications(address.Port(), context_)) {
     context_->UnregisterNotificationHandler(notification_handler_id_);
@@ -301,6 +300,10 @@ bool XBDMDebugger::SetActiveThread(int thread_id) {
 
 void XBDMDebugger::OnNotification(
     const std::shared_ptr<XBDMNotification> &notification) {
+  if (notification->Type() == NT_CUSTOM) {
+    return;
+  }
+
   LOG_DEBUGGER(trace) << "Notification received " << *notification;
   switch (notification->Type()) {
     case NT_VX:
@@ -365,6 +368,10 @@ void XBDMDebugger::OnNotification(
 
     case NT_INVALID:
       LOG_DEBUGGER(error) << "XBDMNotif: Received invalid notification type.";
+      break;
+
+    case NT_CUSTOM:
+      // Custom events are not interesting to the debugger.
       break;
   }
 }

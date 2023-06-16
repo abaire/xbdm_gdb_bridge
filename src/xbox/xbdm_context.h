@@ -19,7 +19,8 @@ class XBDMTransport;
 
 class XBDMContext {
  public:
-  typedef std::function<void(const std::shared_ptr<XBDMNotification> &)>
+  typedef std::function<void(const std::shared_ptr<XBDMNotification> &,
+                             XBDMContext &)>
       NotificationHandler;
 
  public:
@@ -50,7 +51,8 @@ class XBDMContext {
       std::shared_ptr<RDCPProcessedRequest> &request);
   bool XBDMConnect(int max_wait_millis = 5000);
 
-  void DispatchNotification(std::shared_ptr<XBDMNotification> notification);
+  void DispatchNotification(
+      const std::shared_ptr<XBDMNotification> &notification);
 
  private:
   std::string name_;
