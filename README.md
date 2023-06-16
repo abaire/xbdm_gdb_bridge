@@ -106,6 +106,8 @@ The CMake target can be configured to set the `NXDK_DIR` env var via the propert
 
   `NXDK_DIR=<absolute_path_to_nxdk>`
 
+On macOS you may also have to modify PATH such that a homebrew version of LLVM
+is preferred over Xcode's (to supply `dlltool`).
 
 # Design
 
