@@ -159,8 +159,8 @@ add_executable(
         src/shell/commands.h
         src/shell/debugger_commands.cpp
         src/shell/debugger_commands.h
-        src/shell/handler_commands.cpp
-        src/shell/handler_commands.h
+        src/shell/dyndxt_commands.cpp
+        src/shell/dyndxt_commands.h
         src/shell/screenshot_converter.cpp
         src/shell/screenshot_converter.h
         src/shell/shell.cpp
