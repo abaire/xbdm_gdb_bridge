@@ -42,11 +42,14 @@ class DXTLibrary {
 
   // Return the address of the DXT entrypoint.
   // WARNING: This is only correct after Relocate().
-  uint32_t GetEntrypoint() const;
+  [[nodiscard]] uint32_t GetEntrypoint() const;
 
   // Return the fixed up addresses of any thread local storage initializers.
   // WARNING: This is only correct after Relocate().
-  std::vector<uint32_t> GetTLSInitializers() const;
+  [[nodiscard]] std::vector<uint32_t> GetTLSInitializers() const;
+
+  // Return the image base from the DLL header.
+  [[nodiscard]] uint32_t GetImageBase() const;
 
  private:
   bool ParseDLLHeader();
