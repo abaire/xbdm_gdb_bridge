@@ -139,8 +139,24 @@ void TCPConnection::DoSend() {
     // Special case XBDM message terminators to condense log.
     boost::algorithm::trim_right(data);
 
-    LOG_TAGGED(trace, name_) << "  Sent " << bytes_sent << " bytes" << std::endl
-                             << data;
+    bool maybeBinary = false;
+    auto bytes_checked = 0;
+    const auto data_end = data.end();
+    for (auto i = data.begin(); i != data_end && bytes_checked < 256;
+         ++i, ++bytes_checked) {
+      if (!std::isprint(*i)) {
+        maybeBinary = true;
+        break;
+      }
+    }
+    if (maybeBinary) {
+      LOG_TAGGED(trace, name_)
+          << "  Sent " << bytes_sent << " bytes (binary)" << std::endl;
+    } else {
+      LOG_TAGGED(trace, name_)
+          << "  Sent " << bytes_sent << " bytes" << std::endl
+          << data;
+    }
   }
 #endif
 
