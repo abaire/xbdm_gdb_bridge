@@ -110,7 +110,7 @@ std::vector<uint8_t> GDBPacket::Serialize() const {
   ret.push_back(kPacketTrailer);
 
   char checksum_buf[3] = {0};
-  sprintf(checksum_buf, "%02x", checksum_);
+  snprintf(checksum_buf, 3, "%02x", checksum_);
   ret.insert(ret.end(), checksum_buf, checksum_buf + 2);
 
   return ret;
