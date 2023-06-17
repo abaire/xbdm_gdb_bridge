@@ -524,7 +524,7 @@ void GDBBridge::HandleReadRegister(const GDBPacket& packet) {
     return;
   }
   char response[32] = {0};
-  snprintf(response, 31, "%lx", value.value());
+  snprintf(response, 31, "%llx", value.value());
   gdb_->Send(GDBPacket(response));
 }
 
