@@ -1,8 +1,10 @@
-#include "handler_requests.h"
+#include "dyndxt_requests.h"
 
 #include <iostream>
 
-void HandlerInvokeMultiline::ProcessResponse(
+namespace DynDXTLoader {
+
+void InvokeMultiline::ProcessResponse(
     const std::shared_ptr<RDCPResponse>& response) {
   if (!IsOK()) {
     return;
@@ -15,9 +17,9 @@ void HandlerInvokeMultiline::ProcessResponse(
   }
 }
 
-HandlerInvokeSendBinary::HandlerInvokeSendBinary(const std::string& command,
-                                                 std::vector<uint8_t> binary,
-                                                 const std::string& args)
+InvokeSendBinary::InvokeSendBinary(const std::string& command,
+                                   std::vector<uint8_t> binary,
+                                   const std::string& args)
     : RDCPProcessedRequest(command), binary_payload(std::move(binary)) {
   SetData("length=");
   AppendHexString(static_cast<uint32_t>(binary.size()));
@@ -28,7 +30,7 @@ HandlerInvokeSendBinary::HandlerInvokeSendBinary(const std::string& command,
   }
 }
 
-HandlerInvokeReceiveSizePrefixedBinary::HandlerInvokeReceiveSizePrefixedBinary(
+InvokeReceiveSizePrefixedBinary::InvokeReceiveSizePrefixedBinary(
     const std::string& command, const std::string& args)
     : RDCPProcessedRequest(command) {
   if (!args.empty()) {
@@ -48,7 +50,7 @@ HandlerInvokeReceiveSizePrefixedBinary::HandlerInvokeReceiveSizePrefixedBinary(
   };
 }
 
-void HandlerInvokeReceiveSizePrefixedBinary::ProcessResponse(
+void InvokeReceiveSizePrefixedBinary::ProcessResponse(
     const std::shared_ptr<RDCPResponse>& response) {
   if (!IsOK()) {
     return;
@@ -58,7 +60,7 @@ void HandlerInvokeReceiveSizePrefixedBinary::ProcessResponse(
   response_data.insert(response_data.begin(), data.begin(), data.end());
 }
 
-HandlerInvokeReceiveKnownSizedBinary::HandlerInvokeReceiveKnownSizedBinary(
+InvokeReceiveKnownSizedBinary::InvokeReceiveKnownSizedBinary(
     const std::string& command, uint32_t size, const std::string& args)
     : RDCPProcessedRequest(command) {
   if (!args.empty()) {
@@ -74,7 +76,7 @@ HandlerInvokeReceiveKnownSizedBinary::HandlerInvokeReceiveKnownSizedBinary(
   };
 }
 
-void HandlerInvokeReceiveKnownSizedBinary::ProcessResponse(
+void InvokeReceiveKnownSizedBinary::ProcessResponse(
     const std::shared_ptr<RDCPResponse>& response) {
   if (!IsOK()) {
     return;
@@ -84,7 +86,7 @@ void HandlerInvokeReceiveKnownSizedBinary::ProcessResponse(
   response_data.insert(response_data.begin(), data.begin(), data.end());
 }
 
-HandlerDDXTLoad::HandlerDDXTLoad(std::vector<uint8_t> dll_image)
+LoadDynDXT::LoadDynDXT(std::vector<uint8_t> dll_image)
     : RDCPProcessedRequest("ddxt!load"), binary_payload(std::move(dll_image)) {
   SetData(" size=");
   assert(binary_payload.size() < 0xFFFFFFFF);
@@ -92,14 +94,12 @@ HandlerDDXTLoad::HandlerDDXTLoad(std::vector<uint8_t> dll_image)
   AppendHexString(size);
 }
 
-HandlerDDXTReserve::HandlerDDXTReserve(uint32_t image_size)
-    : RDCPProcessedRequest("ddxt!reserve") {
+Reserve::Reserve(uint32_t image_size) : RDCPProcessedRequest("ddxt!reserve") {
   SetData(" size=");
   AppendHexString(image_size);
 }
 
-void HandlerDDXTReserve::ProcessResponse(
-    const std::shared_ptr<RDCPResponse>& response) {
+void Reserve::ProcessResponse(const std::shared_ptr<RDCPResponse>& response) {
   if (!IsOK()) {
     return;
   }
@@ -107,9 +107,9 @@ void HandlerDDXTReserve::ProcessResponse(
   allocated_address = parsed.GetDWORD("addr");
 }
 
-HandlerDDXTInstall::HandlerDDXTInstall(
-    uint32_t image_base, std::vector<uint8_t> buffer,
-    const std::vector<uint32_t>& tls_callbacks, uint32_t entrypoint)
+InstallImage::InstallImage(uint32_t image_base, std::vector<uint8_t> buffer,
+                           const std::vector<uint32_t>& tls_callbacks,
+                           uint32_t entrypoint)
     : RDCPProcessedRequest("ddxt!install"), binary_payload(std::move(buffer)) {
   SetData(" base=");
   AppendHexString(image_base);
@@ -122,9 +122,8 @@ HandlerDDXTInstall::HandlerDDXTInstall(
   assert(tls_callbacks.empty() && "TLS Callback support not implemented.");
 }
 
-HandlerDDXTExport::HandlerDDXTExport(const std::string& module_name,
-                                     uint32_t ordinal, uint32_t address,
-                                     const std::string& export_name)
+RegisterExport::RegisterExport(const std::string& module_name, uint32_t ordinal,
+                               uint32_t address, const std::string& export_name)
     : RDCPProcessedRequest("ddxt!export") {
   SetData(" module=\"");
   AppendData(module_name);
@@ -139,3 +138,5 @@ HandlerDDXTExport::HandlerDDXTExport(const std::string& module_name,
     AppendData("\"");
   }
 }
+
+}  // namespace DynDXTLoader

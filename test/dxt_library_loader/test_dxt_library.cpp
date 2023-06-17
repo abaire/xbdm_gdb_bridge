@@ -1,6 +1,6 @@
 #include <boost/test/unit_test.hpp>
 
-#include "handler_loader/dxt_library.h"
+#include "dyndxt_loader/dxt_library.h"
 
 BOOST_AUTO_TEST_SUITE(dxt_library_suite)
 

@@ -88,13 +88,13 @@ endfunction()
 
 pack_resource(
         ${dyndxt_lib_dir}/bootstrap_l1.asm.obj
-        ${GENERATED_FILES_DIR}/bootstrap_l1.h
+        ${GENERATED_FILES_DIR}/bootstrap_l1_xbox.h
         kBootstrapL1
 )
 
 pack_resource(
         ${dyndxt_lib_dir}/libdynamic_dxt_loader.dll
-        ${GENERATED_FILES_DIR}/dyndxt_loader.h
+        ${GENERATED_FILES_DIR}/dynamic_dxt_loader_xbox.h
         kDynDXTLoader
 )
 
@@ -105,24 +105,24 @@ add_executable(
         src/main.cpp
         src/discovery/discoverer.cpp
         src/discovery/discoverer.h
+        src/dyndxt_loader/dll_linker.cpp
+        src/dyndxt_loader/dll_linker.h
+        src/dyndxt_loader/dxt_library.cpp
+        src/dyndxt_loader/dxt_library.h
+        src/dyndxt_loader/dyndxt_requests.cpp
+        src/dyndxt_loader/dyndxt_requests.h
+        src/dyndxt_loader/loader.cpp
+        src/dyndxt_loader/loader.h
+        src/dyndxt_loader/xbdm_exports.cpp
+        src/dyndxt_loader/xbdm_exports.def.h
+        src/dyndxt_loader/xbdm_exports.h
+        src/dyndxt_loader/xboxkrnl_exports.cpp
+        src/dyndxt_loader/xboxkrnl_exports.def.h
+        src/dyndxt_loader/xboxkrnl_exports.h
         src/gdb/gdb_packet.cpp
         src/gdb/gdb_packet.h
         src/gdb/gdb_transport.cpp
         src/gdb/gdb_transport.h
-        src/handler_loader/dll_linker.cpp
-        src/handler_loader/dll_linker.h
-        src/handler_loader/dxt_library.cpp
-        src/handler_loader/dxt_library.h
-        src/handler_loader/handler_loader.cpp
-        src/handler_loader/handler_loader.h
-        src/handler_loader/handler_requests.cpp
-        src/handler_loader/handler_requests.h
-        src/handler_loader/xbdm_exports.cpp
-        src/handler_loader/xbdm_exports.def.h
-        src/handler_loader/xbdm_exports.h
-        src/handler_loader/xboxkrnl_exports.cpp
-        src/handler_loader/xboxkrnl_exports.def.h
-        src/handler_loader/xboxkrnl_exports.h
         src/net/ip_address.cpp
         src/net/ip_address.h
         src/net/delegating_server.cpp
@@ -196,8 +196,8 @@ add_executable(
         src/xbox/debugger/xbdm_debugger.h
         third_party/nxdk/winapi/winnt.h
         third_party/nxdk/xboxkrnl/xboxdef.h
-        ${GENERATED_FILES_DIR}/bootstrap_l1.h
-        ${GENERATED_FILES_DIR}/dyndxt_loader.h
+        ${GENERATED_FILES_DIR}/bootstrap_l1_xbox.h
+        ${GENERATED_FILES_DIR}/dynamic_dxt_loader_xbox.h
 )
 
 target_include_directories(
@@ -286,8 +286,8 @@ add_executable(
         dxt_library_loader_tests
         test/dxt_library_loader/test_dxt_library.cpp
         test/dxt_library_loader/test_main.cpp
-        src/handler_loader/dxt_library.cpp
-        src/handler_loader/dxt_library.h
+        src/dyndxt_loader/dxt_library.cpp
+        src/dyndxt_loader/dxt_library.h
 )
 target_include_directories(
         dxt_library_loader_tests
