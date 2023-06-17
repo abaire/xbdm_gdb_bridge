@@ -7,8 +7,8 @@
 
 class XBOXInterface;
 
-struct HandlerCommandLoadBootstrap : Command {
-  HandlerCommandLoadBootstrap()
+struct DynDXTCommandLoadBootstrap : Command {
+  DynDXTCommandLoadBootstrap()
       : Command(
             "\n"
             "Load the XBDM handler injector.") {}
@@ -16,8 +16,8 @@ struct HandlerCommandLoadBootstrap : Command {
                     const std::vector<std::string> &) override;
 };
 
-struct HandlerCommandHello : Command {
-  HandlerCommandHello()
+struct DynDXTCommandHello : Command {
+  DynDXTCommandHello()
       : Command(
             "\n"
             "Verifies that the XBDM handler injector is available.") {}
@@ -25,8 +25,8 @@ struct HandlerCommandHello : Command {
                     const std::vector<std::string> &) override;
 };
 
-struct HandlerCommandInvokeSimple : Command {
-  HandlerCommandInvokeSimple()
+struct DynDXTCommandInvokeSimple : Command {
+  DynDXTCommandInvokeSimple()
       : Command(
             "<processor>!<command> [args]\n"
             "\n"
@@ -36,8 +36,8 @@ struct HandlerCommandInvokeSimple : Command {
                     const std::vector<std::string> &args) override;
 };
 
-struct HandlerCommandInvokeMultiline : Command {
-  HandlerCommandInvokeMultiline()
+struct DynDXTCommandInvokeMultiline : Command {
+  DynDXTCommandInvokeMultiline()
       : Command(
             "<processor>!<command> [args]\n"
             "\n"
@@ -47,8 +47,8 @@ struct HandlerCommandInvokeMultiline : Command {
                     const std::vector<std::string> &args) override;
 };
 
-struct HandlerCommandInvokeSendBinary : Command {
-  HandlerCommandInvokeSendBinary()
+struct DynDXTCommandInvokeSendBinary : Command {
+  DynDXTCommandInvokeSendBinary()
       : Command(
             "<processor>!<command> <binary_path> [args]\n"
             "\n"
@@ -59,8 +59,8 @@ struct HandlerCommandInvokeSendBinary : Command {
                     const std::vector<std::string> &args) override;
 };
 
-struct HandlerCommandInvokeReceiveSizePrefixedBinary : Command {
-  HandlerCommandInvokeReceiveSizePrefixedBinary()
+struct DynDXTCommandInvokeReceiveSizePrefixedBinary : Command {
+  DynDXTCommandInvokeReceiveSizePrefixedBinary()
       : Command(
             "<processor>!<command> <save_path> [args]\n"
             "\n"
@@ -72,8 +72,8 @@ struct HandlerCommandInvokeReceiveSizePrefixedBinary : Command {
                     const std::vector<std::string> &args) override;
 };
 
-struct HandlerCommandInvokeReceiveKnownSizedBinary : Command {
-  HandlerCommandInvokeReceiveKnownSizedBinary()
+struct DynDXTCommandInvokeReceiveKnownSizedBinary : Command {
+  DynDXTCommandInvokeReceiveKnownSizedBinary()
       : Command(
             "<processor>!<command> <save_path> <size_in_bytes> [args]\n"
             "\n"
@@ -85,8 +85,8 @@ struct HandlerCommandInvokeReceiveKnownSizedBinary : Command {
                     const std::vector<std::string> &args) override;
 };
 
-struct HandlerCommandLoad : Command {
-  HandlerCommandLoad()
+struct DynDXTCommandLoad : Command {
+  DynDXTCommandLoad()
       : Command(
             "<dll_path>\n"
             "\n"

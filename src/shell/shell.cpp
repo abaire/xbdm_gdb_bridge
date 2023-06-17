@@ -7,7 +7,7 @@
 
 #include "commands.h"
 #include "debugger_commands.h"
-#include "handler_commands.h"
+#include "dyndxt_commands.h"
 #include "shell_commands.h"
 #include "util/logging.h"
 
@@ -16,13 +16,13 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
 #define REGISTER(command, handler) \
   commands_[command] = std::make_shared<handler>()
 
-  auto quit = std::make_shared<ShellCommandQuit>();
-  commands_["exit"] = quit;
-  REGISTER("gdb", ShellCommandGDB);
   commands_["help"] = nullptr;
   commands_["?"] = nullptr;
   commands_["!"] = nullptr;
+  REGISTER("gdb", ShellCommandGDB);
   REGISTER("reconnect", ShellCommandReconnect);
+  auto quit = std::make_shared<ShellCommandQuit>();
+  commands_["exit"] = quit;
   commands_["quit"] = quit;
 
   REGISTER("/run", DebuggerCommandRun);
@@ -48,28 +48,24 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   commands_["/stepf"] = step_function;
   commands_["/stepfun"] = step_function;
 
-  REGISTER("@bootstrap", HandlerCommandLoadBootstrap);
-  REGISTER("@hello", HandlerCommandHello);
-  REGISTER("@load", HandlerCommandLoad);
-  auto invoke_simple = std::make_shared<HandlerCommandInvokeSimple>();
+  REGISTER("@bootstrap", DynDXTCommandLoadBootstrap);
+  REGISTER("@hello", DynDXTCommandHello);
+  REGISTER("@load", DynDXTCommandLoad);
+  auto invoke_simple = std::make_shared<DynDXTCommandInvokeSimple>();
   commands_["@"] = invoke_simple;
   commands_["@simple"] = invoke_simple;
-
-  auto invoke_multiline = std::make_shared<HandlerCommandInvokeMultiline>();
+  auto invoke_multiline = std::make_shared<DynDXTCommandInvokeMultiline>();
   commands_["@multiline"] = invoke_multiline;
   commands_["@m"] = invoke_multiline;
-
-  auto invoke_sendbin = std::make_shared<HandlerCommandInvokeSendBinary>();
+  auto invoke_sendbin = std::make_shared<DynDXTCommandInvokeSendBinary>();
   commands_["@sendbin"] = invoke_sendbin;
   commands_["@sb"] = invoke_sendbin;
-
   auto invoke_recvbin =
-      std::make_shared<HandlerCommandInvokeReceiveSizePrefixedBinary>();
+      std::make_shared<DynDXTCommandInvokeReceiveSizePrefixedBinary>();
   commands_["@recvbin"] = invoke_recvbin;
   commands_["@rbin"] = invoke_recvbin;
-
   auto invoke_recvbytes =
-      std::make_shared<HandlerCommandInvokeReceiveKnownSizedBinary>();
+      std::make_shared<DynDXTCommandInvokeReceiveKnownSizedBinary>();
   commands_["@recvbytes"] = invoke_recvbytes;
   commands_["@rby"] = invoke_recvbytes;
   commands_["@rbytes"] = invoke_recvbytes;
