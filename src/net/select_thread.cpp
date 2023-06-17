@@ -17,7 +17,6 @@ void SelectThread::ThreadMain() {
   fd_set except_fds;
 
   static constexpr int kMinSleepMilliseconds = 1;
-  struct timeval timeout = {.tv_sec = 0, .tv_usec = 0};
 
   while (running_) {
     FD_ZERO(&recv_fds);
@@ -41,6 +40,7 @@ void SelectThread::ThreadMain() {
       continue;
     }
 
+    struct timeval timeout = {.tv_sec = 0, .tv_usec = 10};
     int fds = select(max_fd + 1, &recv_fds, &send_fds, &except_fds, &timeout);
     if (!fds) {
       continue;
