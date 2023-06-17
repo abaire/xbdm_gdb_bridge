@@ -30,9 +30,10 @@ struct ShellCommandReconnect : Command {
 struct ShellCommandGDB : Command {
   ShellCommandGDB()
       : Command(
+            "Start GDB <-> XBDM service.",
             "[IP][:Port]\n"
             "\n"
-            "Starts a GDB server, allowing GDB to communicate with the XBDM "
+            "Start a GDB server, allowing GDB to communicate with the XBDM "
             "target.\n"
             "\n"
             "[IP][:port] - The IP and Port at which GDB can connect.\n"

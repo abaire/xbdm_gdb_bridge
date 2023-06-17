@@ -252,10 +252,10 @@ struct Debugger : public RDCPProcessedRequest {
   bool debuggable;
 };
 
-struct DebugMode : public RDCPProcessedRequest {
-  DebugMode() : RDCPProcessedRequest("debugmode") {}
-  // TODO: Implement me.
-};
+// struct DebugMode : public RDCPProcessedRequest {
+//   DebugMode() : RDCPProcessedRequest("debugmode") {}
+//   // TODO: Implement me.
+// };
 
 /*
 struct Dedicate : public RDCPProcessedRequest {

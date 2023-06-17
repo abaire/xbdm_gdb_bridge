@@ -9,23 +9,23 @@ class XBOXInterface;
 
 struct DebuggerCommandRun : Command {
   DebuggerCommandRun()
-      : Command(
-            "<path_to_xbe> [commandline_args]\n"
-            "\n"
-            "Launches the XBE at the given path, passing any remaining "
-            "parameters as "
-            "command line arguments. Does not set any breakpoints.") {}
+      : Command("Run an XBE without debugging.",
+                "<path_to_xbe> [commandline_args]\n"
+                "\n"
+                "Launch the XBE at the given path, passing any remaining "
+                "parameters as "
+                "command line arguments. Does not set any breakpoints.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct DebuggerCommandLaunch : Command {
   DebuggerCommandLaunch()
-      : Command(
-            "<path_to_xbe> [commandline_args]\n"
-            "\n"
-            "Launches the given path, passing any remaining parameters as "
-            "command line arguments.") {}
+      : Command("Launch an XBE with debugging.",
+                "<path_to_xbe> [commandline_args]\n"
+                "\n"
+                "Launch the given path, passing any remaining parameters as "
+                "command line arguments.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
@@ -33,9 +33,10 @@ struct DebuggerCommandLaunch : Command {
 struct DebuggerCommandLaunchWait : Command {
   DebuggerCommandLaunchWait()
       : Command(
+            "Launch XBE with debugging and break at the entrypoint.",
             "<path_to_xbe> [commandline_args]\n"
             "\n"
-            "Launches the given path, passing any remaining parameters as "
+            "Launch the given path, passing any remaining parameters as "
             "command line arguments.\n"
             "A breakpoint will be set on the XBE entrypoint and execution will "
             "wait for a `go` command.") {}
@@ -45,18 +46,14 @@ struct DebuggerCommandLaunchWait : Command {
 
 struct DebuggerCommandAttach : Command {
   DebuggerCommandAttach()
-      : Command(
-            "\n"
-            "Attach the debugger to the currently running process.") {}
+      : Command("Attach the debugger to the currently running process.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override;
 };
 
 struct DebuggerCommandDetach : Command {
   DebuggerCommandDetach()
-      : Command(
-            "\n"
-            "Detach the debugger from the currently running process.") {}
+      : Command("Detach the debugger from the currently running process.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override;
 };
@@ -64,8 +61,7 @@ struct DebuggerCommandDetach : Command {
 struct DebuggerCommandRestart : Command {
   DebuggerCommandRestart()
       : Command(
-            "\n"
-            "Restarts the currently running process and breaks at the "
+            "Restart the currently running process and breaks at the "
             "entrypoint.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override;
@@ -74,9 +70,11 @@ struct DebuggerCommandRestart : Command {
 struct DebuggerCommandSetActiveThread : Command {
   DebuggerCommandSetActiveThread()
       : Command(
+            "Set active debugger thread.",
             "<thread_id>"
             "\n"
-            "Sets the current thread context for the debugger.") {}
+            "Set the current thread context for the debugger to `thread_id`.") {
+  }
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
@@ -95,45 +93,33 @@ struct DebuggerCommandSetActiveThread : Command {
 
 struct DebuggerCommandStepFunction : Command {
   DebuggerCommandStepFunction()
-      : Command(
-            "\n"
-            "Step one C function call in the current thread.") {}
+      : Command("Step one C function call in the current thread.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override;
 };
 
 struct DebuggerCommandGetThreads : Command {
   DebuggerCommandGetThreads()
-      : Command(
-            "\n"
-            "Print basic information about all threads.") {}
+      : Command("Print basic information about all threads.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override;
 };
 
 struct DebuggerCommandGetThreadInfo : Command {
   DebuggerCommandGetThreadInfo()
-      : Command(
-            "\n"
-            "Print detailed information about the active thread.") {}
+      : Command("Print detailed information about the active thread.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override;
 };
 
 struct DebuggerCommandHaltAll : Command {
-  DebuggerCommandHaltAll()
-      : Command(
-            "\n"
-            "Halts all threads.") {}
+  DebuggerCommandHaltAll() : Command("Halt all threads.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override;
 };
 
 struct DebuggerCommandHalt : Command {
-  DebuggerCommandHalt()
-      : Command(
-            "\n"
-            "Halts active thread.") {}
+  DebuggerCommandHalt() : Command("Halt the current debugger thread.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override;
 };
@@ -141,9 +127,10 @@ struct DebuggerCommandHalt : Command {
 struct DebuggerCommandContinueAll : Command {
   DebuggerCommandContinueAll()
       : Command(
+            "Continue halted threads.",
             "['n'o_break_on_exceptions]\n"
             "\n"
-            "Continues all halted threads in the debugger.\n"
+            "Continue all halted threads in the debugger.\n"
             "\n"
             "no_break_on_exceptions - if 'n', do not break on exceptions when "
             "continuing.") {}
@@ -154,9 +141,10 @@ struct DebuggerCommandContinueAll : Command {
 struct DebuggerCommandContinue : Command {
   DebuggerCommandContinue()
       : Command(
+            "Continue the current thread.",
             "['n'o_break_on_exceptions]\n"
             "\n"
-            "Continues the active thread.\n"
+            "Continue the debugger's current thread.\n"
             "\n"
             "no_break_on_exceptions - if 'n', do not break on exceptions when "
             "continuing.") {}
@@ -167,35 +155,29 @@ struct DebuggerCommandContinue : Command {
 struct DebuggerCommandSuspend : Command {
   DebuggerCommandSuspend()
       : Command(
-            "\n"
-            "Suspends (or raises the suspend count on) the active thread.") {}
+            "Suspend (or raises the suspend count on) the current thread.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override;
 };
 
 struct DebuggerCommandResume : Command {
   DebuggerCommandResume()
-      : Command(
-            "\n"
-            "Suspends (or raises the suspend count on) the active thread.") {}
+      : Command("Resume (or reduce the suspend count on) the current thread.") {
+  }
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override;
 };
 
 struct DebuggerCommandGetModules : Command {
   DebuggerCommandGetModules()
-      : Command(
-            "\n"
-            "Print basic information about loaded modules.") {}
+      : Command("Print basic information about loaded modules.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override;
 };
 
 struct DebuggerCommandGetSections : Command {
   DebuggerCommandGetSections()
-      : Command(
-            "\n"
-            "Print basic information about loaded sections.") {}
+      : Command("Print basic information about loaded sections.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override;
 };

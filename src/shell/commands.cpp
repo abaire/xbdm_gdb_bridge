@@ -147,11 +147,11 @@ Command::Result CommandDebugger::operator()(
   return HANDLED;
 }
 
-Command::Result CommandDebugMode::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
-  SendAndPrintMessage(interface, std::make_shared<DebugMode>());
-  return HANDLED;
-}
+// Command::Result CommandDebugMode::operator()(
+//     XBOXInterface &interface, const std::vector<std::string> &args) {
+//   SendAndPrintMessage(interface, std::make_shared<DebugMode>());
+//   return HANDLED;
+// }
 
 static bool FetchDirectoryEntries(XBOXInterface &interface,
                                   const std::string &path,

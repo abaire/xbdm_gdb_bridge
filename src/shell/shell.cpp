@@ -76,7 +76,6 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   REGISTER("continue", CommandContinue);
   REGISTER("debugoptions", CommandDebugOptions);
   REGISTER("debugger", CommandDebugger);
-  REGISTER("debugmode", CommandDebugMode);
   REGISTER("dmversion", CommandDebugMonitorVersion);
   REGISTER("rm", CommandDelete);
   REGISTER("ls", CommandDirList);
@@ -212,12 +211,25 @@ Command::Result Shell::ProcessCommand(
   return Command::UNHANDLED;
 }
 
+static char kRerunCommandHelp[] = "Re-runs the last shell command.";
+
 void Shell::PrintHelp(std::vector<std::string> &args) const {
   if (args.empty()) {
     std::cout << "Commands:" << std::endl;
 
     for (auto &it : commands_) {
-      std::cout << it.first << std::endl;
+      std::cout << it.first << " - ";
+      if (it.second) {
+        std::cout << it.second->short_help;
+      } else {
+        if (it.first == "!") {
+          std::cout << kRerunCommandHelp;
+        } else {
+          std::cout
+              << "Print this help list (pass an argument for detailed help).";
+        }
+      }
+      std::cout << std::endl;
     }
     return;
   }
@@ -234,7 +246,7 @@ void Shell::PrintHelp(std::vector<std::string> &args) const {
   }
 
   if (target == "!") {
-    std::cout << "Re-runs the last shell command." << std::endl;
+    std::cout << kRerunCommandHelp << std::endl;
     return;
   }
 

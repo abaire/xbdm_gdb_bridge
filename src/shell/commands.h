@@ -7,7 +7,7 @@
 #include "shell/command.h"
 
 struct CommandAltAddr : Command {
-  CommandAltAddr() : Command("Prints 'Game Configuration' IP information.") {}
+  CommandAltAddr() : Command("Print 'Game Configuration' IP information.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override {
     auto request = std::make_shared<AltAddr>();
@@ -23,34 +23,34 @@ struct CommandAltAddr : Command {
 
 struct CommandBreak : Command {
   CommandBreak()
-      : Command(
-            "<subcommand> [subcommand_args]\n"
-            "\n"
-            "Adds or removes a breakpoint.\n"
-            "\n"
-            "subcommands:\n"
-            "  clearall - Clears all breakpoints\n"
-            "  start - Sets a breakpoint at program entry. Only valid if "
-            "the remote is in state \"execution pending\".\n"
-            "  [-]addr <Address> - Breaks on execution at the given "
-            "Address.\n"
-            "  [-]read <Address> <length> - Breaks on read access to the "
-            "given memory range.\n"
-            "  [-]write <Address> <length> - Breaks on write access to the "
-            "given memory range.\n"
-            "  [-]execute <Address> <length> - Breaks on execution within "
-            "the given memory range.\n"
-            "\n"
-            "Subcommands with [-] can be prefixed with '-' to disable a "
-            "previously set breakpoint.\n"
-            "    E.g., addr 0x12345   # sets a breakpoint at 0x12345\n"
-            "          -addr 0x12345  # clears the breakpoint") {}
+      : Command("Manage breakpoints.",
+                "<subcommand> [subcommand_args]\n"
+                "\n"
+                "Add or removes a breakpoint.\n"
+                "\n"
+                "subcommands:\n"
+                "  clearall - Clears all breakpoints\n"
+                "  start - Sets a breakpoint at program entry. Only valid if "
+                "the target is in state \"execution pending\".\n"
+                "  [-]addr <Address> - Breaks on execution at the given "
+                "Address.\n"
+                "  [-]read <Address> <length> - Breaks on read access to the "
+                "given memory range.\n"
+                "  [-]write <Address> <length> - Breaks on write access to the "
+                "given memory range.\n"
+                "  [-]execute <Address> <length> - Breaks on execution within "
+                "the given memory range.\n"
+                "\n"
+                "Subcommands with [-] can be prefixed with '-' to disable a "
+                "previously set breakpoint.\n"
+                "    E.g., addr 0x12345   # sets a breakpoint at 0x12345\n"
+                "          -addr 0x12345  # clears the breakpoint") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandBye : Command {
-  CommandBye() : Command("Closes the connection gracefully.") {}
+  CommandBye() : Command("Close the debugger connection gracefully.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &) override;
 };
@@ -58,9 +58,10 @@ struct CommandBye : Command {
 struct CommandContinue : Command {
   CommandContinue()
       : Command(
+            "Continue execution of a thread.",
             "<thread_id> [break_on_exception=false]\n"
             "\n"
-            "Continues execution of the given thread.") {}
+            "Continue execution of the thread with the given `thread_id`.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
@@ -68,6 +69,7 @@ struct CommandContinue : Command {
 struct CommandDebugOptions : Command {
   CommandDebugOptions()
       : Command(
+            "List or modify debug options.",
             "[crashdump | dpctrace] [...]\n"
             "\n"
             "If no arguments are given, retrieves the currently active debug "
@@ -81,6 +83,7 @@ struct CommandDebugOptions : Command {
 struct CommandDebugger : Command {
   CommandDebugger()
       : Command(
+            "Enable or disable debugging.",
             "[disable]\n"
             "\n"
             "If no args are given, notifies XBDM that this channel intends to "
@@ -91,43 +94,36 @@ struct CommandDebugger : Command {
                     const std::vector<std::string> &args) override;
 };
 
-struct CommandDebugMode : Command {
-  CommandDebugMode()
-      : Command(
-            "[disable]\n"
-            "\n"
-            "If no args are given, notifies XBDM that this channel intends to "
-            "act as a debugger.\n"
-            "If 'disable' is given, disables the previously set debugger "
-            "flag.") {}
-  Result operator()(XBOXInterface &interface,
-                    const std::vector<std::string> &args) override;
-};
+// struct CommandDebugMode : Command {
+//   CommandDebugMode()
+//       : Command(TODO) {}
+//   Result operator()(XBOXInterface &interface,
+//                     const std::vector<std::string> &args) override;
+// };
 
 struct CommandDelete : Command {
   CommandDelete()
-      : Command(
-            "<path> [-r]\n"
-            "\n"
-            "Deletes the given path.\n"
-            "If -r is given, deletes a the given directory recursively.") {}
+      : Command("Delete a file or directory.",
+                "<path> [-r]\n"
+                "\n"
+                "Delete the given `path`.\n"
+                "If -r is given, deletes a the given directory recursively.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandDirList : Command {
   CommandDirList()
-      : Command(
-            "<path>\n"
-            "\n"
-            "Returns a list of items in `path`.") {}
+      : Command("List details of a file or directory.",
+                "<path>\n"
+                "\n"
+                "Retrieve a list of items in `path`.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandDebugMonitorVersion : Command {
-  CommandDebugMonitorVersion()
-      : Command("Returns the debug monitor version.") {}
+  CommandDebugMonitorVersion() : Command("Print the debug monitor version.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
@@ -135,52 +131,54 @@ struct CommandDebugMonitorVersion : Command {
 struct CommandDriveFreeSpace : Command {
   CommandDriveFreeSpace()
       : Command(
+            "Print free space on a drive.",
             "[drive_letter]\n"
             "\n"
-            "Returns the amount of free space on a drive.") {}
+            "Print the amount of free space on `drive_letter` (e.g., 'E').") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandDriveList : Command {
-  CommandDriveList() : Command("Lists mounted drives.") {}
+  CommandDriveList() : Command("List mounted drives.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandGetChecksum : Command {
   CommandGetChecksum()
-      : Command(
-            "<Address> <length> <blocksize>\n"
-            "\n"
-            "Calculates a checksum for the given memory region.") {}
+      : Command("Print a checksum for a memory region.",
+                "<Address> <length> <blocksize>\n"
+                "\n"
+                "Calculate a checksum for the memory region starting at "
+                "'address'.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandGetContext : Command {
   CommandGetContext()
-      : Command(
-            "<thread_id> [<mode> [...]]\n"
-            "\n"
-            "Retrieves information about the registers for `thread_id`\n"
-            "\n"
-            "thread_id - The thread to retrieve information about\n"
-            "mode - [control | int | fp | full]\n"
-            " Optional list of one or more registry sets to query. If no "
-            "`mode` is passed,\n"
-            " all types are queried.") {}
+      : Command("Retrieve register information for a thread.",
+                "<thread_id> [<mode> [...]]\n"
+                "\n"
+                "Retrieve information about the registers for `thread_id`\n"
+                "\n"
+                "thread_id - The thread to retrieve information about\n"
+                "mode - [control | int | fp | full]\n"
+                " Optional list of one or more registry sets to query. If no "
+                "`mode` is passed,\n"
+                " all types are queried.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandGetExtContext : Command {
   CommandGetExtContext()
-      : Command(
-            "<thread_id>\n"
-            "\n"
-            "Retrieves information about the floating point registers for "
-            "`thread_id`") {}
+      : Command("Retrieve floating point register information for a thread.",
+                "<thread_id>\n"
+                "\n"
+                "Retrieve information about the floating point registers for "
+                "`thread_id`") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
@@ -188,9 +186,10 @@ struct CommandGetExtContext : Command {
 struct CommandGetFile : Command {
   CommandGetFile()
       : Command(
+            "Copy a file from the device.",
             "<path> [local_path]\n"
             "\n"
-            "Retrieves the file at `path`.\n"
+            "Retrieve the file at `path`.\n"
             "If `path` is a directory, retrieves the contents recursively.\n"
             "If `local_path` is given, writes the file into `local_path`. If "
             "`local_path` is a directory, the file will retain\n"
@@ -202,156 +201,159 @@ struct CommandGetFile : Command {
 
 struct CommandGetFileAttributes : Command {
   CommandGetFileAttributes()
-      : Command(
-            "<path>\n"
-            "\n"
-            "Retrieves information about the file at `path`.") {}
+      : Command("Print detailed file attributes for a remote path.",
+                "<path>\n"
+                "\n"
+                "Retrieve information about the file at `path`.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandGetMem : Command {
   CommandGetMem()
-      : Command(
-            "<Address> <size>\n"
-            "\n"
-            "Fetches the context of the given block of memory.") {}
+      : Command("Fetch raw memory content.",
+                "<Address> <size>\n"
+                "\n"
+                "Fetch the content of the given block of memory.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandGetProcessID : Command {
   CommandGetProcessID()
-      : Command(
-            "Retrieves the ID of the currently running process (must be "
-            "debuggable).") {}
+      : Command("Print the currently running process ID.",
+                "Print the ID of the currently running process (which must be "
+                "debuggable).") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandGetUtilityDriveInfo : Command {
   CommandGetUtilityDriveInfo()
-      : Command("Gets information about the mounted utility partitions.") {}
+      : Command("Print information about the mounted utility partitions.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandGo : Command {
-  CommandGo() : Command("Resumes execution of all threads.") {}
+  CommandGo() : Command("Resume execution of all threads.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandHalt : Command {
   CommandHalt()
-      : Command(
-            "[thread_id]\n"
-            "\n"
-            "Halts the given thread, or all threads if no `thread_id` is "
-            "given.") {}
+      : Command("Halt one or more threads.",
+                "[thread_id]\n"
+                "\n"
+                "Halt the given thread, or all threads if no `thread_id` is "
+                "given.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandIsBreak : Command {
   CommandIsBreak()
-      : Command(
-            "<Address>\n"
-            "\n"
-            "Checks to see if a breakpoint is set at `Address`.") {}
+      : Command("Check for the existence of a breakpoint.",
+                "<Address>\n"
+                "\n"
+                "Check to see if a breakpoint is set at `Address`.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandIsDebugger : Command {
-  CommandIsDebugger() : Command("Checks to see if the debugger is attached.") {}
+  CommandIsDebugger() : Command("Check to see if the debugger is attached.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandIsStopped : Command {
   CommandIsStopped()
-      : Command(
-            "<thread_id>\n"
-            "\n"
-            "Checks to see if the given thread is stopped.") {}
+      : Command("Check to see if a thread is stopped.",
+                "<thread_id>\n"
+                "\n"
+                "Check to see if the thread `thread_id` is stopped.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandMagicBoot : Command {
   CommandMagicBoot()
-      : Command(
-            "<path> [noxbdm] [cold]\n"
-            "\n"
-            "Boots the given XBE.\n"
-            "noxbdm - Disables XBDM (no further commands will be accepted "
-            "until the target is rebooted)\n"
-            "cold - Performs a cold-reboot.") {}
+      : Command("Reboot into an XBE.",
+                "<path> [noxbdm] [cold]\n"
+                "\n"
+                "Boots the XBE at 'path'.\n"
+                "\n"
+                "noxbdm - Disables XBDM (no further commands will be accepted "
+                "until the target is rebooted).\n"
+                "cold - Performs a cold-reboot.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandMemoryMap : Command {
-  CommandMemoryMap() : Command("Returns global memory information.") {}
+  CommandMemoryMap() : Command("Return global memory information.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandMakeDirectory : Command {
   CommandMakeDirectory()
-      : Command(
-            "<path>\n"
-            "\n"
-            "Creates a new directory at the given path.") {}
+      : Command("Create a new directory on the target.",
+                "<path>\n"
+                "\n"
+                "Create a new directory at the given path.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandModuleSections : Command {
   CommandModuleSections()
-      : Command(
-            "<path>\n"
-            "\n"
-            "Returns information about the sections in the given executable "
-            "Module.") {}
+      : Command("Print information about a module on the target.",
+                "<path>\n"
+                "\n"
+                "Return information about the sections in the given executable "
+                "Module.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandModules : Command {
   CommandModules()
-      : Command("Returns the currently running executable modules.") {}
+      : Command("Print the currently running executable modules.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandNoStopOn : Command {
   CommandNoStopOn()
-      : Command(
-            "<flag> [<flag> [...]]\n"
-            "\n"
-            "Disables automatic stop on events.\n"
-            "flag:\n"
-            "  all          - All events\n"
-            "  fce          - First chance exceptions\n"
-            "  debugstr     - debugstr() invocations\n"
-            "  createthread - Thread creation\n"
-            "  stacktrace   - Stack traces") {}
+      : Command("Disable automatic breakpoints on certain events.",
+                "<flag> [<flag> [...]]\n"
+                "\n"
+                "Disable automatic stop on the given 'flag' events.\n"
+                "\n"
+                "flag:\n"
+                "  all          - All events\n"
+                "  fce          - First chance exceptions\n"
+                "  debugstr     - debugstr() invocations\n"
+                "  createthread - Thread creation\n"
+                "  stacktrace   - Stack traces") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandNotifyAt : Command {
   CommandNotifyAt()
-      : Command(
-            "<Port> [drop] [debug]\n"
-            "\n"
-            "Instructs the target to open a notification connection on the "
-            "given Port.\n"
-            "drop - Instructs the target to close an existing connection "
-            "instead of connecting.\n"
-            "debug - Sets the notification channel to debug mode.") {}
+      : Command("Manage a debugger notification channel.",
+                "<Port> [drop] [debug]\n"
+                "\n"
+                "Instruct the target to open a notification connection on the "
+                "given Port.\n"
+                "\n"
+                "drop - Instructs the target to close an existing connection "
+                "instead of connecting.\n"
+                "debug - Sets the notification channel to debug mode.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
@@ -359,9 +361,11 @@ struct CommandNotifyAt : Command {
 struct CommandPutFile : Command {
   CommandPutFile()
       : Command(
+            "Upload a file to the target.",
             "<local_path> <remote_path> [-f]\n"
             "\n"
-            "Uploads the file at `local_path` to `remote_path`.\n"
+            "Upload the file at `local_path` to `remote_path`.\n"
+            "\n"
             "If `local_path` is a directory, sends the contents recursively.\n"
             "If the `-f` flag is given, overwrites remote files.") {}
   Result operator()(XBOXInterface &interface,
@@ -370,86 +374,87 @@ struct CommandPutFile : Command {
 
 struct CommandRename : Command {
   CommandRename()
-      : Command(
-            "<path> <new_path>\n"
-            "\n"
-            "Moves the file at `path` to `new_path`.") {}
+      : Command("Rename/move a path on the target.",
+                "<path> <new_path>\n"
+                "\n"
+                "Move the file at `path` to `new_path`.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandReboot : Command {
   CommandReboot()
-      : Command(
-            "[<flag> [...]]\n"
-            "\n"
-            "Reboots the target machine.\n"
-            "\n"
-            "flags:\n"
-            "  wait - Wait for the debugger to attach on restart.\n"
-            "  stop - Stop at entry into the launch XBE.\n"
-            "  nodebug - Do not start XBDM when rebooting.\n"
-            "  warm - Do a warm reboot.") {}
+      : Command("Reboot the target.",
+                "[<flag> [...]]\n"
+                "\n"
+                "Reboot the target machine.\n"
+                "\n"
+                "flags:\n"
+                "  wait - Wait for the debugger to attach on restart.\n"
+                "  stop - Stop at entry into the launch XBE.\n"
+                "  nodebug - Do not start XBDM when rebooting.\n"
+                "  warm - Do a warm reboot.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandResume : Command {
   CommandResume()
-      : Command(
-            "<thread_id>\n"
-            "\n"
-            "Resumes the given thread.") {}
+      : Command("Resume a thread.",
+                "<thread_id>\n"
+                "\n"
+                "Resume thread 'thread_id'.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandScreenshot : Command {
-  CommandScreenshot() : Command("Captures a screenshot") {}
+  CommandScreenshot() : Command("Capture a screenshot") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandSetMem : Command {
   CommandSetMem()
-      : Command(
-            "<Address> <hex_string>\n"
-            "\n"
-            "Sets the content of memory starting at `Address` to the given "
-            "`hex_string`.") {}
+      : Command("Set the content of memory on the target.",
+                "<address> <hex_string>\n"
+                "\n"
+                "Set the content of memory starting at `address` to the given "
+                "`hex_string`.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandStop : Command {
-  CommandStop() : Command("Breaks the target into the debugger.") {}
+  CommandStop() : Command("Break into the debugger.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandStopOn : Command {
   CommandStopOn()
-      : Command(
-            "<flag> [<flag> [...]]\n"
-            "\n"
-            "Enables automatic stop on events.\n"
-            "flag:\n"
-            "  all          - All events\n"
-            "  fce          - First chance exceptions\n"
-            "  debugstr     - debugstr() invocations\n"
-            "  createthread - Thread creation\n"
-            "  stacktrace   - Stack traces") {}
+      : Command("Enable a debugger breakpoints on events.",
+                "<flag> [<flag> [...]]\n"
+                "\n"
+                "Enables automatic stop on event 'flag'.\n"
+                "\n"
+                "flag:\n"
+                "  all          - All events\n"
+                "  fce          - First chance exceptions\n"
+                "  debugstr     - debugstr() invocations\n"
+                "  createthread - Thread creation\n"
+                "  stacktrace   - Stack traces") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandSuspend : Command {
   CommandSuspend()
-      : Command(
-            "<thread_id>\n"
-            "\n"
-            "Suspends (or increments the suspend count of) the given thread.") {
-  }
+      : Command("Suspend a thread",
+                "<thread_id>\n"
+                "\n"
+                "Suspend (or increments the suspend count of) the given thread "
+                "'thread_id'.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
@@ -457,39 +462,41 @@ struct CommandSuspend : Command {
 struct CommandThreadInfo : Command {
   CommandThreadInfo()
       : Command(
+            "Print detailed information about a thread.",
             "<thread_id>\n"
             "\n"
-            "Retrieves info about the specified thread.") {}
+            "Retrieve detailed info about the specified thread 'thread_id'.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandThreads : Command {
-  CommandThreads() : Command("Lists running threads.") {}
+  CommandThreads() : Command("List running threads.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandWalkMem : Command {
-  CommandWalkMem() : Command("Prints info on mapped memory.") {}
+  CommandWalkMem() : Command("Print info on mapped memory.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandXBEInfo : Command {
   CommandXBEInfo()
-      : Command(
-            "[path [disk_only]]\n"
-            "\n"
-            "Prints info on XBEs.\n"
-            "If no path is given, gets info on the currently running XBE.\n"
-            "If a path is given, gets info on that XBE.") {}
+      : Command("Print detailed information about an XBE.",
+                "[path [disk_only]]\n"
+                "\n"
+                "Print info on an XBE.\n"
+                "\n"
+                "If no path is given, gets info on the currently running XBE.\n"
+                "If a path is given, gets info on the XBE at 'path'.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
 
 struct CommandXTLInfo : Command {
-  CommandXTLInfo() : Command("Prints last error info") {}
+  CommandXTLInfo() : Command("Print last error info") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };
