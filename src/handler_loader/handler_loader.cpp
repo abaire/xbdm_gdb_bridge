@@ -47,7 +47,7 @@ bool HandlerLoader::Bootstrap(XBOXInterface& interface) {
   }
 
   // See if the Dynamic DXT loader is already running.
-  auto request = std::make_shared<HandlerInvokeSimple>("ddxt!hello");
+  auto request = std::make_shared<HandlerInvokeMultiline>("ddxt!hello");
   interface.SendCommandSync(request);
   if (request->IsOK()) {
     return true;
