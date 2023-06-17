@@ -18,15 +18,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone tree
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: recursive
           path: xbdm_gdb_bridge
       - name: Clone nxdk
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: XboxDev/nxdk
-          ref: f0534c1432327ac3e16a137f780cf21ed8d46ff7
+          ref: 500354ef264f35a46a31643876b06ed614b0aed8
           submodules: recursive
           path: nxdk
       - name: Install dependencies
@@ -72,15 +72,15 @@ jobs:
     runs-on: macOS-latest
     steps:
       - name: Clone tree
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: recursive
           path: xbdm_gdb_bridge
       - name: Clone nxdk
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: XboxDev/nxdk
-          ref: f0534c1432327ac3e16a137f780cf21ed8d46ff7
+          ref: 500354ef264f35a46a31643876b06ed614b0aed8
           submodules: recursive
           path: nxdk
       - name: Install dependencies
@@ -91,7 +91,7 @@ jobs:
             cmake \
             coreutils \
             boost \
-            llvm@11 \
+            llvm \
             sdl2 \
             sdl2_image \
             nasm
@@ -108,7 +108,7 @@ jobs:
       - name: Compile
         run: |
           cd xbdm_gdb_bridge
-          export PATH="/usr/local/opt/llvm@11/bin:$PATH"
+          export PATH="$(brew --prefix llvm)/bin:$PATH"
           export NXDK_DIR="${GITHUB_WORKSPACE}/nxdk"
           cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build -- -j
