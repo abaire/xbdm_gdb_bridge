@@ -14,13 +14,21 @@ struct Command {
     EXIT_REQUESTED,
   };
 
-  explicit Command(std::string help) : help(std::move(help)) {}
+  explicit Command(std::string short_help, std::string long_help = "")
+      : short_help(std::move(short_help)) {
+    if (!long_help.empty()) {
+      help = std::move(long_help);
+    } else {
+      help = "\n" + this->short_help;
+    }
+  }
 
   virtual Result operator()(XBOXInterface &interface,
                             const std::vector<std::string> &args) = 0;
 
   void PrintUsage() const { std::cout << help << std::endl; }
 
+  std::string short_help;
   std::string help;
 };
 
