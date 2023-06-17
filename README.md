@@ -100,6 +100,9 @@ enable them.
 * The `NXDK_DIR` environment variable must be set to the root of the [nxdk](https://github.com/XboxDev/nxdk)
 * `cmake -S . -B build && cmake --build build --verbose`
 
+Tests can be executed afterwards using
+* `ctest --test-dir build --output-on-failure`
+
 #### Configuration variables
 * `ENABLE_HIGH_VERBOSITY_LOGGING` - Enables low level logging of socket traffic. May have a negative impact on
    performance. E.g., `-DENABLE_HIGH_VERBOSITY_LOGGING=ON`

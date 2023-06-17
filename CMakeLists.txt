@@ -68,6 +68,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-ggdb -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 configure_file("src/configure.h.cmake" "${GENERATED_FILES_DIR}/configure.h")
+configure_file("test/configure_test.h.cmake" "${GENERATED_FILES_DIR}/configure_test.h")
 
 # Resource packer ------------------------------------
 add_executable(resource_packer EXCLUDE_FROM_ALL util/resource_packer/resource_packer.cpp)

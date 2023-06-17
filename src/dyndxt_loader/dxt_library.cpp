@@ -135,6 +135,10 @@ uint32_t DXTLibrary::GetEntrypoint() const {
          header_.OptionalHeader.AddressOfEntryPoint;
 }
 
+uint32_t DXTLibrary::GetImageBase() const {
+  return header_.OptionalHeader.ImageBase;
+}
+
 std::vector<uint32_t> DXTLibrary::GetTLSInitializers() const {
   std::vector<uint32_t> ret;
   auto &directory =
