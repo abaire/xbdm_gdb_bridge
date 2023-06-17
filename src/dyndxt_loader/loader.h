@@ -11,8 +11,10 @@ class XBDMContext;
 class XBDMDebugger;
 class XBOXInterface;
 
+namespace DynDXTLoader {
+
 //! Performs bootstrap loading of XBDM handler plugins.
-class HandlerLoader {
+class Loader {
  public:
   // Note: The target should be fully halted before calling this method.
   static bool Bootstrap(XBOXInterface& interface);
@@ -51,7 +53,7 @@ class HandlerLoader {
                                    uint32_t ordinal) const;
 
  private:
-  static HandlerLoader* singleton_;
+  static Loader* singleton_;
 
   // Maps module name to base address.
   std::map<std::string, uint32_t> module_base_addresses_;
@@ -62,5 +64,7 @@ class HandlerLoader {
   // Maps module name to a map of ordinal number to function address.
   std::map<std::string, std::map<uint32_t, uint32_t>> module_exports_;
 };
+
+}  // namespace DynDXTLoader
 
 #endif  // XBDM_GDB_BRIDGE_HANDLERLOADER_H

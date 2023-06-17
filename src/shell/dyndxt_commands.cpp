@@ -2,9 +2,9 @@
 
 #include <fstream>
 
-#include "handler_loader/dxt_library.h"
-#include "handler_loader/handler_loader.h"
-#include "handler_loader/handler_requests.h"
+#include "dyndxt_loader/dxt_library.h"
+#include "dyndxt_loader/dyndxt_requests.h"
+#include "dyndxt_loader/loader.h"
 #include "xbox/debugger/xbdm_debugger.h"
 
 Command::Result DynDXTCommandLoadBootstrap::operator()(
@@ -19,7 +19,7 @@ Command::Result DynDXTCommandLoadBootstrap::operator()(
     std::cout << "Failed to halt target." << std::endl;
   }
 
-  bool successful = HandlerLoader::Bootstrap(interface);
+  bool successful = DynDXTLoader::Loader::Bootstrap(interface);
   if (!successful) {
     std::cout << "Failed to inject handler loader. XBDM handlers will not work."
               << std::endl;
@@ -39,12 +39,12 @@ cleanup:
 
 Command::Result DynDXTCommandHello::operator()(
     XBOXInterface &interface, const std::vector<std::string> &) {
-  if (!HandlerLoader::Bootstrap(interface)) {
+  if (!DynDXTLoader::Loader::Bootstrap(interface)) {
     std::cout << "Failed to install Dynamic DXT loader.";
     return HANDLED;
   }
 
-  auto request = std::make_shared<HandlerInvokeMultiline>("ddxt!hello");
+  auto request = std::make_shared<DynDXTLoader::InvokeMultiline>("ddxt!hello");
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
     std::cout << *request << std::endl;
@@ -67,7 +67,7 @@ Command::Result DynDXTCommandInvokeSimple::operator()(
   parser.Parse(1, command_line_args);
 
   auto request =
-      std::make_shared<HandlerInvokeSimple>(command, command_line_args);
+      std::make_shared<DynDXTLoader::InvokeSimple>(command, command_line_args);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
     std::cout << *request << std::endl;
@@ -90,8 +90,8 @@ Command::Result DynDXTCommandInvokeMultiline::operator()(
   std::string command_line_args;
   parser.Parse(1, command_line_args);
 
-  auto request =
-      std::make_shared<HandlerInvokeMultiline>(command, command_line_args);
+  auto request = std::make_shared<DynDXTLoader::InvokeMultiline>(
+      command, command_line_args);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
     std::cout << *request << std::endl;
@@ -137,8 +137,8 @@ Command::Result DynDXTCommandInvokeSendBinary::operator()(
     }
   }
 
-  auto request = std::make_shared<HandlerInvokeSendBinary>(command, data,
-                                                           command_line_args);
+  auto request = std::make_shared<DynDXTLoader::InvokeSendBinary>(
+      command, data, command_line_args);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
     std::cout << *request << std::endl;
@@ -166,8 +166,9 @@ Command::Result DynDXTCommandInvokeReceiveSizePrefixedBinary::operator()(
   std::string command_line_args;
   parser.Parse(2, command_line_args);
 
-  auto request = std::make_shared<HandlerInvokeReceiveSizePrefixedBinary>(
-      command, command_line_args);
+  auto request =
+      std::make_shared<DynDXTLoader::InvokeReceiveSizePrefixedBinary>(
+          command, command_line_args);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
     std::cout << *request << std::endl;
@@ -202,7 +203,7 @@ Command::Result DynDXTCommandInvokeReceiveKnownSizedBinary::operator()(
   std::string command_line_args;
   parser.Parse(3, command_line_args);
 
-  auto request = std::make_shared<HandlerInvokeReceiveKnownSizedBinary>(
+  auto request = std::make_shared<DynDXTLoader::InvokeReceiveKnownSizedBinary>(
       command, size, command_line_args);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
@@ -226,7 +227,7 @@ Command::Result DynDXTCommandLoad::operator()(
     return HANDLED;
   }
 
-  if (!HandlerLoader::Load(interface, path)) {
+  if (!DynDXTLoader::Loader::Load(interface, path)) {
     std::cout << "Load failed." << std::endl;
     return HANDLED;
   }

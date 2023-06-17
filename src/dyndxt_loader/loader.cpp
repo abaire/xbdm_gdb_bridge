@@ -1,14 +1,12 @@
-#include "handler_loader.h"
+#include "loader.h"
 
 #include <algorithm>
 #include <boost/interprocess/streams/bufferstream.hpp>
 #include <iostream>
 
-#include "bootstrap_l1.h"
 #include "dll_linker.h"
 #include "dxt_library.h"
-#include "dyndxt_loader.h"
-#include "handler_requests.h"
+#include "dyndxt_requests.h"
 #include "util/logging.h"
 #include "winapi/winnt.h"
 #include "xbdm_exports.h"
@@ -16,6 +14,13 @@
 #include "xbox/xbdm_context.h"
 #include "xbox/xbox_interface.h"
 #include "xboxkrnl_exports.h"
+
+// The pre-generated binaries to be installed on the XBOX to facilitate
+// DynamicDXT loading.
+#include "bootstrap_l1_xbox.h"
+#include "dynamic_dxt_loader_xbox.h"
+
+namespace DynDXTLoader {
 
 static constexpr uint32_t kDmAllocatePoolWithTagOrdinal = 2;
 static constexpr uint32_t kDmFreePoolOrdinal = 9;
@@ -39,15 +44,15 @@ static bool FetchExport(const std::shared_ptr<XBDMDebugger>& debugger,
                         std::map<uint32_t, uint32_t>& ordinal_to_address,
                         uint32_t image_base, uint32_t& resolved_address);
 
-HandlerLoader* HandlerLoader::singleton_ = nullptr;
+Loader* Loader::singleton_ = nullptr;
 
-bool HandlerLoader::Bootstrap(XBOXInterface& interface) {
+bool Loader::Bootstrap(XBOXInterface& interface) {
   if (!singleton_) {
-    singleton_ = new HandlerLoader();
+    singleton_ = new Loader();
   }
 
   // See if the Dynamic DXT loader is already running.
-  auto request = std::make_shared<HandlerInvokeMultiline>("ddxt!hello");
+  auto request = std::make_shared<DynDXTLoader::InvokeMultiline>("ddxt!hello");
   interface.SendCommandSync(request);
   if (request->IsOK()) {
     return true;
@@ -61,7 +66,7 @@ bool HandlerLoader::Bootstrap(XBOXInterface& interface) {
   return ret;
 }
 
-bool HandlerLoader::Load(XBOXInterface& interface, const std::string& path) {
+bool Loader::Load(XBOXInterface& interface, const std::string& path) {
   if (!singleton_ && !Bootstrap(interface)) {
     LOG(error) << "Failed to bootstrap handler loader.";
     return false;
@@ -69,7 +74,7 @@ bool HandlerLoader::Load(XBOXInterface& interface, const std::string& path) {
   return singleton_->LoadDLL(interface, path);
 }
 
-bool HandlerLoader::InjectLoader(XBOXInterface& interface) {
+bool Loader::InjectLoader(XBOXInterface& interface) {
   auto debugger = interface.Debugger();
   if (!debugger) {
     LOG(error) << "Debugger not attached.";
@@ -147,7 +152,7 @@ cleanup:
   return ret;
 }
 
-bool HandlerLoader::LoadDLL(XBOXInterface& interface, const std::string& path) {
+bool Loader::LoadDLL(XBOXInterface& interface, const std::string& path) {
   auto debugger = interface.Debugger();
   if (!debugger) {
     LOG(error) << "Debugger not attached.";
@@ -172,7 +177,7 @@ bool HandlerLoader::LoadDLL(XBOXInterface& interface, const std::string& path) {
     }
   }
 
-  auto request = std::make_shared<HandlerDDXTLoad>(data);
+  auto request = std::make_shared<DynDXTLoader::LoadDynDXT>(data);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
     LOG(error) << *request;
@@ -184,7 +189,7 @@ bool HandlerLoader::LoadDLL(XBOXInterface& interface, const std::string& path) {
   return true;
 }
 
-uint32_t HandlerLoader::InstallDynamicDXTLoader(
+uint32_t Loader::InstallDynamicDXTLoader(
     const std::shared_ptr<XBDMDebugger>& debugger,
     const std::shared_ptr<XBDMContext>& context) {
   auto stream = std::make_shared<boost::interprocess::bufferstream>(
@@ -233,9 +238,9 @@ uint32_t HandlerLoader::InstallDynamicDXTLoader(
   return lib.GetEntrypoint();
 }
 
-uint32_t HandlerLoader::AllocatePool(
-    const std::shared_ptr<XBDMDebugger>& debugger,
-    const std::shared_ptr<XBDMContext>& context, uint32_t size) const {
+uint32_t Loader::AllocatePool(const std::shared_ptr<XBDMDebugger>& debugger,
+                              const std::shared_ptr<XBDMContext>& context,
+                              uint32_t size) const {
   // The requested size and target address is stored in the last 4 bytes of the
   // L1 bootloader.
   const uint32_t io_address =
@@ -267,7 +272,7 @@ uint32_t HandlerLoader::AllocatePool(
   return address;
 }
 
-bool HandlerLoader::SetL1LoaderExecuteMode(
+bool Loader::SetL1LoaderExecuteMode(
     const std::shared_ptr<XBDMContext>& context) const {
   // Set the L1 loader into execute mode.
   const uint32_t io_address =
@@ -284,9 +289,9 @@ bool HandlerLoader::SetL1LoaderExecuteMode(
   return true;
 }
 
-bool HandlerLoader::ResolveImports(
-    const std::shared_ptr<XBDMDebugger>& debugger,
-    const std::string& module_name, std::vector<DXTLibraryImport>& imports) {
+bool Loader::ResolveImports(const std::shared_ptr<XBDMDebugger>& debugger,
+                            const std::string& module_name,
+                            std::vector<DXTLibraryImport>& imports) {
   if (!FetchBaseAddress(debugger, module_name)) {
     return false;
   }
@@ -331,9 +336,8 @@ bool HandlerLoader::ResolveImports(
   return true;
 }
 
-bool HandlerLoader::FetchBaseAddress(
-    const std::shared_ptr<XBDMDebugger>& debugger,
-    const std::string& module_name) {
+bool Loader::FetchBaseAddress(const std::shared_ptr<XBDMDebugger>& debugger,
+                              const std::string& module_name) {
   if (module_base_addresses_.find(module_name) !=
       module_base_addresses_.end()) {
     return true;
@@ -350,8 +354,7 @@ bool HandlerLoader::FetchBaseAddress(
   return true;
 }
 
-uint32_t HandlerLoader::GetExport(const std::string& module,
-                                  uint32_t ordinal) const {
+uint32_t Loader::GetExport(const std::string& module, uint32_t ordinal) const {
   auto module_export = module_exports_.find(module);
   if (module_export == module_exports_.end()) {
     LOG(error) << "Failed to look up export " << module << " @ " << ordinal
@@ -434,3 +437,5 @@ static bool FetchExport(const std::shared_ptr<XBDMDebugger>& debugger,
 
   return true;
 }
+
+}  // namespace DynDXTLoader
