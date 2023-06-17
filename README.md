@@ -56,6 +56,12 @@ will connect to XBDM, stand up a GDB bridge on port `1999`, and leave `xbdm_gdb_
 in shell mode (`-s`) to allow further commands to be issued. GDB can then be attached 
 using the appropriate `target remote` command (e.g., `target remote 127.0.0.1:1999`).
 
+
+`xbdm_gdb_bridge 10.0.0.24 -v8 -s -- gdb :1999 && /launch e:\pgraph`
+
+will enable very verbose logging connect to XBDM, stand up GDB on port 1999, and attempt
+to launch the `default.xbe` located at `e:\pgraph` on the XBOX.
+
 ## Dynamic DXT code injection
 
 Installs a bootstrap and provides a loading mechanism for debugger extension DLLs.
