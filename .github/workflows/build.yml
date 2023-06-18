@@ -56,6 +56,10 @@ jobs:
           export NXDK_DIR="${GITHUB_WORKSPACE}/nxdk"
           cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build -- -j$(grep -c processor /proc/cpuinfo)
+      - name: Test
+        run: |
+          cd xbdm_gdb_bridge
+          ctest --test-dir build --output-on-failure
       - name: Create release
         if: github.ref == 'refs/heads/main'
         uses: "marvinpinto/action-automatic-releases@latest"
@@ -112,6 +116,10 @@ jobs:
           export NXDK_DIR="${GITHUB_WORKSPACE}/nxdk"
           cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build -- -j
+      - name: Test
+        run: |
+          cd xbdm_gdb_bridge
+          ctest --test-dir build --output-on-failure
       - name: Create release
         if: github.ref == 'refs/heads/main'
         uses: "marvinpinto/action-automatic-releases@latest"
