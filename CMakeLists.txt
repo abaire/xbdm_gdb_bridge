@@ -25,7 +25,6 @@ ExternalProject_Add(
         ddxt/lib/dynamic_dxt_loader.lib
         ddxt/lib/libdynamic_dxt_loader.dll
         ddxt/lib/xbdm.lib
-        BUILD_ALWAYS TRUE
 )
 ExternalProject_Get_Property(dyndxt_loader INSTALL_DIR)
 set(dyndxt_lib_dir ${INSTALL_DIR}/lib)
