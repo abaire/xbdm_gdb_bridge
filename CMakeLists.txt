@@ -22,9 +22,12 @@ ExternalProject_Add(
         EXCLUDE_FROM_ALL
         BUILD_BYPRODUCTS
         ddxt/lib/bootstrap_l1.asm.obj
+        ddxt/lib/bootstrap_l2.asm.obj
         ddxt/lib/dynamic_dxt_loader.lib
         ddxt/lib/libdynamic_dxt_loader.dll
         ddxt/lib/xbdm.lib
+        CONFIGURE_HANDLED_BY_BUILD TRUE
+        BUILD_ALWAYS TRUE
 )
 ExternalProject_Get_Property(dyndxt_loader INSTALL_DIR)
 set(dyndxt_lib_dir ${INSTALL_DIR}/lib)
@@ -90,6 +93,12 @@ pack_resource(
         ${dyndxt_lib_dir}/bootstrap_l1.asm.obj
         ${GENERATED_FILES_DIR}/bootstrap_l1_xbox.h
         kBootstrapL1
+)
+
+pack_resource(
+        ${dyndxt_lib_dir}/bootstrap_l2.asm.obj
+        ${GENERATED_FILES_DIR}/bootstrap_l2_xbox.h
+        kBootstrapL2
 )
 
 pack_resource(
@@ -197,6 +206,7 @@ add_executable(
         third_party/nxdk/winapi/winnt.h
         third_party/nxdk/xboxkrnl/xboxdef.h
         ${GENERATED_FILES_DIR}/bootstrap_l1_xbox.h
+        ${GENERATED_FILES_DIR}/bootstrap_l2_xbox.h
         ${GENERATED_FILES_DIR}/dynamic_dxt_loader_xbox.h
 )
 

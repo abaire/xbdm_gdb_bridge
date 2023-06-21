@@ -21,7 +21,8 @@ class RDCPRequest {
   virtual void Complete(const std::shared_ptr<RDCPResponse> &response) = 0;
   virtual void Abandon() = 0;
 
-  RDCPResponse::ReadBinarySizeFunc BinaryResponseSizeParser() const {
+  [[nodiscard]] RDCPResponse::ReadBinarySizeFunc BinaryResponseSizeParser()
+      const {
     return binary_response_size_parser_;
   }
 

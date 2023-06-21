@@ -8,6 +8,7 @@
 #include "dxt_library.h"
 #include "dyndxt_requests.h"
 #include "util/logging.h"
+#include "util/parsing.h"
 #include "winapi/winnt.h"
 #include "xbdm_exports.h"
 #include "xbox/debugger/xbdm_debugger.h"
@@ -18,6 +19,7 @@
 // The pre-generated binaries to be installed on the XBOX to facilitate
 // DynamicDXT loading.
 #include "bootstrap_l1_xbox.h"
+#include "bootstrap_l2_xbox.h"
 #include "dynamic_dxt_loader_xbox.h"
 
 namespace DynDXTLoader {
@@ -32,8 +34,8 @@ static constexpr uint32_t kDmResumeThreadOrdinal = 35;
 
 static bool SetMemoryUnsafe(const std::shared_ptr<XBDMContext>& context,
                             uint32_t address, const std::vector<uint8_t>& data);
-static bool InvokeBootstrap(const std::shared_ptr<XBDMContext>& context,
-                            uint32_t parameter);
+static bool InvokeL1Bootstrap(const std::shared_ptr<XBDMContext>& context,
+                              const uint32_t parameter);
 
 static bool FetchExport(const std::shared_ptr<XBDMDebugger>& debugger,
                         uint32_t ordinal,
@@ -58,7 +60,14 @@ bool Loader::Bootstrap(XBOXInterface& interface) {
     return true;
   }
 
+  auto load_start = std::chrono::high_resolution_clock::now();
   bool ret = singleton_->InjectLoader(interface);
+  auto now = std::chrono::high_resolution_clock::now();
+  auto elapsed =
+      std::chrono::duration<double, std::milli>(now - load_start).count();
+  LOG(info) << "Bootstrap install " << (ret ? "succeeded" : "failed") << " in "
+            << elapsed << " milliseconds.";
+
   if (!ret) {
     delete singleton_;
     singleton_ = nullptr;
@@ -103,6 +112,7 @@ bool Loader::InjectLoader(XBOXInterface& interface) {
 
     RESOLVE(XBDM_DmResumeThread, xbdm_exports, xbdm_base_addr)
     RESOLVE(XBDM_DmAllocatePoolWithTag, xbdm_exports, xbdm_base_addr)
+    RESOLVE(XBDM_DmRegisterCommandProcessor, xbdm_exports, xbdm_base_addr)
 
 #undef RESOLVE
   }
@@ -127,18 +137,7 @@ bool Loader::InjectLoader(XBOXInterface& interface) {
   }
 
   bool ret = true;
-
-  uint32_t loader_entrypoint = InstallDynamicDXTLoader(debugger, xbdm);
-  if (!loader_entrypoint) {
-    ret = false;
-    goto cleanup;
-  }
-
-  LOG(info) << "Invoking Dynamic DXT DXTMain at 0x" << std::hex
-            << loader_entrypoint;
-
-  if (!InvokeBootstrap(xbdm, loader_entrypoint)) {
-    LOG(error) << "Failed to initialize Dynamic DXT loader.";
+  if (!InstallL2Loader(debugger, xbdm)) {
     ret = false;
     goto cleanup;
   }
@@ -149,7 +148,65 @@ cleanup:
     return false;
   }
 
+  if (ret) {
+    if (!InstallDynamicDXTLoader(interface)) {
+      return false;
+    }
+  }
+
   return ret;
+}
+
+bool Loader::InstallL2Loader(const std::shared_ptr<XBDMDebugger>& debugger,
+                             const std::shared_ptr<XBDMContext>& context) {
+  std::vector<uint8_t> bootstrap_l2(
+      kBootstrapL2,
+      kBootstrapL2 + (sizeof(kBootstrapL2) / sizeof(kBootstrapL2[0])));
+
+  {
+    // Patch up the L2 bootstrap import table.
+    // Keep in sync with bootstrap_l2.asm.
+    auto* import_table = reinterpret_cast<uint32_t*>(bootstrap_l2.data() +
+                                                     bootstrap_l2.size() - 8);
+    *import_table++ = GetExport("xbdm.dll", XBDM_DmAllocatePoolWithTag);
+    *import_table++ = GetExport("xbdm.dll", XBDM_DmRegisterCommandProcessor);
+  }
+
+  uint32_t l2_entrypoint =
+      L1BootstrapAllocatePool(debugger, context, bootstrap_l2.size());
+  if (!l2_entrypoint) {
+    LOG(error) << "Failed to allocate memory for l2 bootstrap loader.";
+    return false;
+  }
+
+  // Upload the L2 bootloader.
+  auto load_start = std::chrono::high_resolution_clock::now();
+  if (!SetMemoryUnsafe(context, l2_entrypoint, bootstrap_l2)) {
+    LOG(error) << "Failed to upload l2 bootstrap loader.";
+    return 0;
+  }
+  auto now = std::chrono::high_resolution_clock::now();
+  auto elapsed =
+      std::chrono::duration<double, std::milli>(now - load_start).count();
+  LOG(info) << "L2 bootstrap installed at 0x" << std::hex << std::setfill('0')
+            << std::setw(8) << l2_entrypoint << std::dec << " "
+            << bootstrap_l2.size() << " bytes in " << elapsed
+            << " milliseconds "
+            << ((double)bootstrap_l2.size() * 1000 / elapsed) << " Bps.";
+
+  // Instruct the L1 loader to call into the memory allocated by the call above.
+  if (!SetL1LoaderExecuteMode(context)) {
+    // TODO: Free pool.
+    return false;
+  }
+
+  if (!InvokeL1Bootstrap(context, l2_entrypoint)) {
+    // TODO: Free pool.
+    LOG(error) << "Failed to initialize Dynamic DXT loader.";
+    return false;
+  }
+
+  return true;
 }
 
 bool Loader::LoadDLL(XBOXInterface& interface, const std::string& path) {
@@ -189,58 +246,106 @@ bool Loader::LoadDLL(XBOXInterface& interface, const std::string& path) {
   return true;
 }
 
-uint32_t Loader::InstallDynamicDXTLoader(
-    const std::shared_ptr<XBDMDebugger>& debugger,
-    const std::shared_ptr<XBDMContext>& context) {
+static uint32_t L2BootstrapAllocate(XBOXInterface& interface,
+                                    uint32_t image_size) {
+  char alloc_request[64];
+  snprintf(alloc_request, 64, "ldxt!a s=%u", image_size);
+  auto request = std::make_shared<DynDXTLoader::InvokeSimple>(alloc_request);
+  interface.SendCommandSync(request);
+  if (!request->IsOK()) {
+    LOG(error) << "Failed to allocate " << image_size << " bytes for Loader. "
+               << *request;
+    return 0;
+  }
+
+  auto response = request->message;
+  auto base_param = response.find("base=");
+  if (base_param == std::string::npos) {
+    LOG(error) << "Failed to parse base param from response.";
+    return 0;
+  }
+
+  uint32_t target = 0;
+  if (!MaybeParseHexInt(target, response.substr(base_param + 5))) {
+    LOG(error) << "Invalid base param in response. " << response;
+    return 0;
+  }
+
+  return target;
+}
+
+static bool L2BootstrapInstall(XBOXInterface& interface, uint32_t entrypoint,
+                               const std::vector<uint8_t>& image) {
+  auto load_start = std::chrono::high_resolution_clock::now();
+
+  char install_request[64];
+  snprintf(install_request, 64, "ldxt!i e=%u", entrypoint);
+  auto request =
+      std::make_shared<DynDXTLoader::InvokeSendBinary>(install_request, image);
+  interface.SendCommandSync(request);
+  if (!request->IsOK()) {
+    LOG(error) << "Failed to install DynDXT loader. " << *request;
+    return false;
+  }
+
+  auto now = std::chrono::high_resolution_clock::now();
+  auto elapsed =
+      std::chrono::duration<double, std::milli>(now - load_start).count();
+  LOG(info) << "Loader installed at 0x" << std::hex << std::setfill('0')
+            << std::setw(8) << entrypoint << std::dec << " " << image.size()
+            << " bytes in " << elapsed << " milliseconds "
+            << ((double)image.size() * 1000 / elapsed) << " Bps.";
+
+  return true;
+}
+
+bool Loader::InstallDynamicDXTLoader(XBOXInterface& interface) {
   auto stream = std::make_shared<boost::interprocess::bufferstream>(
       (char*)kDynDXTLoader, sizeof(kDynDXTLoader));
   DXTLibrary lib(std::dynamic_pointer_cast<std::istream>(stream),
                  "BundledDXTLoader");
   if (!lib.Parse()) {
-    LOG(error) << "Failed to load dynamic dxt loader.";
-    return 0;
+    LOG(error) << "Failed to load dynamic dxt loader DLL.";
+    return false;
   }
+
+  auto debugger = interface.Debugger();
+  auto context = interface.Context();
 
   for (auto& dll_imports : lib.GetImports()) {
     if (!ResolveImports(debugger, dll_imports.first, dll_imports.second)) {
-      return 0;
+      return false;
     }
   }
 
-  uint32_t image_size = lib.GetImageSize();
-  uint32_t target = AllocatePool(debugger, context, image_size);
+  auto target = L2BootstrapAllocate(interface, lib.GetImageSize());
   if (!target) {
-    LOG(error) << "Failed to allocate memory for dxt loader.";
-    return 0;
+    return false;
   }
 
   if (!lib.Relocate(target)) {
     // TODO: Free pool.
-    return 0;
+    return false;
   }
 
-  if (!SetMemoryUnsafe(context, target, lib.GetImage())) {
-    LOG(error) << "Failed to upload dxt loader.";
-    return 0;
+  if (!L2BootstrapInstall(interface, lib.GetEntrypoint(), lib.GetImage())) {
+    // TODO: Free pool.
+    return false;
   }
 
+  // TODO: Call TLS initializers.
   for (auto callback : lib.GetTLSInitializers()) {
     LOG(error) << "TLS callback functionality not implemented.";
     // TODO: Free pool.
-    return 0;
+    return false;
   }
 
-  if (!SetL1LoaderExecuteMode(context)) {
-    // TODO: Free pool.
-    return 0;
-  }
-
-  return lib.GetEntrypoint();
+  return true;
 }
 
-uint32_t Loader::AllocatePool(const std::shared_ptr<XBDMDebugger>& debugger,
-                              const std::shared_ptr<XBDMContext>& context,
-                              uint32_t size) const {
+uint32_t Loader::L1BootstrapAllocatePool(
+    const std::shared_ptr<XBDMDebugger>& debugger,
+    const std::shared_ptr<XBDMContext>& context, uint32_t size) const {
   // The requested size and target address is stored in the last 4 bytes of the
   // L1 bootloader.
   const uint32_t io_address =
@@ -255,8 +360,8 @@ uint32_t Loader::AllocatePool(const std::shared_ptr<XBDMDebugger>& debugger,
     }
   }
 
-  if (!InvokeBootstrap(context,
-                       GetExport("xbdm.dll", XBDM_DmAllocatePoolWithTag))) {
+  if (!InvokeL1Bootstrap(context,
+                         GetExport("xbdm.dll", XBDM_DmAllocatePoolWithTag))) {
     LOG(error) << "Failed to allocate memory.";
     return 0;
   }
@@ -401,8 +506,8 @@ static bool SetMemoryUnsafe(const std::shared_ptr<XBDMContext>& context,
   return true;
 }
 
-static bool InvokeBootstrap(const std::shared_ptr<XBDMContext>& context,
-                            const uint32_t parameter) {
+static bool InvokeL1Bootstrap(const std::shared_ptr<XBDMContext>& context,
+                              const uint32_t parameter) {
   auto request = std::make_shared<::Resume>(parameter);
   context->SendCommandSync(request);
   return request->IsOK();
