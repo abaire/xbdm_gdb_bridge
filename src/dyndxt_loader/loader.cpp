@@ -248,9 +248,9 @@ bool Loader::LoadDLL(XBOXInterface& interface, const std::string& path) {
 
 static uint32_t L2BootstrapAllocate(XBOXInterface& interface,
                                     uint32_t image_size) {
-  char alloc_request[64];
-  snprintf(alloc_request, 64, "ldxt!a s=%u", image_size);
-  auto request = std::make_shared<DynDXTLoader::InvokeSimple>(alloc_request);
+  char args[32];
+  snprintf(args, 32, " s=0x%x", image_size);
+  auto request = std::make_shared<DynDXTLoader::InvokeSimple>("ldxt!a", args);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
     LOG(error) << "Failed to allocate " << image_size << " bytes for Loader. "
@@ -278,10 +278,10 @@ static bool L2BootstrapInstall(XBOXInterface& interface, uint32_t entrypoint,
                                const std::vector<uint8_t>& image) {
   auto load_start = std::chrono::high_resolution_clock::now();
 
-  char install_request[64];
-  snprintf(install_request, 64, "ldxt!i e=%u", entrypoint);
-  auto request =
-      std::make_shared<DynDXTLoader::InvokeSendBinary>(install_request, image);
+  char args[32];
+  snprintf(args, 32, " e=0x%x", entrypoint);
+  auto request = std::make_shared<DynDXTLoader::InvokeSendKnownSizeBinary>(
+      "ldxt!i", image, args);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
     LOG(error) << "Failed to install DynDXT loader. " << *request;

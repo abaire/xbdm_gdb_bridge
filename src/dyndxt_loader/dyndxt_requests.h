@@ -60,6 +60,18 @@ struct InvokeSendBinary : public RDCPProcessedRequest {
   std::vector<uint8_t> binary_payload;
 };
 
+struct InvokeSendKnownSizeBinary : public RDCPProcessedRequest {
+  explicit InvokeSendKnownSizeBinary(const std::string& command,
+                                     std::vector<uint8_t> binary,
+                                     const std::string& args = "");
+
+  [[nodiscard]] const std::vector<uint8_t>* BinaryPayload() override {
+    return &binary_payload;
+  }
+
+  std::vector<uint8_t> binary_payload;
+};
+
 struct InvokeReceiveSizePrefixedBinary : public RDCPProcessedRequest {
   explicit InvokeReceiveSizePrefixedBinary(const std::string& command,
                                            const std::string& args = "");
