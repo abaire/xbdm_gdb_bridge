@@ -27,15 +27,16 @@ class Loader {
 
   bool LoadDLL(XBOXInterface& interface, const std::string& path);
 
-  // Injects the dynamic dxt loader, returning the address of the entrypoint
-  // method or 0 on error.
-  uint32_t InstallDynamicDXTLoader(
-      const std::shared_ptr<XBDMDebugger>& debugger,
-      const std::shared_ptr<XBDMContext>& context);
+  //! Installs the L2 bootloader.
+  bool InstallL2Loader(const std::shared_ptr<XBDMDebugger>& debugger,
+                       const std::shared_ptr<XBDMContext>& context);
+
+  // Installs the Dynamic DXT loader using the L2 bootloader.
+  bool InstallDynamicDXTLoader(XBOXInterface& interface);
 
   // Invoke the L1 bootstrap to allocate memory. Note that this assumes the
   // `resume` command has already been patched with the L1 bootstrap.
-  [[nodiscard]] uint32_t AllocatePool(
+  [[nodiscard]] uint32_t L1BootstrapAllocatePool(
       const std::shared_ptr<XBDMDebugger>& debugger,
       const std::shared_ptr<XBDMContext>& context, uint32_t size) const;
 
