@@ -30,6 +30,15 @@ InvokeSendBinary::InvokeSendBinary(const std::string& command,
   }
 }
 
+InvokeSendKnownSizeBinary::InvokeSendKnownSizeBinary(
+    const std::string& command, std::vector<uint8_t> binary,
+    const std::string& args)
+    : RDCPProcessedRequest(command), binary_payload(std::move(binary)) {
+  if (!args.empty()) {
+    SetData(args);
+  }
+}
+
 InvokeReceiveSizePrefixedBinary::InvokeReceiveSizePrefixedBinary(
     const std::string& command, const std::string& args)
     : RDCPProcessedRequest(command) {
