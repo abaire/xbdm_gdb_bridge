@@ -22,10 +22,16 @@ class Loader {
   // Loads a dynamic DXT handler DLL.
   static bool Load(XBOXInterface& interface, const std::string& path);
 
+  static bool Install(XBOXInterface& interface,
+                      const std::vector<uint8_t>& data);
+
  private:
   bool InjectLoader(XBOXInterface& interface);
 
-  bool LoadDLL(XBOXInterface& interface, const std::string& path);
+  bool InstallDynDXT(XBOXInterface& interface, const std::string& path);
+
+  bool InstallDynDXT(XBOXInterface& interface,
+                     const std::vector<uint8_t>& data);
 
   //! Installs the L2 bootloader.
   bool InstallL2Loader(const std::shared_ptr<XBDMDebugger>& debugger,
@@ -43,8 +49,8 @@ class Loader {
   [[nodiscard]] bool SetL1LoaderExecuteMode(
       const std::shared_ptr<XBDMContext>& context) const;
 
-  bool ResolveImports(const std::shared_ptr<XBDMDebugger>& debugger,
-                      const std::string& module_name,
+  // Resolves a list of import thunks to actual addresses on the XBOX.
+  bool ResolveImports(XBOXInterface& interface, const std::string& module_name,
                       std::vector<DXTLibraryImport>& imports);
 
   bool FetchBaseAddress(const std::shared_ptr<XBDMDebugger>& debugger,

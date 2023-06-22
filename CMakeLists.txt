@@ -122,6 +122,8 @@ add_executable(
         src/dyndxt_loader/dyndxt_requests.h
         src/dyndxt_loader/loader.cpp
         src/dyndxt_loader/loader.h
+        src/dyndxt_loader/ResolveExportList.cpp
+        src/dyndxt_loader/ResolveExportList.h
         src/dyndxt_loader/xbdm_exports.cpp
         src/dyndxt_loader/xbdm_exports.def.h
         src/dyndxt_loader/xbdm_exports.h
