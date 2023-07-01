@@ -24,24 +24,32 @@ bool TCPServer::Listen(const IPAddress &address) {
   int enabled = 1;
   if (setsockopt(socket_, SOL_SOCKET, SO_REUSEADDR, &enabled,
                  sizeof(enabled))) {
-    LOG(warning) << "Failed to set reuseaddr " << errno;
+    char buffer[256];
+    strerror_r(errno, buffer, 256);
+    LOG(warning) << "Failed to set reuseaddr " << errno << " - " << buffer;
   }
 
   if (bind(socket_, reinterpret_cast<struct sockaddr const *>(&addr),
            sizeof(addr))) {
-    LOG(error) << "Bind failed " << errno;
+    char buffer[256];
+    strerror_r(errno, buffer, 256);
+    LOG(error) << "Bind failed " << errno << " - " << buffer;
     goto close_and_fail;
   }
 
   if (getsockname(socket_, reinterpret_cast<struct sockaddr *>(&bind_addr),
                   &bind_addr_len) < 0) {
-    LOG(error) << "getsockname failed" << errno;
+    char buffer[256];
+    strerror_r(errno, buffer, 256);
+    LOG(error) << "getsockname failed " << errno << " - " << buffer;
     goto close_and_fail;
   }
   address_ = IPAddress(bind_addr);
 
   if (listen(socket_, 1)) {
-    LOG(error) << "listen failed" << errno;
+    char buffer[256];
+    strerror_r(errno, buffer, 256);
+    LOG(error) << "listen failed " << errno << " - " << buffer;
     goto close_and_fail;
   }
 
@@ -95,7 +103,9 @@ bool TCPServer::Process(const fd_set &read_fds, const fd_set &write_fds,
         accept(socket_, reinterpret_cast<struct sockaddr *>(&bind_addr),
                &bind_addr_len);
     if (accepted_socket < 0) {
-      LOG(error) << "accept failed" << errno;
+      char buffer[256];
+      strerror_r(errno, buffer, 256);
+      LOG(error) << "accept failed " << errno << " - " << buffer;
     } else {
       auto address = IPAddress(bind_addr);
       OnAccepted(accepted_socket, address);

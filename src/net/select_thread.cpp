@@ -46,7 +46,9 @@ void SelectThread::ThreadMain() {
       continue;
     }
     if (fds < 0) {
-      LOG(error) << "select failed " << errno;
+      char buffer[256];
+      strerror_r(errno, buffer, 256);
+      LOG(error) << "select failed " << errno << " - " << buffer;
       // TODO: Determine if this would ever be recoverable.
       WaitMilliseconds(kMinSleepMilliseconds);
       continue;
