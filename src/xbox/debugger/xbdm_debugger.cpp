@@ -47,6 +47,16 @@ bool XBDMDebugger::Attach() {
     }
   }
 
+  // If a notification handler is currently active, attempt to wait until the
+  // target is likely to be responsive before re-registering the notification
+  // handler. This avoids a potential race condition where a gdb debugger
+  // attaches during launch of an XBE, fails to reattach a notification handler,
+  // and waits forever for the target to enter an interactive state.
+  if (notification_handler_id_) {
+    auto unsafe_states = std::set<ExecutionState>({S_INVALID, S_REBOOTING});
+    WaitForStateNotIn(unsafe_states, kAttachSafeStateMaxWaitMilliseconds);
+  }
+
   context_->UnregisterNotificationHandler(notification_handler_id_);
   notification_handler_id_ = context_->RegisterNotificationHandler(
       [this](const std::shared_ptr<XBDMNotification> &notification) {
@@ -75,10 +85,12 @@ bool XBDMDebugger::Attach() {
     return false;
   }
 
+  is_attached_ = true;
   return true;
 }
 
 void XBDMDebugger::Shutdown() {
+  is_attached_ = false;
   SetDebugger(false);
   // TODO: Request a notifyat drop as well.
   context_->UnregisterNotificationHandler(notification_handler_id_);
@@ -698,6 +710,17 @@ bool XBDMDebugger::WaitForStateIn(const std::set<ExecutionState> &target_states,
       lock, std::chrono::milliseconds(max_wait_milliseconds),
       [this, &target_states] {
         return target_states.find(this->state_) != target_states.end();
+      });
+}
+
+bool XBDMDebugger::WaitForStateNotIn(
+    const std::set<ExecutionState> &banned_states,
+    uint32_t max_wait_milliseconds) {
+  std::unique_lock<std::mutex> lock(state_lock_);
+  return state_condition_variable_.wait_for(
+      lock, std::chrono::milliseconds(max_wait_milliseconds),
+      [this, &banned_states] {
+        return banned_states.find(this->state_) == banned_states.end();
       });
 }
 

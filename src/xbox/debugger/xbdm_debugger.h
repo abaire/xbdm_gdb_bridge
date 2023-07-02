@@ -33,11 +33,13 @@ struct NotificationException;
 class XBDMDebugger {
  public:
   static constexpr uint32_t kDefaultHaltAllMaxWaitMilliseconds = 250;
+  static constexpr uint32_t kAttachSafeStateMaxWaitMilliseconds = 250;
 
  public:
   explicit XBDMDebugger(std::shared_ptr<XBDMContext> context);
 
   bool Attach();
+  inline bool IsAttached() const { return is_attached_; }
   void Shutdown();
 
   bool DebugXBE(const std::string &path, bool wait_forever = false,
@@ -126,10 +128,15 @@ class XBDMDebugger {
   bool ValidateMemoryAccess(uint32_t address, uint32_t length,
                             bool is_write = false);
 
-  //! Waits up to max_wait_milliseconds for the target to enter one of the given
+  //! Waits up to max_wait_milliseconds for the target to be in one of the given
   //! ExecutionStates.
   bool WaitForStateIn(const std::set<ExecutionState> &target_states,
                       uint32_t max_wait_milliseconds);
+
+  //! Waits up to max_wait_milliseconds for the target to be in a state other
+  //! than one of the ExecutionStates.
+  bool WaitForStateNotIn(const std::set<ExecutionState> &banned_states,
+                         uint32_t max_wait_milliseconds);
 
  private:
   [[nodiscard]] bool BreakAtStart() const;
@@ -158,6 +165,7 @@ class XBDMDebugger {
   void OnException(const std::shared_ptr<NotificationException> &);
 
  private:
+  bool is_attached_{false};
   std::shared_ptr<XBDMContext> context_;
 
   std::mutex state_lock_;

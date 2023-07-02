@@ -12,9 +12,12 @@
 #include "net/select_thread.h"
 #include "notification/xbdm_notification.h"
 #include "util/logging.h"
+#include "util/timer.h"
 #include "xbox/bridge/gdb_bridge.h"
 #include "xbox/debugger/xbdm_debugger.h"
 #include "xbox/xbdm_context.h"
+
+constexpr int kMaxDebuggerAttachAttempts = 5;
 
 XBOXInterface::XBOXInterface(std::string name, IPAddress xbox_address)
     : name_(std::move(name)), xbox_address_(std::move(xbox_address)) {}
@@ -165,8 +168,19 @@ void XBOXInterface::OnGDBClientConnected(int sock, IPAddress& address) {
   // to communicate with XBDM.
   assert(gdb_executor_);
   boost::asio::dispatch(*gdb_executor_, [this, transport]() mutable {
-    this->xbdm_debugger_->Attach();
-    this->xbdm_debugger_->HaltAll();
+    if (!this->xbdm_debugger_->IsAttached()) {
+      auto i = 0;
+      for (; i < kMaxDebuggerAttachAttempts && !this->xbdm_debugger_->Attach();
+           ++i) {
+        LOG_XBDM(trace) << "GDB: Debugger attach failed. Attempt " << (i + 1);
+        WaitMilliseconds(50);
+      }
+      if (i == kMaxDebuggerAttachAttempts) {
+        LOG_XBDM(error) << "GDB: Failed to attach debugger.";
+      } else {
+        this->xbdm_debugger_->HaltAll();
+      }
+    }
     this->select_thread_->AddConnection(transport);
     this->gdb_bridge_->AddTransport(transport);
   });
