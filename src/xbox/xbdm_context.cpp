@@ -81,7 +81,7 @@ void XBDMContext::OnNotificationChannelConnected(int sock, IPAddress& address) {
 
   // TODO: Hold on to the transport so it can be shut down gracefully.
   auto transport = std::make_shared<XBDMNotificationTransport>(
-      logging::kLoggingTagXBDM, sock, address,
+      logging::kLoggingTagXBDMNotification, sock, address,
       [this](std::shared_ptr<XBDMNotification> notification) {
         this->OnNotificationReceived(std::move(notification));
       });

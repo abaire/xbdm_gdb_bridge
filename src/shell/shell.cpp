@@ -204,6 +204,7 @@ Command::Result Shell::ProcessCommand(
 
   auto it = commands_.find(command);
   if (it != commands_.end()) {
+    LOG(trace) << "Handle command '" << command << "'";
     Command &handler = *it->second;
     return handler(*interface_, args);
   }

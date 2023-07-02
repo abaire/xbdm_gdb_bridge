@@ -90,7 +90,9 @@ class LoggerSink : public SynchronizedSink {
     if (!tag.empty() && severity.get() < boost::log::trivial::warning) {
       if (tag == kLoggingTagGDB && !enable_gdb_messages) {
         return;
-      } else if (tag == kLoggingTagXBDM && !enable_xbdm_messages) {
+      } else if ((tag == kLoggingTagXBDM ||
+                  tag == kLoggingTagXBDMNotification) &&
+                 !enable_xbdm_messages) {
         return;
       } else if (tag == kLoggingTagDebugger && !enable_debugger_messages) {
         return;
@@ -156,7 +158,8 @@ class LoggerSink : public SynchronizedSink {
           break;
       }
     }
-    strm << "<" << severity << "> ";
+
+    strm << std::left << std::setw(8) << severity << "> ";
     if (enable_colorized_output) {
       strm << ANSI_RESET;
     }
@@ -165,6 +168,8 @@ class LoggerSink : public SynchronizedSink {
       if (enable_colorized_output) {
         if (tag == kLoggingTagXBDM) {
           strm << ANSI_CYAN << ANSI_REVERSED;
+        } else if (tag == kLoggingTagXBDMNotification) {
+          strm << ANSI_BRIGHT_CYAN << ANSI_REVERSED;
         } else if (tag == kLoggingTagGDB) {
           strm << ANSI_BLUE << ANSI_REVERSED;
         } else if (tag == kLoggingTagDebugger) {

@@ -16,6 +16,7 @@ constexpr const char kLoggingThreadAttribute[] = "Thread";
 
 constexpr const char kLoggingTagGDB[] = "GDB";
 constexpr const char kLoggingTagXBDM[] = "XBDM";
+constexpr const char kLoggingTagXBDMNotification[] = "XBDM_N";
 constexpr const char kLoggingTagDebugger[] = "DEBUGGER";
 
 BOOST_LOG_ATTRIBUTE_KEYWORD(tag_attr, kLoggingTagAttribute, std::string)

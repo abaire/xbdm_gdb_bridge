@@ -14,5 +14,5 @@ RDCPRequest::operator std::vector<uint8_t>() const {
 }
 
 std::ostream &operator<<(std::ostream &os, RDCPRequest const &r) {
-  return os << r.command_ << " " << r.data_.size();
+  return os << r.command_ << " [" << r.data_.size() << "]";
 }
