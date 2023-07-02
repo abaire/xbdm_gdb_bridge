@@ -247,6 +247,7 @@ std::shared_ptr<Thread> XBDMDebugger::GetFirstStoppedThread() {
   {
     const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
     if (threads_.empty()) {
+      LOG_DEBUGGER(trace) << "No known threads";
       return nullptr;
     }
     threads = threads_;
@@ -269,6 +270,7 @@ std::shared_ptr<Thread> XBDMDebugger::GetFirstStoppedThread() {
     }
   }
 
+  LOG_DEBUGGER(trace) << "No stopped threads";
   return nullptr;
 }
 
@@ -687,6 +689,16 @@ bool XBDMDebugger::WaitForState(ExecutionState s,
   return state_condition_variable_.wait_for(
       lock, std::chrono::milliseconds(max_wait_milliseconds),
       [this, s] { return this->state_ == s; });
+}
+
+bool XBDMDebugger::WaitForStateIn(const std::set<ExecutionState> &target_states,
+                                  uint32_t max_wait_milliseconds) {
+  std::unique_lock<std::mutex> lock(state_lock_);
+  return state_condition_variable_.wait_for(
+      lock, std::chrono::milliseconds(max_wait_milliseconds),
+      [this, &target_states] {
+        return target_states.find(this->state_) != target_states.end();
+      });
 }
 
 bool XBDMDebugger::StepInstruction() {

@@ -126,11 +126,18 @@ class XBDMDebugger {
   bool ValidateMemoryAccess(uint32_t address, uint32_t length,
                             bool is_write = false);
 
+  //! Waits up to max_wait_milliseconds for the target to enter one of the given
+  //! ExecutionStates.
+  bool WaitForStateIn(const std::set<ExecutionState> &target_states,
+                      uint32_t max_wait_milliseconds);
+
  private:
   [[nodiscard]] bool BreakAtStart() const;
   bool SetDebugger(bool enabled);
   bool RestartAndReconnect(uint32_t reboot_flags);
 
+  //! Waits up to max_wait_milliseconds for the target to enter the given
+  //! ExecutionState.
   bool WaitForState(ExecutionState s, uint32_t max_wait_milliseconds);
 
   void OnNotification(const std::shared_ptr<XBDMNotification> &);

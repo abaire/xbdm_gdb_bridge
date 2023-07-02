@@ -68,7 +68,7 @@ void XBDMTransport::WriteNextRequest() {
 
   const auto &request = request_queue_.front();
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
-  LOG_XBDM(trace) << "XBDM request: " << *request;
+  LOG_XBDM(trace) << "XBDM request: '" << *request << "'";
   request_sent_.Start();
 #endif
   std::vector<uint8_t> buffer = static_cast<std::vector<uint8_t>>(*request);
@@ -105,10 +105,6 @@ void XBDMTransport::OnBytesRead() {
 
   ShiftReadBuffer(bytes_consumed);
 
-#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
-  LOG_XBDM(trace) << "Response: " << *response;
-#endif
-
   if (request_queue_.empty()) {
     // On initial connection, XBDM will send an unsolicited OK response.
     HandleInitialConnectResponse(response);
@@ -132,13 +128,14 @@ void XBDMTransport::OnBytesRead() {
     WriteNextRequest();
 
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
-    LOG_XBDM(trace) << "Request " << *request << " round trip "
+    LOG_XBDM(trace) << "Request '" << *request << "' round trip "
                     << request_sent_.FractionalMillisecondsElapsed() << " ms";
+    LOG_XBDM(trace) << "Response: " << *response;
     request_sent_.Start();
 #endif
     request->Complete(response);
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
-    LOG_XBDM(trace) << "Completion of request " << *request << " took "
+    LOG_XBDM(trace) << "Completion of request '" << *request << "' took "
                     << request_sent_.FractionalMillisecondsElapsed() << " ms";
 #endif
   }
@@ -146,6 +143,10 @@ void XBDMTransport::OnBytesRead() {
 
 void XBDMTransport::HandleInitialConnectResponse(
     const std::shared_ptr<RDCPResponse> &response) {
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
+  LOG_XBDM(trace) << "Initial connect response: " << *response;
+#endif
+
   if (response->Status() == StatusCode::OK_CONNECTED) {
     state_ = ConnectionState::CONNECTED;
     return;

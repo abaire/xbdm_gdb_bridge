@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 
+#include "configure.h"
 #include "net/ip_address.h"
 #include "shell/shell.h"
 #include "util/logging.h"
@@ -31,10 +32,16 @@ static int main_(const IPAddress &xbox_addr,
 
   auto shell = Shell(interface);
   for (auto &command : commands) {
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
+    LOG(trace) << "Processing startup command '" << command.front() << "'";
+#endif
     shell.ProcessCommand(command);
   }
 
   if (run_shell) {
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
+    LOG(trace) << "Running shell";
+#endif
     shell.Run();
   }
 

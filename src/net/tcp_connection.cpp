@@ -151,11 +151,11 @@ void TCPConnection::DoSend() {
     }
     if (maybeBinary) {
       LOG_TAGGED(trace, name_)
-          << "  Sent " << bytes_sent << " bytes (binary)" << std::endl;
+          << "-> Sent " << bytes_sent << " bytes (binary)" << std::endl;
     } else {
       LOG_TAGGED(trace, name_)
-          << "  Sent " << bytes_sent << " bytes" << std::endl
-          << data;
+          << "-> Sent " << bytes_sent << " bytes" << std::endl
+          << data << std::endl;
     }
   }
 #endif
