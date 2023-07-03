@@ -18,6 +18,7 @@ class SelectThread;
 class XBDMContext;
 class XBDMDebugger;
 
+//! Provides various functions to interface with a remote XBDM processor.
 class XBOXInterface {
  public:
   XBOXInterface(std::string name, IPAddress xbox_address);
@@ -40,6 +41,19 @@ class XBOXInterface {
   bool StartGDBServer(const IPAddress &address);
   void StopGDBServer();
   bool GetGDBListenAddress(IPAddress &ret) const;
+
+  //! Sets the XBOX path of a target to be launched the first time a GDB
+  //! debugger connects to the GDB server.
+  //!
+  //! This prevents timing issues where a launch may be attempting to reboot the
+  //! XBOX at the same time as the debugger is attempting to halt and retrieve
+  //! thread information.
+  inline void SetGDBLaunchTarget(const std::string &path) {
+    gdb_launch_target_ = path;
+  }
+
+  //! Clears a previously set post-connect launch target.
+  inline void ClearGDBLaunchTarget() { gdb_launch_target_.clear(); }
 
   bool StartNotificationListener(const IPAddress &address);
   void AttachDebugNotificationHandler();
@@ -67,6 +81,7 @@ class XBOXInterface {
   std::shared_ptr<DelegatingServer> gdb_server_;
   std::shared_ptr<GDBBridge> gdb_bridge_;
   std::shared_ptr<boost::asio::thread_pool> gdb_executor_;
+  std::string gdb_launch_target_;
 
   int debug_notification_handler_id_{0};
 };

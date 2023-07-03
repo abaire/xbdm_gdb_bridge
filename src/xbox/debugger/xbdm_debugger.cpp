@@ -446,10 +446,10 @@ void XBDMDebugger::OnThreadTerminated(
   for (auto it = threads_.begin(); it != threads_.end(); ++it) {
     auto &thread = *it;
     if (thread->thread_id == msg->thread_id) {
-      threads_.erase(it);
       if (thread->thread_id == active_thread_id_) {
         active_thread_id_ = -1;
       }
+      threads_.erase(it);
       return;
     }
   }

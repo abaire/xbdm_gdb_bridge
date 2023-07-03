@@ -14,7 +14,7 @@ where `<xbox_ip>` alone will default to port `731` and port alone will default t
 IP `127.0.0.1`.
 
 _Note_: Connecting to a qemu-based emulator using NAT may require the use of
-`hostfwd_add` to forward a localhost port to the emulated machine. 
+`hostfwd_add` to forward a localhost port to the emulated machine.
 
 ## Using the shell
 
@@ -22,7 +22,7 @@ When started without any initial commands or when using the `-s` option,
 `xbdm_gdb_bridge` will enter shell mode, allowing any number of commands to be
 executed.
 
-Within the shell, use the `?` command without any arguments to get a list of available 
+Within the shell, use the `?` command without any arguments to get a list of available
 commands. `? <command_name>` can be used to get more information about any given command
 (e.g., `? gdb`).
 
@@ -53,14 +53,23 @@ Assuming an XBOX at IP `10.0.0.24`:
 `xbdm_gdb_bridge 10.0.0.24 -s -- gdb :1999`
 
 will connect to XBDM, stand up a GDB bridge on port `1999`, and leave `xbdm_gdb_bridge`
-in shell mode (`-s`) to allow further commands to be issued. GDB can then be attached 
+in shell mode (`-s`) to allow further commands to be issued. GDB can then be attached
 using the appropriate `target remote` command (e.g., `target remote 127.0.0.1:1999`).
 
+`xbdm_gdb_bridge 10.0.0.24 -v8 -s -- gdb :1999 e:\pgraph`
 
-`xbdm_gdb_bridge 10.0.0.24 -v8 -s -- gdb :1999 && /launch e:\pgraph`
+will enable very verbose logging (`-v8`), connect to XBDM, then listen for a GDB
+instance on port `1999`. When GDB connects, it will launch the `default.xbe` located
+at `e:\pgraph` on the XBOX.
 
-will enable very verbose logging connect to XBDM, stand up GDB on port 1999, and attempt
-to launch the `default.xbe` located at `e:\pgraph` on the XBOX.
+A full deploy/debug command from a CMake based target in CLion might look like:
+
+```
+xbdm_gdb_bridge 10.0.0.24 -s -- \
+    mkdir e:\$CMakeCurrentTargetName$ && \
+    putfile $CMakeCurrentBuildDir$/default.xbe e:\$CMakeCurrentTargetName$ -f \
+    && gdb :1999 e:\$CMakeCurrentTargetName$
+```
 
 ## Dynamic DXT code injection
 
@@ -71,10 +80,10 @@ Usage:
 
 `@load <dll_path>` will load and install the extension.
 
-The various `@`-prefixed functions can be used to interact with the extension once 
+The various `@`-prefixed functions can be used to interact with the extension once
 installed.
 
-E.g., `@m demo!sendmultiline` will ask the `demo` handler installed by 
+E.g., `@m demo!sendmultiline` will ask the `demo` handler installed by
 [the demo project](https://github.com/abaire/nxdk_demo_dyndxt) to send back a multiline
 response and will print out each returned line.
 
@@ -101,11 +110,13 @@ enable them.
 * `cmake -S . -B build && cmake --build build --verbose`
 
 Tests can be executed afterwards using
+
 * `ctest --test-dir build --output-on-failure`
 
 #### Configuration variables
+
 * `ENABLE_HIGH_VERBOSITY_LOGGING` - Enables low level logging of socket traffic. May have a negative impact on
-   performance. E.g., `-DENABLE_HIGH_VERBOSITY_LOGGING=ON`
+  performance. E.g., `-DENABLE_HIGH_VERBOSITY_LOGGING=ON`
 
 ### CLion
 
@@ -120,7 +131,7 @@ is preferred over Xcode's (to supply `dlltool`).
 
 # Design
 
-* `Shell` performs interactive command processing. 
+* `Shell` performs interactive command processing.
 * `XBOXInterface` holds the various connections and thread pools.
 
 ## Threading model
@@ -130,7 +141,7 @@ is preferred over Xcode's (to supply `dlltool`).
     * `SelectThread` performs low level reading and writing of all sockets associated with the interface. E.g., the
       XBDM client, GDB server and any attached clients, etc...
     * `xbdm_control_executor_` is a `thread_pool` instance that sequences XBDM requests.
-    * `gdb_control_executor_` is a `thread_pool` instance that sequences GDB requests. Generally a GDB request will 
+    * `gdb_control_executor_` is a `thread_pool` instance that sequences GDB requests. Generally a GDB request will
       spawn one or more XBDM requests that will be processed by the `xbdm_control_executor_`.
     * During a debugging session, a `notification_executor_` `thread_pool` is created to handle push notifications from
       XBDM.
