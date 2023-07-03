@@ -6,10 +6,15 @@
 #include <string>
 
 #include "commands.h"
+#include "configure.h"
 #include "debugger_commands.h"
 #include "dyndxt_commands.h"
 #include "shell_commands.h"
 #include "util/logging.h"
+
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
+#include "util/timer.h"
+#endif
 
 Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
     : interface_(interface), prompt_("> ") {
@@ -204,9 +209,20 @@ Command::Result Shell::ProcessCommand(
 
   auto it = commands_.find(command);
   if (it != commands_.end()) {
-    LOG(trace) << "Handle command '" << command << "'";
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
+    LOG(trace) << "Processing shell command '" << command << "'";
+    auto timer = Timer();
+    timer.Start();
+#endif
+
     Command &handler = *it->second;
-    return handler(*interface_, args);
+    auto ret = handler(*interface_, args);
+
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
+    LOG(trace) << "... processed shell command '" << command << "'  in "
+               << timer.FractionalMillisecondsElapsed() << " ms";
+#endif
+    return ret;
   }
 
   return Command::UNHANDLED;
