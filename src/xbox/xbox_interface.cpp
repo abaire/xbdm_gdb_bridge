@@ -18,6 +18,7 @@
 #include "xbox/xbdm_context.h"
 
 constexpr int kMaxDebuggerAttachAttempts = 5;
+constexpr int kMaxDebuggerHaltAttempts = 5;
 
 XBOXInterface::XBOXInterface(std::string name, IPAddress xbox_address)
     : name_(std::move(name)), xbox_address_(std::move(xbox_address)) {}
@@ -177,8 +178,21 @@ void XBOXInterface::OnGDBClientConnected(int sock, IPAddress& address) {
       }
       if (i == kMaxDebuggerAttachAttempts) {
         LOG_XBDM(error) << "GDB: Failed to attach debugger.";
-      } else {
-        this->xbdm_debugger_->HaltAll();
+        transport->Close();
+        return;
+      }
+
+      for (i = 0;
+           i < kMaxDebuggerHaltAttempts && !this->xbdm_debugger_->HaltAll();
+           ++i) {
+        LOG_XBDM(trace) << "GDB: Debugger initial halt failed. Attempt "
+                        << (i + 1);
+        WaitMilliseconds(50);
+      }
+      if (i == kMaxDebuggerHaltAttempts) {
+        LOG_XBDM(error) << "GDB: Failed to halt target.";
+        transport->Close();
+        return;
       }
     }
     this->select_thread_->AddConnection(transport);

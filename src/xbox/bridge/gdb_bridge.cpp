@@ -265,7 +265,7 @@ void GDBBridge::HandleEnableExtendedMode(const GDBPacket& packet) {
 void GDBBridge::HandleQueryHaltReason(const GDBPacket& packet) {
   auto thread = debugger_->GetFirstStoppedThread();
   if (!thread || !thread->stopped) {
-    SendOK();
+    SendError(EPERM);
     return;
   }
 
@@ -1069,7 +1069,14 @@ void GDBBridge::HandleQuerySupported(const GDBPacket& packet) {
       continue;
     }
 
-    LOG_GDB(trace) << "Unknown feature " << feature;
+    if (feature.back() == '+') {
+      LOG_GDB(debug) << "Disabling unsupported feature " << feature;
+      feature.back() = '-';
+      response += feature;
+      continue;
+    } else {
+      LOG_GDB(trace) << "Unknown feature " << feature;
+    }
   }
 
   gdb_->Send(GDBPacket(response));
