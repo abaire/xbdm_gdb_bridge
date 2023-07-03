@@ -169,9 +169,11 @@ void XBOXInterface::OnGDBClientConnected(int sock, IPAddress& address) {
   // to communicate with XBDM.
   assert(gdb_executor_);
   boost::asio::dispatch(*gdb_executor_, [this, transport]() mutable {
+    uint32_t i;
+
     if (!this->xbdm_debugger_->IsAttached()) {
-      auto i = 0;
-      for (; i < kMaxDebuggerAttachAttempts && !this->xbdm_debugger_->Attach();
+      for (i = 0;
+           i < kMaxDebuggerAttachAttempts && !this->xbdm_debugger_->Attach();
            ++i) {
         LOG_XBDM(trace) << "GDB: Debugger attach failed. Attempt " << (i + 1);
         WaitMilliseconds(50);
@@ -181,22 +183,33 @@ void XBOXInterface::OnGDBClientConnected(int sock, IPAddress& address) {
         transport->Close();
         return;
       }
-
-      for (i = 0;
-           i < kMaxDebuggerHaltAttempts && !this->xbdm_debugger_->HaltAll();
-           ++i) {
-        LOG_XBDM(trace) << "GDB: Debugger initial halt failed. Attempt "
-                        << (i + 1);
-        WaitMilliseconds(50);
-      }
-      if (i == kMaxDebuggerHaltAttempts) {
-        LOG_XBDM(error) << "GDB: Failed to halt target.";
-        transport->Close();
-        return;
-      }
     }
+
+    if (!gdb_launch_target_.empty()) {
+      this->xbdm_debugger_->DebugXBE(gdb_launch_target_);
+      ClearGDBLaunchTarget();
+    }
+
+    for (i = 0;
+         i < kMaxDebuggerHaltAttempts && !this->xbdm_debugger_->HaltAll();
+         ++i) {
+      LOG_XBDM(trace) << "GDB: Debugger initial halt failed. Attempt "
+                      << (i + 1);
+      WaitMilliseconds(50);
+    }
+    if (i == kMaxDebuggerHaltAttempts) {
+      LOG_XBDM(error) << "GDB: Failed to halt target.";
+      transport->Close();
+      return;
+    }
+
     this->select_thread_->AddConnection(transport);
-    this->gdb_bridge_->AddTransport(transport);
+
+    if (!this->gdb_bridge_->AddTransport(transport)) {
+      LOG_XBDM(error) << "Failed to add transport to GDB bridge.";
+      transport->Close();
+      return;
+    }
   });
 }
 
