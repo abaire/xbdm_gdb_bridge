@@ -1,5 +1,7 @@
 #include "tracer.h"
 
+#include <filesystem>
+#include <fstream>
 #include <memory>
 
 #include "dyndxt_loader/dyndxt_requests.h"
@@ -239,18 +241,25 @@ bool Tracer::TraceFrames(XBOXInterface &interface,
   }
 
   for (auto i = 0; i < num_frames; ++i) {
-    if (!instance->TraceFrame(interface)) {
+    char frame_name[32];
+    snprintf(frame_name, sizeof(frame_name), "frame_%d", i + 1);
+    auto output_path = std::filesystem::path(artifact_path) / frame_name;
+    if (!instance->TraceFrame(interface, output_path)) {
       return false;
     }
 
-    // TODO: Write out the artifacts.
     LOG_TRACER(trace) << "Frame trace " << (i + 1) << " completed.";
   }
   return true;
 }
 
-bool Tracer::TraceFrame(XBOXInterface &interface) {
-  in_progress_frame_.Reset();
+bool Tracer::TraceFrame(XBOXInterface &interface,
+                        const std::filesystem::path &artifact_path) {
+  if (!exists(artifact_path)) {
+    create_directories(artifact_path);
+  }
+
+  in_progress_frame_.Setup(artifact_path);
 
   request_processed_ = false;
   pgraph_data_available_ = false;
@@ -266,27 +275,47 @@ bool Tracer::TraceFrame(XBOXInterface &interface) {
 
   while (!request_processed_) {
     if (pgraph_data_available_.exchange(false)) {
-      if (!in_progress_frame_.FetchPGRAPHTraceData(interface)) {
-        // TODO: Handle error if it's not just lack of data due to a previous
-        //   read.
+      if (in_progress_frame_.FetchPGRAPHTraceData(interface) ==
+          FrameCapture::FetchResult::ERROR) {
+        // TODO: Handle error.
         LOG_TRACER(error) << "FetchPGRAPHTraceData failed.";
       }
     }
 
     if (graphics_data_available_.exchange(false)) {
-      // TODO: Download graphics data.
+      if (in_progress_frame_.FetchGraphicsTraceData(interface) ==
+          FrameCapture::FetchResult::ERROR) {
+        // TODO: Handle error.
+        LOG_TRACER(error) << "FetchPGRAPHTraceData failed.";
+      }
     }
   }
 
-  // TODO: Consume any remaining buffers.
-  if (!in_progress_frame_.FetchPGRAPHTraceData(interface)) {
-    // TODO: Handle error
-    LOG_TRACER(error) << "FetchPGRAPHTraceData failed.";
+  // Consume any remaining PGRAPH data.
+  while (true) {
+    auto result = in_progress_frame_.FetchPGRAPHTraceData(interface);
+    if (result == FrameCapture::FetchResult::NO_DATA_AVAILABLE) {
+      break;
+    }
+    if (result == FrameCapture::FetchResult::ERROR) {
+      // TODO: Handle error
+      LOG_TRACER(error) << "FetchPGRAPHTraceData failed.";
+    }
   }
 
-  if (graphics_data_available_.exchange(false)) {
-    // TODO: Download graphics data.
+  // Consume any remaining graphics data.
+  while (true) {
+    auto result = in_progress_frame_.FetchGraphicsTraceData(interface);
+    if (result == FrameCapture::FetchResult::NO_DATA_AVAILABLE) {
+      break;
+    }
+    if (result == FrameCapture::FetchResult::ERROR) {
+      // TODO: Handle error
+      LOG_TRACER(error) << "FetchGraphicsTraceData failed.";
+    }
   }
+
+  in_progress_frame_.Close();
 
   return true;
 }

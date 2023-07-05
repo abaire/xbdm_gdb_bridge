@@ -28,6 +28,32 @@ typedef struct PushBufferCommand {
   uint32_t parameter_count;
 } __attribute((packed)) PushBufferCommand;
 
+//! Enumerates the possible states of a PushBufferCommandParameters struct.
+//!
+//! Keep in sync with pushbuffer_command.h
+typedef enum PBCPDataState {
+  PBCPDS_INVALID = 0,
+  PBCPDS_SMALL_BUFFER = 1,
+  PBCPDS_HEAP_BUFFER = 2,
+} PBCPDataState;
+
+//! Holds the parameter data for a PushBufferCommand.
+//!
+//! Keep in sync with pushbuffer_command.h
+typedef struct PushBufferCommandParameters {
+  //! A value from PBCPDataState indicating what data, if any, is valid in this
+  //! struct.
+  uint32_t data_state;
+  union {
+    //! Contains the parameters inline.
+    uint32_t buffer[4];
+
+    // The `heap_buffer` value is only valid on the XBOX itself so this field is
+    // repurposed to link into the local data map.
+    uint32_t data_id;
+  } data;
+} __attribute((packed)) PushBufferCommandParameters;
+
 //! Encapsulates information about a single PGRAPH command.
 //!
 //! Keep in sync with pushbuffer_command.h
@@ -48,9 +74,10 @@ typedef struct PushBufferCommandTraceInfo {
   //! The PGRAPH graphics class for this packet (e.g., 0x97 for 3D).
   uint32_t graphics_class;
 
-  // The data param is only valid on the XBOX itself so this field is repurposed
-  // to link into the data map.
-  uint32_t data_id;
+  // Parameters passed to the command, if any.
+  // If populated, this will always be exactly (command.parameter_count * 4)
+  // bytes.
+  PushBufferCommandParameters data;
 } __attribute((packed)) PushBufferCommandTraceInfo;
 
 }  // namespace NTRCTracer

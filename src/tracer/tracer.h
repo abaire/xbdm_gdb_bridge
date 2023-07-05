@@ -1,6 +1,7 @@
 #ifndef XBDM_GDB_BRIDGE_SRC_TRACER_TRACER_H_
 #define XBDM_GDB_BRIDGE_SRC_TRACER_TRACER_H_
 
+#include <filesystem>
 #include <memory>
 
 #include "frame_capture.h"
@@ -55,7 +56,8 @@ class Tracer {
   bool BreakOnFrameStart_(XBOXInterface &interface, bool require_flip);
 
   //! Traces a single frame.
-  bool TraceFrame(XBOXInterface &interface);
+  bool TraceFrame(XBOXInterface &interface,
+                  const std::filesystem::path &artifact_path);
 
  private:
   static Tracer *singleton_;
