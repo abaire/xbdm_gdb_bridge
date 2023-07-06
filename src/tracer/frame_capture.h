@@ -31,7 +31,7 @@ class FrameCapture {
   FetchResult FetchPGRAPHTraceData(XBOXInterface &interface);
 
   //! Retrieves and consumes graphics trace information from the given XBOX.
-  FetchResult FetchGraphicsTraceData(XBOXInterface &interface);
+  FetchResult FetchAuxTraceData(XBOXInterface &interface);
 
  private:
   //! Reads as many PushBufferCommandTraceInfo instances from
@@ -40,6 +40,25 @@ class FrameCapture {
 
   //! Writes information about the given packet to the nv2a_log.
   void LogPacket(const PushBufferCommandTraceInfo &packet);
+
+  //! Reads as many aux data structures from aux_trace_buffer_ as possible,
+  //! erasing consumed bytes.
+  void ProcessAuxBuffer();
+
+  void LogPGRAPH(const AuxDataHeader &packet, uint32_t data_len,
+                 std::vector<uint8_t>::const_iterator data) const;
+
+  void LogPFB(const AuxDataHeader &packet, uint32_t data_len,
+              std::vector<uint8_t>::const_iterator data) const;
+
+  void LogRDI(const AuxDataHeader &packet, uint32_t data_len,
+              std::vector<uint8_t>::const_iterator data) const;
+
+  void LogSurface(const AuxDataHeader &packet, uint32_t data_len,
+                  std::vector<uint8_t>::const_iterator data) const;
+
+  void LogTexture(const AuxDataHeader &packet, uint32_t data_len,
+                  std::vector<uint8_t>::const_iterator data) const;
 
  public:
   //! Map of arbitrary ID to a vector of parameters for some PGRAPH command.
@@ -62,6 +81,9 @@ class FrameCapture {
 
   //! Stores bytes that were not consumed as part of the last trace fetch.
   std::vector<uint8_t> pgraph_trace_buffer_;
+
+  //! Stores bytes that were not consumed as part of the last aux fetch.
+  std::vector<uint8_t> aux_trace_buffer_;
 };
 
 }  // namespace NTRCTracer

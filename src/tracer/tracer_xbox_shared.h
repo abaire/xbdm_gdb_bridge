@@ -80,6 +80,97 @@ typedef struct PushBufferCommandTraceInfo {
   PushBufferCommandParameters data;
 } __attribute((packed)) PushBufferCommandTraceInfo;
 
+//! Describes some auxiliary buffer data type.
+//!
+//! Keep in sync with pgraph_command_callbacks.h
+typedef enum AuxDataType {
+  //! A raw dump of the PGRAPH region.
+  ADT_PGRAPH_DUMP,
+  //! A raw dump of the PFB region.
+  ADT_PFB_DUMP,
+  //! A raw dump of the RDI data.
+  ADT_RDI_DUMP,
+  //! A surface buffer of some sort.
+  ADT_SURFACE,
+  //! A texture.
+  ADT_TEXTURE,
+} AuxDataType;
+
+//! Header describing an entry in the auxiliary data stream.
+//!
+//! Keep in sync with pgraph_command_callbacks.h
+typedef struct AuxDataHeader {
+  //! The index of the PushBufferCommandTraceInfo packet with which this data is
+  //! associated.
+  uint32_t packet_index;
+
+  //! A value from AuxDataType indicating the type of data.
+  uint32_t data_type;
+
+  //! The length of the data, which starts immediately following this header.
+  uint32_t len;
+} __attribute((packed)) AuxDataHeader;
+
+//! Header describing RDI data.
+//!
+//! Keep in sync with pgraph_command_callbacks.h
+typedef struct RDIHeader {
+  //! The offset from which the following RDI values were read.
+  uint32_t offset;
+  //! The number of 32-bit values that follow this struct.
+  uint32_t count;
+} __attribute((packed)) RDIHeader;
+
+//! Describes the application of a surface.
+//!
+//! Keep in sync with pgraph_command_callbacks.h
+typedef enum SurfaceType {
+  ST_COLOR,
+  ST_DEPTH,
+} SurfaceType;
+
+//! Header describing surface data.
+//!
+//! Keep in sync with pgraph_command_callbacks.h
+typedef struct SurfaceHeader {
+  //! The intended use of this surface.
+  uint32_t type;
+  //! The number of ASCII characters immediately following this header
+  //! containing a description of the content.
+  uint32_t description_len;
+  //! The number of image bytes immediately following the description
+  //! characters.
+  uint32_t len;
+
+  uint32_t width;
+  uint32_t height;
+  uint32_t pitch;
+} __attribute((packed)) SurfaceHeader;
+
+//! Header describing texture data.
+//!
+//! Keep in sync with pgraph_command_callbacks.h
+typedef struct TextureHeader {
+  //! The texture unit/stage that this texture is associated with.
+  uint32_t stage;
+
+  //! The layer index of this texture.
+  uint32_t layer;
+
+  //! The number of image bytes immediately following this header.
+  uint32_t len;
+
+  uint32_t format;
+  uint32_t width;
+  uint32_t height;
+  uint32_t depth;
+  uint32_t pitch;
+  //! The value of the control0 register.
+  uint32_t control0;
+  //! The value of the control1 register.
+  uint32_t control1;
+} __attribute((packed)) TextureHeader;
+
 }  // namespace NTRCTracer
 
 #endif  // XBDM_GDB_BRIDGE_SRC_TRACER_TRACER_XBOX_SHARED_H_

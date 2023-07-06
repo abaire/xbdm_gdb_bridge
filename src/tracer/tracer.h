@@ -65,7 +65,7 @@ class Tracer {
   int notification_handler_id_{0};
   std::atomic_bool request_processed_{false};
   std::atomic_bool pgraph_data_available_{false};
-  std::atomic_bool graphics_data_available_{false};
+  std::atomic_bool aux_data_available_{false};
 
   FrameCapture in_progress_frame_;
   std::list<FrameCapture> captured_frames_;

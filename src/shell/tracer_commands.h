@@ -30,7 +30,7 @@ struct TracerCommandDetach : Command {
 struct TracerCommandBreakOnNextFlip : Command {
   TracerCommandBreakOnNextFlip()
       : Command(
-            "Asks the tracer to break at the start of a frame."
+            "Asks the tracer to break at the start of a frame.",
             "[require_flip]\n"
             "\n"
             "Asks the tracer to break at the start of a frame.\n"

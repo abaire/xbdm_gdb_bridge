@@ -111,8 +111,8 @@ void Tracer::OnNotification(
     request_processed_ = true;
   } else if (content.HasKey("w_pgraph")) {
     pgraph_data_available_ = true;
-  } else if (content.HasKey("w_graphics")) {
-    graphics_data_available_ = true;
+  } else if (content.HasKey("w_aux")) {
+    aux_data_available_ = true;
   } else {
     LOG_TRACER(error) << "Notification handler called with unknown type: "
                       << *notification;
@@ -263,7 +263,7 @@ bool Tracer::TraceFrame(XBOXInterface &interface,
 
   request_processed_ = false;
   pgraph_data_available_ = false;
-  graphics_data_available_ = false;
+  aux_data_available_ = false;
 
   auto request = std::make_shared<DynDXTLoader::InvokeSimple>(NTRC_HANDLER_NAME
                                                               "!trace_frame");
@@ -282,8 +282,8 @@ bool Tracer::TraceFrame(XBOXInterface &interface,
       }
     }
 
-    if (graphics_data_available_.exchange(false)) {
-      if (in_progress_frame_.FetchGraphicsTraceData(interface) ==
+    if (aux_data_available_.exchange(false)) {
+      if (in_progress_frame_.FetchAuxTraceData(interface) ==
           FrameCapture::FetchResult::ERROR) {
         // TODO: Handle error.
         LOG_TRACER(error) << "FetchPGRAPHTraceData failed.";
@@ -305,13 +305,13 @@ bool Tracer::TraceFrame(XBOXInterface &interface,
 
   // Consume any remaining graphics data.
   while (true) {
-    auto result = in_progress_frame_.FetchGraphicsTraceData(interface);
+    auto result = in_progress_frame_.FetchAuxTraceData(interface);
     if (result == FrameCapture::FetchResult::NO_DATA_AVAILABLE) {
       break;
     }
     if (result == FrameCapture::FetchResult::ERROR) {
       // TODO: Handle error
-      LOG_TRACER(error) << "FetchGraphicsTraceData failed.";
+      LOG_TRACER(error) << "FetchAuxTraceData failed.";
     }
   }
 
