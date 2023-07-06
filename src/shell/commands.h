@@ -101,6 +101,22 @@ struct CommandDebugger : Command {
 //                     const std::vector<std::string> &args) override;
 // };
 
+struct CommandDedicate : Command {
+  CommandDedicate()
+      : Command(
+            "Dedicate the shell connection to a specific handler or reset to "
+            "global.",
+            "[handler_name]\n"
+            "\n"
+            "If no args are given, restores the shell connection to the global "
+            "command handler. If a name is given, dedicates the shell "
+            "connection to talking to only that handler, which must have been "
+            "registered via DmCommandProcessorEx with a non-null thread "
+            "creation argument.") {}
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &args) override;
+};
+
 struct CommandDelete : Command {
   CommandDelete()
       : Command("Delete a file or directory.",

@@ -9,6 +9,7 @@
 #include "notification_ntrc.h"
 #include "ntrc_dyndxt.h"
 #include "ntrc_dyndxt_xbox.h"
+#include "rdcp/xbdm_requests.h"
 #include "util/logging.h"
 #include "util/timer.h"
 #include "xbox/xbdm_context.h"
@@ -49,13 +50,17 @@ bool Tracer::Install(XBOXInterface &interface) {
         NTRC_HANDLER_NAME, MakeXBDMNotificationConstructor<NotificationNTRC>());
   }
 
-  // See if the ntrc dyndxt is already running, installing it if not.
+  // Create a dedicated connection. If the tracer isn't already running, this
+  // will fail to find the command handler and spawn an install.
   {
-    auto request = std::make_shared<DynDXTLoader::InvokeMultiline>(
-        NTRC_HANDLER_NAME "!hello");
-    interface.SendCommandSync(request);
+    auto request = std::make_shared<Dedicate>(NTRC_HANDLER_NAME);
+    interface.SendCommandSync(request, NTRC_HANDLER_NAME);
     if (!request->IsOK()) {
       if (!InstallDynDXT(interface)) {
+        return false;
+      }
+      interface.SendCommandSync(request, NTRC_HANDLER_NAME);
+      if (!request->IsOK()) {
         return false;
       }
     }
@@ -79,7 +84,7 @@ static bool InstallDynDXT(XBOXInterface &interface) {
 bool Tracer::Attach(XBOXInterface &interface) {
   auto request = std::make_shared<DynDXTLoader::InvokeSimple>(
       NTRC_HANDLER_NAME "!attach tcap=1 dcap=1 ccap=1 rdicap=0");
-  interface.SendCommandSync(request);
+  interface.SendCommandSync(request, NTRC_HANDLER_NAME);
   if (!request->IsOK()) {
     LOG_TRACER(error) << *request << std::endl;
     return false;
@@ -91,7 +96,7 @@ bool Tracer::Attach(XBOXInterface &interface) {
 bool Tracer::Detach(XBOXInterface &interface) {
   auto request =
       std::make_shared<DynDXTLoader::InvokeSimple>(NTRC_HANDLER_NAME "!detach");
-  interface.SendCommandSync(request);
+  interface.SendCommandSync(request, NTRC_HANDLER_NAME);
   if (!request->IsOK()) {
     LOG_TRACER(error) << *request << std::endl;
     return false;
@@ -201,7 +206,7 @@ bool Tracer::BreakOnFrameStart_(XBOXInterface &interface, bool require_flip) {
     request_processed_ = false;
     auto request = std::make_shared<DynDXTLoader::InvokeSimple>(
         NTRC_HANDLER_NAME "!wait_stable_pb");
-    interface.SendCommandSync(request);
+    interface.SendCommandSync(request, NTRC_HANDLER_NAME);
     if (!request->IsOK()) {
       LOG_TRACER(error) << *request << std::endl;
       return false;
@@ -218,7 +223,7 @@ bool Tracer::BreakOnFrameStart_(XBOXInterface &interface, bool require_flip) {
 
     request_processed_ = false;
     auto request = std::make_shared<DynDXTLoader::InvokeSimple>(cmd);
-    interface.SendCommandSync(request);
+    interface.SendCommandSync(request, NTRC_HANDLER_NAME);
     if (!request->IsOK()) {
       LOG_TRACER(error) << *request << std::endl;
       return false;
@@ -267,7 +272,7 @@ bool Tracer::TraceFrame(XBOXInterface &interface,
 
   auto request = std::make_shared<DynDXTLoader::InvokeSimple>(NTRC_HANDLER_NAME
                                                               "!trace_frame");
-  interface.SendCommandSync(request);
+  interface.SendCommandSync(request, NTRC_HANDLER_NAME);
   if (!request->IsOK()) {
     LOG_TRACER(error) << *request << std::endl;
     return false;

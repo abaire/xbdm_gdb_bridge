@@ -62,7 +62,14 @@ class XBOXInterface {
   std::shared_ptr<RDCPProcessedRequest> SendCommandSync(
       std::shared_ptr<RDCPProcessedRequest> command);
   std::future<std::shared_ptr<RDCPProcessedRequest>> SendCommand(
-      std::shared_ptr<RDCPProcessedRequest> command);
+      const std::shared_ptr<RDCPProcessedRequest> &command);
+
+  std::shared_ptr<RDCPProcessedRequest> SendCommandSync(
+      const std::shared_ptr<RDCPProcessedRequest> &command,
+      const std::string &dedicated_handler);
+  std::future<std::shared_ptr<RDCPProcessedRequest>> SendCommand(
+      const std::shared_ptr<RDCPProcessedRequest> &command,
+      const std::string &dedicated_handler);
 
  private:
   void OnGDBClientConnected(int sock, IPAddress &address);

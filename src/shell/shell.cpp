@@ -87,6 +87,7 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   REGISTER("continue", CommandContinue);
   REGISTER("debugoptions", CommandDebugOptions);
   REGISTER("debugger", CommandDebugger);
+  REGISTER("dedicate", CommandDedicate);
   REGISTER("dmversion", CommandDebugMonitorVersion);
   REGISTER("rm", CommandDelete);
   REGISTER("ls", CommandDirList);

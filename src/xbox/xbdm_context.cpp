@@ -31,6 +31,11 @@ XBDMContext::XBDMContext(std::string name, IPAddress xbox_address,
 }
 
 void XBDMContext::Shutdown() {
+  for (const auto& it : dedicated_transports_) {
+    it.second->Close();
+  }
+  dedicated_transports_.clear();
+
   if (xbdm_transport_) {
     xbdm_transport_->Close();
     xbdm_transport_.reset();
@@ -110,52 +115,118 @@ bool XBDMContext::Reconnect() {
 }
 
 std::shared_ptr<RDCPProcessedRequest> XBDMContext::SendCommandSync(
-    std::shared_ptr<RDCPProcessedRequest> command) {
+    const std::shared_ptr<RDCPProcessedRequest>& command) {
   auto future = SendCommand(command);
   future.get();
   return command;
 }
 
 std::future<std::shared_ptr<RDCPProcessedRequest>> XBDMContext::SendCommand(
-    std::shared_ptr<RDCPProcessedRequest> command) {
+    const std::shared_ptr<RDCPProcessedRequest>& command) {
+  return SendCommand(command, xbdm_transport_);
+}
+
+std::shared_ptr<RDCPProcessedRequest> XBDMContext::SendCommandSync(
+    std::shared_ptr<RDCPProcessedRequest> command,
+    const std::shared_ptr<XBDMTransport>& transport) {
+  auto future = SendCommand(command, transport);
+  future.get();
+  return command;
+}
+
+std::future<std::shared_ptr<RDCPProcessedRequest>> XBDMContext::SendCommand(
+    const std::shared_ptr<RDCPProcessedRequest>& command,
+    const std::string& dedicated_handler) {
+  auto it = dedicated_transports_.find(dedicated_handler);
+  if (it == dedicated_transports_.end()) {
+    assert(CreateDedicatedChannel(dedicated_handler));
+    it = dedicated_transports_.find(dedicated_handler);
+    assert(it != dedicated_transports_.end());
+  }
+
+  return SendCommand(command, it->second);
+}
+
+std::shared_ptr<RDCPProcessedRequest> XBDMContext::SendCommandSync(
+    const std::shared_ptr<RDCPProcessedRequest>& command,
+    const std::string& dedicated_handler) {
+  auto future = SendCommand(command, dedicated_handler);
+  future.get();
+  return command;
+}
+
+std::future<std::shared_ptr<RDCPProcessedRequest>> XBDMContext::SendCommand(
+    const std::shared_ptr<RDCPProcessedRequest>& command,
+    const std::shared_ptr<XBDMTransport>& transport) {
   assert(xbdm_control_executor_ && "SendCommand called before Start.");
   std::promise<std::shared_ptr<RDCPProcessedRequest>> promise;
   auto future = promise.get_future();
   boost::asio::dispatch(
       *xbdm_control_executor_,
-      [this, promise = std::move(promise), command]() mutable {
-        this->ExecuteXBDMPromise(promise, command);
+      [this, promise = std::move(promise), command, transport]() mutable {
+        this->ExecuteXBDMPromise(promise, command, transport);
       });
   return future;
 }
 
+bool XBDMContext::CreateDedicatedChannel(const std::string& command_handler) {
+  if (dedicated_transports_.find(command_handler) !=
+      dedicated_transports_.end()) {
+    return false;
+  }
+
+  std::string tag = logging::kLoggingTagXBDM;
+  tag += "_";
+  tag += command_handler;
+  auto transport = std::make_shared<XBDMTransport>(tag);
+  select_thread_->AddConnection(transport);
+
+  if (!transport->Connect(xbox_address_)) {
+    return false;
+  }
+
+  dedicated_transports_[command_handler] = transport;
+  return true;
+}
+
+void XBDMContext::DestroyDedicatedChannel(const std::string& command_handler) {
+  auto it = dedicated_transports_.find(command_handler);
+  if (it == dedicated_transports_.end()) {
+    return;
+  }
+
+  it->second->Close();
+  dedicated_transports_.erase(it);
+}
+
 void XBDMContext::ExecuteXBDMPromise(
     std::promise<std::shared_ptr<RDCPProcessedRequest>>& promise,
-    std::shared_ptr<RDCPProcessedRequest>& request) {
-  if (!XBDMConnect()) {
+    const std::shared_ptr<RDCPProcessedRequest>& request,
+    const std::shared_ptr<XBDMTransport>& transport) {
+  if (!XBDMConnect(transport)) {
     request->status = StatusCode::ERR_NOT_CONNECTED;
   } else {
-    xbdm_transport_->Send(request);
+    transport->Send(request);
     request->WaitUntilCompleted();
   }
 
   promise.set_value(request);
 }
 
-bool XBDMContext::XBDMConnect(int max_wait_millis) {
-  assert(xbdm_transport_);
-  if (xbdm_transport_->CanProcessCommands()) {
+bool XBDMContext::XBDMConnect(const std::shared_ptr<XBDMTransport>& transport,
+                              int max_wait_millis) {
+  assert(transport);
+  if (transport->CanProcessCommands()) {
     return true;
   }
 
-  if (!xbdm_transport_->IsConnected() &&
-      !xbdm_transport_->Connect(xbox_address_)) {
+  if (!transport->IsConnected() && !transport->Connect(xbox_address_)) {
     return false;
   }
 
   static constexpr int busywait_millis = 5;
   while (max_wait_millis > 0) {
-    if (xbdm_transport_->CanProcessCommands()) {
+    if (transport->CanProcessCommands()) {
       return true;
     }
 

@@ -29,7 +29,7 @@ FrameCapture::FetchResult FrameCapture::FetchPGRAPHTraceData(
   auto request =
       std::make_shared<DynDXTLoader::InvokeReceiveSizePrefixedBinary>(
           NTRC_HANDLER_NAME "!read_pgraph maxsize=0x4000");
-  interface.SendCommandSync(request);
+  interface.SendCommandSync(request, NTRC_HANDLER_NAME);
   if (!request->IsOK()) {
     // A notification of data availability may have triggered this fetch while a
     // read operation retrieved the data, so it is not considered an error for
@@ -62,7 +62,7 @@ FrameCapture::FetchResult FrameCapture::FetchAuxTraceData(
     auto request =
         std::make_shared<DynDXTLoader::InvokeReceiveSizePrefixedBinary>(
             NTRC_HANDLER_NAME "!read_aux maxsize=0x1000000");
-    interface.SendCommandSync(request);
+    interface.SendCommandSync(request, NTRC_HANDLER_NAME);
     if (!request->IsOK()) {
       if (request->status == ERR_DATA_NOT_AVAILABLE) {
         break;

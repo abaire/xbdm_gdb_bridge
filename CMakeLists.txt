@@ -15,19 +15,17 @@ include(FindPkgConfig)
 ExternalProject_Add(
         dyndxt_loader
         PREFIX ddxt
-        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dxt_loader/nxdk_dyndxt
+        GIT_REPOSITORY https://github.com/abaire/nxdk_dyndxt.git
+        GIT_TAG origin/main
         CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
             -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-        EXCLUDE_FROM_ALL
         BUILD_BYPRODUCTS
         ddxt/lib/bootstrap_l1.asm.obj
         ddxt/lib/bootstrap_l2.asm.obj
         ddxt/lib/dynamic_dxt_loader.lib
         ddxt/lib/libdynamic_dxt_loader.dll
         ddxt/lib/xbdm.lib
-        CONFIGURE_HANDLED_BY_BUILD TRUE
-        BUILD_ALWAYS TRUE
 )
 ExternalProject_Get_Property(dyndxt_loader INSTALL_DIR)
 set(dyndxt_lib_dir ${INSTALL_DIR}/lib)
@@ -40,8 +38,8 @@ ExternalProject_Add(
         GIT_REPOSITORY https://github.com/abaire/nxdk_ntrc_dyndxt.git
         GIT_TAG origin/main
         CMAKE_ARGS
-        -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
-        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+            -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
+            -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         BUILD_BYPRODUCTS
         ntrc/lib/libntrc_dyndxt.dll
         ntrc/include/ntrc_dyndxt.h

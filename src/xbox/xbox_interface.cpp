@@ -144,9 +144,23 @@ std::shared_ptr<RDCPProcessedRequest> XBOXInterface::SendCommandSync(
 }
 
 std::future<std::shared_ptr<RDCPProcessedRequest>> XBOXInterface::SendCommand(
-    std::shared_ptr<RDCPProcessedRequest> command) {
+    const std::shared_ptr<RDCPProcessedRequest>& command) {
   assert(xbdm_context_);
-  return xbdm_context_->SendCommand(std::move(command));
+  return xbdm_context_->SendCommand(command);
+}
+
+std::shared_ptr<RDCPProcessedRequest> XBOXInterface::SendCommandSync(
+    const std::shared_ptr<RDCPProcessedRequest>& command,
+    const std::string& dedicated_handler) {
+  assert(xbdm_context_);
+  return xbdm_context_->SendCommandSync(command, dedicated_handler);
+}
+
+std::future<std::shared_ptr<RDCPProcessedRequest>> XBOXInterface::SendCommand(
+    const std::shared_ptr<RDCPProcessedRequest>& command,
+    const std::string& dedicated_handler) {
+  assert(xbdm_context_);
+  return xbdm_context_->SendCommand(command, dedicated_handler);
 }
 
 void XBOXInterface::OnGDBClientConnected(int sock, IPAddress& address) {

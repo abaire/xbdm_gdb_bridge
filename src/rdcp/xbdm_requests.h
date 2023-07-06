@@ -257,20 +257,22 @@ struct Debugger : public RDCPProcessedRequest {
 //   // TODO: Implement me.
 // };
 
-/*
 struct Dedicate : public RDCPProcessedRequest {
-    """Sets connection as dedicated."""
+  explicit Dedicate(const char* handler_name = nullptr)
+      : RDCPProcessedRequest("dedicate") {
+    if (handler_name) {
+      SetData(" handler=\"");
+      AppendData(handler_name);
+      AppendData("\"");
+    } else {
+      SetData(" global");
+    }
+  }
 
-    struct Response(_ProcessedRawBodyResponse):
-        pass
-
-    construct(global_enable=None, handler_name=None):
-        RDCPProcessedRequest("dedicate") {
-        if global_enable:
-            self.body = b" global"
-        elif handler_name:
-            self.body = bytes(f' handler="{handler_name}"', "utf-8")
-*/
+  [[nodiscard]] bool IsOK() const override {
+    return status == StatusCode::OK_CONNECTION_DEDICATED;
+  }
+};
 
 /*
 struct DefTitle : public RDCPProcessedRequest {
