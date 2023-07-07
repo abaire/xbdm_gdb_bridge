@@ -153,6 +153,16 @@ Command::Result CommandDebugger::operator()(
 //   return HANDLED;
 // }
 
+Command::Result CommandDedicate::operator()(
+    XBOXInterface &interface, const std::vector<std::string> &args) {
+  if (args.empty()) {
+    SendAndPrintMessage(interface, std::make_shared<Dedicate>(nullptr));
+  } else {
+    SendAndPrintMessage(interface, std::make_shared<Dedicate>(args[0].c_str()));
+  }
+  return HANDLED;
+}
+
 static bool FetchDirectoryEntries(XBOXInterface &interface,
                                   const std::string &path,
                                   std::list<DirList::Entry> &directories,

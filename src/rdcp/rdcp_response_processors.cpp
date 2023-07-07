@@ -98,6 +98,13 @@ int64_t RDCPMapResponse::GetQWORD(const std::string &low_key,
 RDCPMultiMapResponse::RDCPMultiMapResponse(const std::vector<char> &data) {
   auto lines = SplitMultiline(data);
   for (auto &line : lines) {
-    maps.emplace_back(RDCPMapResponse(line));
+    maps.emplace_back(line);
   }
+}
+
+std::ostream &operator<<(std::ostream &os, const RDCPMapResponse &r) {
+  for (const auto &it : r.map) {
+    os << it.first << " = " << it.second << " ; ";
+  }
+  return os;
 }

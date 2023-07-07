@@ -31,6 +31,7 @@ namespace DynDXTLoader {
 constexpr const char kLoggingTagTracer[] = "DDXTLOADER";
 #define LOG_LOADER(lvl) LOG_TAGGED(lvl, kLoggingTagTracer)
 
+
 static bool SetMemoryUnsafe(const std::shared_ptr<XBDMContext>& context,
                             uint32_t address, const std::vector<uint8_t>& data);
 static bool InvokeL1Bootstrap(const std::shared_ptr<XBDMContext>& context,

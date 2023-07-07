@@ -10,6 +10,7 @@
 #include "debugger_commands.h"
 #include "dyndxt_commands.h"
 #include "shell_commands.h"
+#include "tracer_commands.h"
 #include "util/logging.h"
 
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
@@ -75,12 +76,18 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   commands_["@rby"] = invoke_recvbytes;
   commands_["@rbytes"] = invoke_recvbytes;
 
+  REGISTER("$init", TracerCommandInit);
+  REGISTER("$detach", TracerCommandDetach);
+  REGISTER("$stepflip", TracerCommandBreakOnNextFlip);
+  REGISTER("$trace", TracerCommandTraceFrames);
+
   REGISTER("altaddr", CommandAltAddr);
   REGISTER("break", CommandBreak);
   REGISTER("bye", CommandBye);
   REGISTER("continue", CommandContinue);
   REGISTER("debugoptions", CommandDebugOptions);
   REGISTER("debugger", CommandDebugger);
+  REGISTER("dedicate", CommandDedicate);
   REGISTER("dmversion", CommandDebugMonitorVersion);
   REGISTER("rm", CommandDelete);
   REGISTER("ls", CommandDirList);

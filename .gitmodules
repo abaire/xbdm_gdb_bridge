@@ -1,3 +1,0 @@
-[submodule "dxt_loader/nxdk_dyndxt"]
-	path = dxt_loader/nxdk_dyndxt
-	url = git@github.com:abaire/nxdk_dyndxt.git

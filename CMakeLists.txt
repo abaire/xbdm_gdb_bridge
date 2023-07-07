@@ -15,23 +15,38 @@ include(FindPkgConfig)
 ExternalProject_Add(
         dyndxt_loader
         PREFIX ddxt
-        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dxt_loader/nxdk_dyndxt
+        GIT_REPOSITORY https://github.com/abaire/nxdk_dyndxt.git
+        GIT_TAG origin/main
         CMAKE_ARGS
             -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
             -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-        EXCLUDE_FROM_ALL
         BUILD_BYPRODUCTS
         ddxt/lib/bootstrap_l1.asm.obj
         ddxt/lib/bootstrap_l2.asm.obj
         ddxt/lib/dynamic_dxt_loader.lib
         ddxt/lib/libdynamic_dxt_loader.dll
         ddxt/lib/xbdm.lib
-        CONFIGURE_HANDLED_BY_BUILD TRUE
-        BUILD_ALWAYS TRUE
 )
 ExternalProject_Get_Property(dyndxt_loader INSTALL_DIR)
 set(dyndxt_lib_dir ${INSTALL_DIR}/lib)
 set(dyndxt_include_dir ${INSTALL_DIR}/include)
+
+# Import the nvtrace DynamicDXT
+ExternalProject_Add(
+        ntrc_dyndxt
+        PREFIX ntrc
+        GIT_REPOSITORY https://github.com/abaire/nxdk_ntrc_dyndxt.git
+        GIT_TAG origin/main
+        CMAKE_ARGS
+            -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
+            -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        BUILD_BYPRODUCTS
+        ntrc/lib/libntrc_dyndxt.dll
+        ntrc/include/ntrc_dyndxt.h
+)
+ExternalProject_Get_Property(ntrc_dyndxt INSTALL_DIR)
+set(ntrc_dyndxt_lib_dir ${INSTALL_DIR}/lib)
+set(ntrc_dyndxt_include_dir ${INSTALL_DIR}/include)
 
 find_package(
         Boost 1.70
@@ -107,6 +122,15 @@ pack_resource(
         kDynDXTLoader
 )
 
+# ntrc tracer packing --------------------------------
+
+pack_resource(
+        ${ntrc_dyndxt_lib_dir}/libntrc_dyndxt.dll
+        ${GENERATED_FILES_DIR}/ntrc_dyndxt_xbox.h
+        kNTRCDynDXT
+)
+
+
 # xbdm executable ------------------------------------
 
 add_executable(
@@ -177,6 +201,8 @@ add_executable(
         src/shell/shell.cpp
         src/shell/shell.h
         src/shell/shell_commands.h
+        src/shell/tracer_commands.cpp
+        src/shell/tracer_commands.h
         src/util/logging.cpp
         src/util/logging.h
         src/util/optional.h
@@ -201,6 +227,13 @@ add_executable(
         src/rdcp/types/module.h
         src/rdcp/types/section.cpp
         src/rdcp/types/section.h
+        src/tracer/frame_capture.cpp
+        src/tracer/frame_capture.h
+        src/tracer/notification_ntrc.cpp
+        src/tracer/notification_ntrc.h
+        src/tracer/tracer.cpp
+        src/tracer/tracer.h
+        src/tracer/tracer_xbox_shared.h
         src/xbox/debugger/thread.cpp
         src/xbox/debugger/thread.h
         src/xbox/debugger/xbdm_debugger.cpp
@@ -210,6 +243,8 @@ add_executable(
         ${GENERATED_FILES_DIR}/bootstrap_l1_xbox.h
         ${GENERATED_FILES_DIR}/bootstrap_l2_xbox.h
         ${GENERATED_FILES_DIR}/dynamic_dxt_loader_xbox.h
+        ${GENERATED_FILES_DIR}/ntrc_dyndxt_xbox.h
+        ${ntrc_dyndxt_include_dir}/ntrc_dyndxt.h
 )
 
 target_include_directories(
@@ -218,6 +253,7 @@ target_include_directories(
         handler_loader_bootstrap
         src
         third_party/nxdk
+        ${ntrc_dyndxt_include_dir}
 )
 
 target_link_libraries(
@@ -229,7 +265,7 @@ target_link_libraries(
         ${RC_DEPENDS}
 )
 
-add_dependencies(xbdm_gdb_bridge dyndxt_loader)
+add_dependencies(xbdm_gdb_bridge dyndxt_loader ntrc_dyndxt)
 
 # Tests ----------------------------------------------
 

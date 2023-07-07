@@ -5,6 +5,7 @@
 #include <ostream>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "rdcp/types/execution_state.h"
@@ -25,10 +26,20 @@ enum NotificationType {
   NT_WATCHPOINT,
   NT_SINGLE_STEP,
   NT_EXCEPTION,
+  // A custom event type that must be string matched.
+  NT_CUSTOM,
 };
+
+struct XBDMNotification;
+
+//! A function that can construct an XBDMNotification instance.
+typedef std::function<std::shared_ptr<XBDMNotification>(
+    const char *buffer_start, const char *buffer_end)>
+    XBDMNotificationConstructor;
 
 struct XBDMNotification {
   [[nodiscard]] virtual NotificationType Type() const = 0;
+  [[nodiscard]] virtual std::string NotificationPrefix() const { return ""; }
 
   friend std::ostream &operator<<(std::ostream &os,
                                   const XBDMNotification &base) {
@@ -164,5 +175,24 @@ struct NotificationException : XBDMNotification {
 
 std::shared_ptr<XBDMNotification> ParseXBDMNotification(const char *message,
                                                         long message_len);
+
+//! Registers an XBDMNotification constructor for a custom event prefix.
+bool RegisterXBDMNotificationConstructor(
+    const char *prefix, XBDMNotificationConstructor constructor);
+
+//! Unregisters the custom constructor for the given event prefix.
+bool UnregisterXBDMNotificationConstructor(const char *prefix);
+
+//! Generates an XBDMNotificationConstructor method for some XBDMNotification
+//! type.
+template <typename T>
+std::enable_if_t<std::is_base_of_v<XBDMNotification, T>,
+                 XBDMNotificationConstructor>
+MakeXBDMNotificationConstructor() {
+  return [](const char *buffer_start,
+            const char *buffer_end) -> std::shared_ptr<XBDMNotification> {
+    return std::make_shared<T>(buffer_start, buffer_end);
+  };
+}
 
 #endif  // XBDM_GDB_BRIDGE_XBDM_NOTIFICATION_H

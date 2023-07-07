@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <mutex>
 #include <ostream>
 #include <regex>
 
@@ -11,6 +12,13 @@
 
 static bool StartsWith(const char *buffer, long buffer_len, const char *prefix,
                        long prefix_len);
+
+//! Mutex to guard interaction with the custom notification constructors.
+static std::recursive_mutex customNotificationMutex;
+
+//! Map of prefix to custom notification constructor functions.
+static std::map<std::string, XBDMNotificationConstructor>
+    customNotificationConstructors;
 
 std::shared_ptr<XBDMNotification> ParseXBDMNotification(const char *buffer,
                                                         long buffer_len) {
@@ -32,9 +40,56 @@ std::shared_ptr<XBDMNotification> ParseXBDMNotification(const char *buffer,
   SETIF("data ", NotificationWatchpoint)
   SETIF("singlestep ", NotificationSingleStep)
   SETIF("exception ", NotificationException)
-
 #undef SETIF
-  return {};
+
+  {
+    const std::lock_guard<std::recursive_mutex> lock(customNotificationMutex);
+
+    auto delimiter = strchr(buffer, '!');
+    if (!delimiter) {
+      return {};
+    }
+
+    auto prefix = std::string(buffer, delimiter);
+    auto entry = customNotificationConstructors.find(prefix);
+    if (entry == customNotificationConstructors.end()) {
+      return {};
+    }
+
+    return entry->second(delimiter + 1, buffer + buffer_len);
+  }
+}
+
+//! Registers an XBDMNotification constructor for a custom event prefix.
+bool RegisterXBDMNotificationConstructor(
+    const char *prefix, XBDMNotificationConstructor constructor) {
+  const std::lock_guard<std::recursive_mutex> lock(customNotificationMutex);
+
+  if (customNotificationConstructors.find(prefix) !=
+      customNotificationConstructors.end()) {
+    LOG(warning) << "Ignoring notification constructor registration for "
+                    "existing prefix '"
+                 << prefix << "'.";
+    return false;
+  }
+
+  customNotificationConstructors[prefix] = std::move(constructor);
+  return true;
+}
+
+//! Unregisters the custom constructor for the given event prefix.
+bool UnregisterXBDMNotificationConstructor(const char *prefix) {
+  const std::lock_guard<std::recursive_mutex> lock(customNotificationMutex);
+
+  auto entry = customNotificationConstructors.find(prefix);
+  if (entry == customNotificationConstructors.end()) {
+    LOG(warning) << "Attempt to remove unknown custom notification constructor "
+                    "with prefix '"
+                 << prefix << "'.";
+    return false;
+  }
+  customNotificationConstructors.erase(entry);
+  return true;
 }
 
 static bool StartsWith(const char *buffer, long buffer_len, const char *prefix,

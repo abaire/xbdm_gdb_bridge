@@ -107,6 +107,8 @@ struct RDCPMapResponse {
   std::set<std::string> valueless_keys;
 };
 
+std::ostream &operator<<(std::ostream &os, const RDCPMapResponse &r);
+
 struct RDCPMultiMapResponse {
   explicit RDCPMultiMapResponse(const std::vector<char> &data);
 
