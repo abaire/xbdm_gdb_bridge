@@ -1,6 +1,7 @@
 #ifndef XBDM_GDB_BRIDGE_SRC_TRACER_TRACER_H_
 #define XBDM_GDB_BRIDGE_SRC_TRACER_TRACER_H_
 
+#include <atomic>
 #include <filesystem>
 #include <memory>
 
