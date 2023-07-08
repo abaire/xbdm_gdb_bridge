@@ -22,7 +22,9 @@ class Tracer {
   static bool Initialize(XBOXInterface &interface);
 
   //! Attaches to the tracer instance on the XBOX.
-  static bool Attach(XBOXInterface &interface);
+  static bool Attach(XBOXInterface &interface, bool tcap = true,
+                     bool dcap = false, bool ccap = true, bool rdicap = false,
+                     bool rawpgraph = false, bool rawpfb = false);
 
   //! Detaches from the tracer instance on the XBOX.
   static bool Detach(XBOXInterface &interface);

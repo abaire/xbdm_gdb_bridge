@@ -17,14 +17,7 @@ struct ShellCommandReconnect : Command {
   ShellCommandReconnect()
       : Command("Attempt to disconnect and reconnect from XBDM.") {}
   Result operator()(XBOXInterface &interface,
-                    const std::vector<std::string> &) override {
-    if (interface.ReconnectXBDM()) {
-      std::cout << "Connected." << std::endl;
-    } else {
-      std::cout << "Failed to connect." << std::endl;
-    }
-    return Result::HANDLED;
-  }
+                    const std::vector<std::string> &) override;
 };
 
 struct ShellCommandGDB : Command {
@@ -43,35 +36,36 @@ struct ShellCommandGDB : Command {
             "containing a default.xbe) that should be launched "
             "when a GDB debugger first connects.") {}
   Result operator()(XBOXInterface &interface,
-                    const std::vector<std::string> &args) override {
-    std::vector<std::string> components;
-    IPAddress address;
+                    const std::vector<std::string> &args) override;
+};
 
-    if (args.empty()) {
-      std::cout << "Missing required port argument." << std::endl;
-      PrintUsage();
-      return Result::HANDLED;
-    }
-    address = IPAddress(args.front());
+struct ShellCommandTrace : Command {
+  ShellCommandTrace()
+      : Command("Inject the nv2a tracer and capture one or more frames.",
+                "[<config> <value>] ...\n"
+                "\n"
+                "Configuration options:\n"
+                "  path <path> - Local directory into which trace artifacts "
+                "should be saved. Each frame will create a separate subdir of "
+                "the form 'frame_X'. Default: <current working dir>.\n"
+                "  frames <int> - Number of consecutive frames to capture. "
+                "Default: 1.\n"
+                "  tex <on|off> - Enables or disables capture of raw "
+                "textures. Default: on.\n"
+                "  depth <on|off> - Enables or disables capture of the depth "
+                "buffer. Default: off.\n"
+                "  color <on|off> - Enables or disables capture of the color "
+                "buffer (framebuffer). Default: on.\n"
+                "  rdi <on|off> - Enables or disables capture of RDI "
+                "regions (vertex shader program, constants). This may have a "
+                "significant performance impact. Default: off.\n"
+                "  pgraph <on|off> - Enables or disables capture of the raw "
+                "PGRAPH region. Default: off.\n"
+                "  pfb <on|off> - Enables or disables capture of the raw "
+                "PFB region. Default: off.") {}
 
-    if (!interface.StartGDBServer(address)) {
-      std::cout << "Failed to start GDB server." << std::endl;
-      return Result::HANDLED;
-    }
-
-    if (args.size() > 1) {
-      interface.SetGDBLaunchTarget(args.back());
-    }
-
-    if (!interface.GetGDBListenAddress(address)) {
-      std::cout << "GDB server failed to bind." << std::endl;
-      interface.ClearGDBLaunchTarget();
-    } else {
-      std::cout << "GDB server listening at Address " << address << std::endl;
-    }
-
-    return Result::HANDLED;
-  }
+  Result operator()(XBOXInterface &interface,
+                    const std::vector<std::string> &args) override;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SHELL_COMMANDS_H

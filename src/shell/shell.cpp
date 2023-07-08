@@ -26,6 +26,7 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   commands_["?"] = nullptr;
   commands_["!"] = nullptr;
   REGISTER("gdb", ShellCommandGDB);
+  REGISTER("trace", ShellCommandTrace);
   REGISTER("reconnect", ShellCommandReconnect);
   auto quit = std::make_shared<ShellCommandQuit>();
   commands_["exit"] = quit;

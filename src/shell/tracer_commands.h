@@ -10,14 +10,26 @@ class XBOXInterface;
 struct TracerCommandInit : Command {
   TracerCommandInit()
       : Command("Load the ntrc nv2a tracer DynamicDXT.",
+                "[<config> <value>] ...\n"
                 "\n"
-                "Load the ntrc tracer.\n"
+                "Initializes the NTRC tracer on the remote.\n"
                 "\n"
-                "This will avoid an on-demand load when interacting with the "
-                "tracer via other commands, enabling more accurate start "
-                "timing.") {}
+                "Configuration options:\n"
+                "  tex <on|off> - Enables or disables capture of raw "
+                "textures. Default: on.\n"
+                "  depth <on|off> - Enables or disables capture of the depth "
+                "buffer. Default: off.\n"
+                "  color <on|off> - Enables or disables capture of the color "
+                "buffer (framebuffer). Default: on.\n"
+                "  rdi <on|off> - Enables or disables capture of RDI "
+                "regions (vertex shader program, constants). This may have a "
+                "significant performance impact. Default: off.\n"
+                "  pgraph <on|off> - Enables or disables capture of the raw "
+                "PGRAPH region. Default: off.\n"
+                "  pfb <on|off> - Enables or disables capture of the raw "
+                "PFB region. Default: off.") {}
   Result operator()(XBOXInterface &interface,
-                    const std::vector<std::string> &) override;
+                    const std::vector<std::string> &args) override;
 };
 
 struct TracerCommandDetach : Command {
@@ -44,17 +56,16 @@ struct TracerCommandBreakOnNextFlip : Command {
 struct TracerCommandTraceFrames : Command {
   TracerCommandTraceFrames()
       : Command("Retrieves hardware interaction trace for one or more frames.",
-                "[local_artifact_path] [num_frames]\n"
+                "[<config> <value>] ...\n"
                 "\n"
                 "Retrieves PGRAPH and graphics tracing from the XBOX.\n"
                 "\n"
-                "[local_artifact_path] - Local filesystem path into which "
-                "artifacts should be written.\n"
-                "    If multiple frames are captured, a subdirectory will be "
-                "created for each frame. Defaults to the the current working "
-                "directory.\n"
-                "[num_frames] - The number of consecutive frames to capture. "
-                "Defaults to 1.") {}
+                "Configuration options:\n"
+                "  path <path> - Local directory into which trace artifacts "
+                "should be saved. Each frame will create a separate subdir of "
+                "the form 'frame_X'. Default: <current working dir>.\n"
+                "  frames <int> - Number of consecutive frames to capture. "
+                "Default: 1.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };

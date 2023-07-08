@@ -1,18 +1,44 @@
 #include "tracer_commands.h"
 
+#include <boost/algorithm/string/case_conv.hpp>
 #include <filesystem>
 #include <vector>
 
 #include "tracer/tracer.h"
+#include "util/parsing.h"
 
 Command::Result TracerCommandInit::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface &interface, const std::vector<std::string> &args) {
   if (!NTRCTracer::Tracer::Initialize(interface)) {
     std::cout << "Failed to initialize tracer." << std::endl;
     return HANDLED;
   }
 
-  if (!NTRCTracer::Tracer::Attach(interface)) {
+  std::map<std::string, bool> opts = {{"tex", true},     {"depth", false},
+                                      {"color", true},   {"rdi", false},
+                                      {"pgraph", false}, {"pfb", false}};
+  auto it = args.begin();
+  while (it != args.end()) {
+    auto key = boost::algorithm::to_lower_copy(*it++);
+    if (opts.find(key) == opts.end()) {
+      std::cout << "Unknown parameter '" << key << "'." << std::endl;
+      return HANDLED;
+    }
+
+    if (it == args.end()) {
+      std::cout << "Invalid argument list, missing value for argument '" << key
+                << "'" << std::endl;
+      return HANDLED;
+    }
+
+    auto param = boost::algorithm::to_lower_copy(*it++);
+    opts[key] = param == "t" || param == "true" || param == "y" ||
+                param == "yes" || param == "on" || param == "1";
+  }
+
+  if (!NTRCTracer::Tracer::Attach(interface, opts["tex"], opts["depth"],
+                                  opts["color"], opts["rdi"], opts["pgraph"],
+                                  opts["pfb"])) {
     std::cout << "Failed to attach to tracer." << std::endl;
     return HANDLED;
   }
@@ -43,27 +69,39 @@ Command::Result TracerCommandBreakOnNextFlip::operator()(
 Command::Result TracerCommandTraceFrames::operator()(
     XBOXInterface &interface, const std::vector<std::string> &args) {
   auto local_artifact_path = std::filesystem::current_path();
-  if (args.size() > 1) {
-    try {
-      auto explicit_path = std::filesystem::path(args[0]);
-      if (explicit_path.is_relative()) {
-        local_artifact_path /= explicit_path;
-      } else {
-        local_artifact_path = explicit_path;
-      }
-    } catch (...) {
-      std::cout << "Invalid 'local_artifact_path' argument." << std::endl;
+  auto num_frames = 1;
+
+  auto it = args.begin();
+  while (it != args.end()) {
+    auto key = boost::algorithm::to_lower_copy(*it++);
+    if (it == args.end()) {
+      std::cout << "Invalid argument list, missing value for argument '" << key
+                << "'" << std::endl;
       return HANDLED;
     }
-  }
 
-  uint32_t num_frames = 1;
-  if (args.size() > 2) {
-    try {
-      num_frames = std::stoi(args[1]);
-    } catch (std::invalid_argument &e) {
-      std::cout << "Invalid 'num_frames' argument." << std::endl;
-      return HANDLED;
+    if (key == "path") {
+      try {
+        auto explicit_path = std::filesystem::path(*it++);
+        if (explicit_path.is_relative()) {
+          local_artifact_path /= explicit_path;
+        } else {
+          local_artifact_path = explicit_path;
+        }
+      } catch (...) {
+        std::cout << "Invalid '" << key << "' argument." << std::endl;
+        return HANDLED;
+      }
+    } else if (key == "frames") {
+      try {
+        num_frames = std::stoi((*it++));
+      } catch (std::invalid_argument &e) {
+        std::cout << "Invalid '" << key << "' argument." << std::endl;
+        return HANDLED;
+      }
+
+    } else {
+      std::cout << "Unknown config argument '" << key << "'" << std::endl;
     }
   }
 
