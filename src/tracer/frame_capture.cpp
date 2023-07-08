@@ -28,7 +28,7 @@ FrameCapture::FetchResult FrameCapture::FetchPGRAPHTraceData(
     XBOXInterface &interface) {
   auto request =
       std::make_shared<DynDXTLoader::InvokeReceiveSizePrefixedBinary>(
-          NTRC_HANDLER_NAME "!read_pgraph maxsize=0x4000");
+          NTRC_HANDLER_NAME "!read_pgraph maxsize=0x100000");
   interface.SendCommandSync(request, NTRC_HANDLER_NAME);
   if (!request->IsOK()) {
     // A notification of data availability may have triggered this fetch while a
@@ -127,14 +127,22 @@ void FrameCapture::ProcessPGRAPHBuffer() {
 }
 
 void FrameCapture::LogPacket(const PushBufferCommandTraceInfo &packet) {
-  nv2a_log_ << "nv2a_pgraph_method " << packet.command.subchannel << ": 0x"
-            << std::hex << packet.graphics_class << " -> 0x"
-            << packet.command.method;
+  auto log = [this, &packet](uint32_t method, const uint32_t *param) {
+    nv2a_log_ << "nv2a_pgraph_method " << std::dec << packet.command.subchannel
+              << ": 0x" << std::hex << packet.graphics_class << " -> 0x"
+              << method;
+
+    if (!param) {
+      nv2a_log_ << " <NO_DATA>";
+    } else {
+      nv2a_log_ << " 0x" << std::hex << *param;
+    }
+    nv2a_log_ << std::endl;
+  };
 
   const uint32_t *data = nullptr;
   switch (packet.data.data_state) {
     case PBCPDS_INVALID:
-      nv2a_log_ << " <NO_DATA>";
       break;
 
     case PBCPDS_SMALL_BUFFER:
@@ -146,12 +154,17 @@ void FrameCapture::LogPacket(const PushBufferCommandTraceInfo &packet) {
       break;
   }
 
-  if (data) {
-    for (auto i = 0; i < packet.command.parameter_count; ++i) {
-      nv2a_log_ << " 0x" << std::hex << data[i];
+  uint32_t method = packet.command.method;
+  for (auto i = 0; i < packet.command.parameter_count; ++i) {
+    const uint32_t *param = nullptr;
+    if (data) {
+      param = data + i;
+    }
+    log(method, param);
+    if (!packet.command.non_increasing) {
+      method += 4;
     }
   }
-  nv2a_log_ << std::endl;
 
   if (verbose_logging_) {
     nv2a_log_ << "  Detailed info:" << std::endl;
