@@ -200,6 +200,7 @@ add_executable(
         src/shell/screenshot_converter.h
         src/shell/shell.cpp
         src/shell/shell.h
+        src/shell/shell_commands.cpp
         src/shell/shell_commands.h
         src/shell/tracer_commands.cpp
         src/shell/tracer_commands.h

@@ -87,6 +87,14 @@ E.g., `@m demo!sendmultiline` will ask the `demo` handler installed by
 [the demo project](https://github.com/abaire/nxdk_demo_dyndxt) to send back a multiline
 response and will print out each returned line.
 
+## Tracing of NV2A (GPU) interactions
+
+The `trace` command (and lower level `$`-prefixed commands) may be used to inject
+the [nvtrc dynamic DXT](https://github.com/abaire/nxdk_ntrc_dyndxt) in order to
+capture pushbuffer commands, surfaces, textures, etc... from the running XBE.
+
+See `help trace` for details.
+
 # Development
 
 ## git hooks

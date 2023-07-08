@@ -81,9 +81,14 @@ static bool InstallDynDXT(XBOXInterface &interface) {
   return true;
 }
 
-bool Tracer::Attach(XBOXInterface &interface) {
-  auto request = std::make_shared<DynDXTLoader::InvokeSimple>(
-      NTRC_HANDLER_NAME "!attach tcap=1 dcap=1 ccap=1 rdicap=0");
+bool Tracer::Attach(XBOXInterface &interface, bool tcap, bool dcap, bool ccap,
+                    bool rdicap, bool rawpgraph, bool rawpfb) {
+  char command[256];
+  snprintf(command, sizeof(command),
+           NTRC_HANDLER_NAME
+           "!attach tcap=%d dcap=%d ccap=%d rdicap=%d rawpgraph=%d rawpfb=%d",
+           tcap, dcap, ccap, rdicap, rawpgraph, rawpfb);
+  auto request = std::make_shared<DynDXTLoader::InvokeSimple>(command);
   interface.SendCommandSync(request, NTRC_HANDLER_NAME);
   if (!request->IsOK()) {
     LOG_TRACER(error) << *request << std::endl;
