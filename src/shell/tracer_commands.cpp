@@ -70,10 +70,17 @@ Command::Result TracerCommandTraceFrames::operator()(
     XBOXInterface &interface, const std::vector<std::string> &args) {
   auto local_artifact_path = std::filesystem::current_path();
   auto num_frames = 1;
+  auto verbose = false;
 
   auto it = args.begin();
   while (it != args.end()) {
     auto key = boost::algorithm::to_lower_copy(*it++);
+
+    if (key == "verbose") {
+      verbose = true;
+      continue;
+    }
+
     if (it == args.end()) {
       std::cout << "Invalid argument list, missing value for argument '" << key
                 << "'" << std::endl;
@@ -99,7 +106,6 @@ Command::Result TracerCommandTraceFrames::operator()(
         std::cout << "Invalid '" << key << "' argument." << std::endl;
         return HANDLED;
       }
-
     } else {
       std::cout << "Unknown config argument '" << key << "'" << std::endl;
     }
@@ -111,7 +117,7 @@ Command::Result TracerCommandTraceFrames::operator()(
   }
 
   if (!NTRCTracer::Tracer::TraceFrames(interface, local_artifact_path,
-                                       num_frames)) {
+                                       num_frames, verbose)) {
     std::cout << "Failed to trace frames." << std::endl;
     return HANDLED;
   }

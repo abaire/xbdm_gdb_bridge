@@ -242,8 +242,8 @@ bool Tracer::BreakOnFrameStart_(XBOXInterface &interface, bool require_flip) {
 }
 
 bool Tracer::TraceFrames(XBOXInterface &interface,
-                         const std::string &artifact_path,
-                         uint32_t num_frames) {
+                         const std::string &artifact_path, uint32_t num_frames,
+                         bool verbose) {
   Tracer *instance = singleton_;
   if (!instance) {
     LOG_TRACER(error) << "Tracer not initialized.";
@@ -254,7 +254,7 @@ bool Tracer::TraceFrames(XBOXInterface &interface,
     char frame_name[32];
     snprintf(frame_name, sizeof(frame_name), "frame_%d", i + 1);
     auto output_path = std::filesystem::path(artifact_path) / frame_name;
-    if (!instance->TraceFrame(interface, output_path)) {
+    if (!instance->TraceFrame(interface, output_path, verbose)) {
       return false;
     }
 
@@ -264,12 +264,13 @@ bool Tracer::TraceFrames(XBOXInterface &interface,
 }
 
 bool Tracer::TraceFrame(XBOXInterface &interface,
-                        const std::filesystem::path &artifact_path) {
+                        const std::filesystem::path &artifact_path,
+                        bool verbose) {
   if (!exists(artifact_path)) {
     create_directories(artifact_path);
   }
 
-  in_progress_frame_.Setup(artifact_path);
+  in_progress_frame_.Setup(artifact_path, verbose);
 
   request_processed_ = false;
   pgraph_data_available_ = false;

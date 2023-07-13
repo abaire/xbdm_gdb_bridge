@@ -65,7 +65,9 @@ struct TracerCommandTraceFrames : Command {
                 "should be saved. Each frame will create a separate subdir of "
                 "the form 'frame_X'. Default: <current working dir>.\n"
                 "  frames <int> - Number of consecutive frames to capture. "
-                "Default: 1.") {}
+                "Default: 1.\n"
+                "  verbose - Emits more verbose information into the capture "
+                "log.") {}
   Result operator()(XBOXInterface &interface,
                     const std::vector<std::string> &args) override;
 };

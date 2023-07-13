@@ -37,7 +37,7 @@ class Tracer {
   //! Trace one or more consecutive frames.
   static bool TraceFrames(XBOXInterface &interface,
                           const std::string &artifact_path,
-                          uint32_t num_frames = 1);
+                          uint32_t num_frames = 1, bool verbose = false);
 
  private:
   //! Installs the ntrc_dyndxt if necessary and registers for notifications.
@@ -60,7 +60,8 @@ class Tracer {
 
   //! Traces a single frame.
   bool TraceFrame(XBOXInterface &interface,
-                  const std::filesystem::path &artifact_path);
+                  const std::filesystem::path &artifact_path,
+                  bool verbose = false);
 
  private:
   static Tracer *singleton_;
