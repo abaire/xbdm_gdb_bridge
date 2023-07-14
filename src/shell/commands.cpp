@@ -966,7 +966,8 @@ static bool UploadFile(XBOXInterface &interface, const std::string &local_path,
 
 static bool UploadDirectory(XBOXInterface &interface,
                             const std::string &local_path,
-                            const std::string &remote_path, bool overwrite) {
+                            const std::string &remote_path, bool overwrite,
+                            bool contents_only = false) {
   bool exists;
   bool is_dir;
   if (!CheckRemoteFile(interface, remote_path, exists, is_dir)) {
@@ -991,9 +992,11 @@ static bool UploadDirectory(XBOXInterface &interface,
   if (full_remote_path.back() != '\\') {
     full_remote_path += "\\";
   }
-  full_remote_path += std::filesystem::path(local_path).filename();
-  if (full_remote_path.back() != '\\') {
-    full_remote_path += "\\";
+  if (!contents_only) {
+    full_remote_path += std::filesystem::path(local_path).filename();
+    if (full_remote_path.back() != '\\') {
+      full_remote_path += "\\";
+    }
   }
 
   for (auto const &dir_entry :
@@ -1044,7 +1047,7 @@ Command::Result CommandPutFile::operator()(
   bool allow_overwrite = parser.ArgExists("allow_overwrite", "overwrite", "-f");
 
   if (is_directory) {
-    UploadDirectory(interface, local_path, remote_path, allow_overwrite);
+    UploadDirectory(interface, local_path, remote_path, allow_overwrite, true);
   } else {
     UploadFile(interface, local_path, remote_path, allow_overwrite);
   }
