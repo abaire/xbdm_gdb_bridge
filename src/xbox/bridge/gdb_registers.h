@@ -1,6 +1,7 @@
 #ifndef XBDM_GDB_BRIDGE_GDB_REGISTERS_H
 #define XBDM_GDB_BRIDGE_GDB_REGISTERS_H
 
+#include <cstdint>
 #include <optional>
 #include <string>
 
