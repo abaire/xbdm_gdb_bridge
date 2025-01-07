@@ -96,13 +96,14 @@ jobs:
             cmake \
             coreutils \
             boost \
-            llvm \
+            llvm@18 \
             sdl2 \
             sdl2_image \
             nasm
       - name: Precompile nxdk
         run: |
           echo "Precompiling nxdk to allow CMake to run correctly."
+          export PATH="$(brew --prefix llvm@18)/bin:$PATH"
           cd nxdk
           eval $(./bin/activate -s)
           for dir in samples/*/ ; do
@@ -113,7 +114,7 @@ jobs:
       - name: Compile
         run: |
           cd xbdm_gdb_bridge
-          export PATH="$(brew --prefix llvm)/bin:$PATH"
+          export PATH="$(brew --prefix llvm@18)/bin:$PATH"
           export NXDK_DIR="${GITHUB_WORKSPACE}/nxdk"
           cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build -- -j
