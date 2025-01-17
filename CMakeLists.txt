@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 17)
 include(CMakePushCheckState)
 set(_CMAKE_PROCESSING_LANGUAGE "C")
 include(CheckSymbolExists)
-include (ExternalProject)
+include(ExternalProject)
 include(FindPkgConfig)
 
 ExternalProject_Add(
@@ -18,8 +18,8 @@ ExternalProject_Add(
         GIT_REPOSITORY https://github.com/abaire/nxdk_dyndxt.git
         GIT_TAG origin/main
         CMAKE_ARGS
-            -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
-            -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         BUILD_BYPRODUCTS
         ddxt/lib/bootstrap_l1.asm.obj
         ddxt/lib/bootstrap_l2.asm.obj
@@ -38,8 +38,8 @@ ExternalProject_Add(
         GIT_REPOSITORY https://github.com/abaire/nxdk_ntrc_dyndxt.git
         GIT_TAG origin/main
         CMAKE_ARGS
-            -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
-            -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         BUILD_BYPRODUCTS
         ntrc/lib/libntrc_dyndxt.dll
         ntrc/include/ntrc_dyndxt.h
@@ -48,13 +48,46 @@ ExternalProject_Get_Property(ntrc_dyndxt INSTALL_DIR)
 set(ntrc_dyndxt_lib_dir ${INSTALL_DIR}/lib)
 set(ntrc_dyndxt_include_dir ${INSTALL_DIR}/include)
 
-find_package(
-        Boost 1.70
-        COMPONENTS
-        log
-        program_options
-        unit_test_framework
-        REQUIRED
+include(FetchContent)
+set(boost_tag "boost-1.87.0")
+FetchContent_Declare(
+        boost
+        GIT_REPOSITORY https://github.com/boostorg/boost.git
+        GIT_TAG "${boost_tag}"
+)
+FetchContent_Declare(
+        boost_config
+        GIT_REPOSITORY https://github.com/boostorg/config.git
+        GIT_TAG "${boost_tag}"
+)
+FetchContent_Declare(
+        boost_assert
+        GIT_REPOSITORY https://github.com/boostorg/assert.git
+        GIT_TAG "${boost_tag}"
+)
+FetchContent_Declare(
+        boost_log
+        GIT_REPOSITORY https://github.com/boostorg/log.git
+        GIT_TAG "${boost_tag}"
+)
+FetchContent_Declare(
+        boost_program_options
+        GIT_REPOSITORY https://github.com/boostorg/program_options.git
+        GIT_TAG "${boost_tag}"
+)
+FetchContent_Declare(
+        boost_unit_test_framework
+        GIT_REPOSITORY https://github.com/boostorg/test.git
+        GIT_TAG "${boost_tag}"
+)
+
+FetchContent_MakeAvailable(
+        boost
+        boost_config
+        boost_assert
+        boost_log
+        boost_program_options
+        boost_unit_test_framework
 )
 
 PKG_SEARCH_MODULE(SDL2 REQUIRED sdl2)
@@ -64,7 +97,7 @@ set(GENERATED_FILES_DIR "${CMAKE_BINARY_DIR}/generated")
 
 include_directories(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS})
 
-option(ENABLE_HIGH_VERBOSITY_LOGGING  "Enable low level, highly verbose logging")
+option(ENABLE_HIGH_VERBOSITY_LOGGING "Enable low level, highly verbose logging")
 
 include_directories("${Boost_INCLUDE_DIR}" "${GENERATED_FILES_DIR}")
 
