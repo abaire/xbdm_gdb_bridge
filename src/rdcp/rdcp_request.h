@@ -61,7 +61,7 @@ class RDCPRequest {
       std::enable_if_t<std::is_integral<T>::value && sizeof(T) <= 8, int> = 0>
   void AppendHexString(T value) {
     char buf[32] = {0};
-    snprintf(buf, 31, "0x%x", value);
+    snprintf(buf, 31, "0x%08x", value);
     data_.insert(data_.end(), buf, buf + strlen(buf));
   }
 
