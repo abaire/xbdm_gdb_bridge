@@ -8,11 +8,9 @@
 #include <string>
 #include <vector>
 
+#include "file_util.h"
 #include "screenshot_converter.h"
 #include "util/parsing.h"
-
-static bool CheckRemoteFile(XBOXInterface &interface, const std::string &path,
-                            bool &exists, bool &is_dir);
 
 static void SendAndPrintMessage(
     XBOXInterface &interface,
@@ -163,77 +161,6 @@ Command::Result CommandDedicate::operator()(
   return HANDLED;
 }
 
-static bool FetchDirectoryEntries(XBOXInterface &interface,
-                                  const std::string &path,
-                                  std::list<DirList::Entry> &directories,
-                                  std::list<DirList::Entry> &files) {
-  directories.clear();
-  files.clear();
-
-  auto request = std::make_shared<DirList>(path);
-  interface.SendCommandSync(request);
-  if (!request->IsOK()) {
-    std::cout << *request << std::endl;
-    return false;
-  }
-
-  for (const auto &entry : request->entries) {
-    if (entry.is_directory) {
-      directories.push_back(entry);
-    } else {
-      files.push_back(entry);
-    }
-  }
-
-  return true;
-}
-
-static bool DeleteRecursively(XBOXInterface &interface,
-                              const std::string &path) {
-  std::list<DirList::Entry> directories;
-  std::list<DirList::Entry> files;
-  if (!FetchDirectoryEntries(interface, path, directories, files)) {
-    return false;
-  }
-
-  std::string root_path = path;
-  if (root_path.back() != '\\') {
-    root_path += "\\";
-  }
-
-  for (auto &file : files) {
-    std::string full_path = root_path + file.name;
-    auto request = std::make_shared<Delete>(full_path, false);
-    interface.SendCommandSync(request);
-    if (!request->IsOK()) {
-      std::cout << *request << std::endl;
-      return false;
-    }
-
-    std::cout << "rm " << full_path << std::endl;
-  }
-
-  for (auto &dir : directories) {
-    std::string full_path = root_path + dir.name;
-    if (!DeleteRecursively(interface, full_path)) {
-      return false;
-    }
-  }
-
-  {
-    auto request = std::make_shared<Delete>(path, true);
-    interface.SendCommandSync(request);
-    if (!request->IsOK()) {
-      std::cout << *request << std::endl;
-      return false;
-    }
-
-    std::cout << "rm " << path << std::endl;
-  }
-
-  return true;
-}
-
 Command::Result CommandDelete::operator()(
     XBOXInterface &interface, const std::vector<std::string> &args) {
   ArgParser parser(args);
@@ -247,7 +174,7 @@ Command::Result CommandDelete::operator()(
   if (recursive) {
     bool exists;
     bool is_directory;
-    if (CheckRemoteFile(interface, path, exists, is_directory) &&
+    if (CheckRemotePath(interface, path, exists, is_directory) &&
         is_directory) {
       DeleteRecursively(interface, path);
       return HANDLED;
@@ -444,77 +371,6 @@ Command::Result CommandGetExtContext::operator()(
   return HANDLED;
 }
 
-static bool SaveFile(XBOXInterface &interface, const std::string &remote,
-                     const std::filesystem::path &local) {
-  auto request = std::make_shared<GetFile>(remote);
-  interface.SendCommandSync(request);
-  if (!request->IsOK()) {
-    std::cout << *request << std::endl;
-    return false;
-  }
-
-  std::ofstream of(local, std::ofstream::binary | std::ofstream::trunc);
-  if (!of) {
-    std::cout << "Failed to create local file " << local << std::endl;
-    return false;
-  }
-  of.write(reinterpret_cast<char *>(request->data.data()),
-           static_cast<std::streamsize>(request->data.size()));
-  of.close();
-
-  return of.good();
-}
-
-static bool SaveDirectory(XBOXInterface &interface, const std::string &remote,
-                          const std::filesystem::path &local) {
-  std::list<DirList::Entry> directories;
-  std::list<DirList::Entry> files;
-  if (!FetchDirectoryEntries(interface, remote, directories, files)) {
-    return false;
-  }
-
-  std::string remote_dir = remote;
-  if (remote_dir.back() != '\\') {
-    remote_dir += "\\";
-  }
-
-  for (auto &dir : directories) {
-    std::string remote_path = remote_dir + dir.name;
-    std::filesystem::path local_path = local / dir.name;
-    std::error_code err;
-    std::filesystem::create_directories(local_path, err);
-
-    if (!SaveDirectory(interface, remote_path, local_path)) {
-      return false;
-    }
-  }
-
-  for (auto &file : files) {
-    std::string remote_path = remote_dir + file.name;
-    std::filesystem::path local_path = local / file.name;
-    if (!SaveFile(interface, remote_path, local_path)) {
-      return false;
-    }
-    std::cout << remote_path << " -> " << local_path << std::endl;
-  }
-
-  return true;
-}
-
-static bool CheckRemoteFile(XBOXInterface &interface, const std::string &path,
-                            bool &exists, bool &is_dir) {
-  auto request = std::make_shared<GetFileAttributes>(path);
-  interface.SendCommandSync(request);
-  if (!request->IsOK()) {
-    std::cout << *request << std::endl;
-    return false;
-  }
-
-  exists = request->exists;
-  is_dir = request->flags.find("directory") != request->flags.end();
-  return true;
-}
-
 Command::Result CommandGetFile::operator()(
     XBOXInterface &interface, const std::vector<std::string> &args) {
   ArgParser parser(args);
@@ -527,7 +383,7 @@ Command::Result CommandGetFile::operator()(
 
   bool exists;
   bool is_directory;
-  if (!CheckRemoteFile(interface, path, exists, is_directory)) {
+  if (!CheckRemotePath(interface, path, exists, is_directory)) {
     return HANDLED;
   }
 
@@ -902,124 +758,6 @@ Command::Result CommandNotifyAt::operator()(
   return HANDLED;
 }
 
-static bool UploadFile(XBOXInterface &interface, const std::string &local_path,
-                       const std::string &remote_path, bool overwrite) {
-  bool exists;
-  bool is_dir;
-  if (!CheckRemoteFile(interface, remote_path, exists, is_dir)) {
-    return false;
-  }
-
-  if (!exists && remote_path.back() == '\\') {
-    auto request = std::make_shared<Mkdir>(remote_path);
-    interface.SendCommandSync(request);
-    if (!request->IsOK()) {
-      std::cout << *request << std::endl;
-      return false;
-    }
-    is_dir = true;
-  }
-
-  std::string full_remote_path = remote_path;
-  if (is_dir) {
-    if (full_remote_path.back() != '\\') {
-      full_remote_path += "\\";
-    }
-    full_remote_path += std::filesystem::path(local_path).filename();
-
-    if (!CheckRemoteFile(interface, full_remote_path, exists, is_dir)) {
-      return false;
-    }
-  }
-
-  if (exists && !is_dir && !overwrite) {
-    std::cout << "Remote file '" << remote_path
-              << "' already exists, skipping..." << std::endl;
-    return true;
-  }
-
-  std::ifstream ifs(local_path, std::ifstream::binary);
-  if (!ifs) {
-    std::cout << "Failed to open '" << local_path << "' for reading."
-              << std::endl;
-    return false;
-  }
-  std::istreambuf_iterator<char> ifs_begin(ifs);
-  std::istreambuf_iterator<char> ifs_end;
-  std::vector<uint8_t> data(ifs_begin, ifs_end);
-  ifs.close();
-
-  std::cout << local_path << " => " << full_remote_path << " ... "
-            << std::flush;
-
-  auto request = std::make_shared<SendFile>(full_remote_path, data);
-  interface.SendCommandSync(request);
-  if (!request->IsOK()) {
-    std::cout << "Failed" << std::endl;
-    std::cout << *request << std::endl;
-    return false;
-  }
-  std::cout << "OK" << std::endl;
-
-  return true;
-}
-
-static bool UploadDirectory(XBOXInterface &interface,
-                            const std::string &local_path,
-                            const std::string &remote_path, bool overwrite,
-                            bool contents_only = false) {
-  bool exists;
-  bool is_dir;
-  if (!CheckRemoteFile(interface, remote_path, exists, is_dir)) {
-    return false;
-  }
-  if (exists && !is_dir) {
-    std::cout << "Remote path '" << remote_path
-              << "' exists and is a file. Aborting." << std::endl;
-    return false;
-  }
-
-  if (!exists) {
-    auto request = std::make_shared<Mkdir>(remote_path);
-    interface.SendCommandSync(request);
-    if (!request->IsOK()) {
-      std::cout << *request << std::endl;
-      return false;
-    }
-  }
-
-  std::string full_remote_path = remote_path;
-  if (full_remote_path.back() != '\\') {
-    full_remote_path += "\\";
-  }
-  if (!contents_only) {
-    full_remote_path += std::filesystem::path(local_path).filename();
-    if (full_remote_path.back() != '\\') {
-      full_remote_path += "\\";
-    }
-  }
-
-  for (auto const &dir_entry :
-       std::filesystem::directory_iterator{local_path}) {
-    if (dir_entry.is_regular_file()) {
-      std::string subpath = dir_entry.path();
-      auto status = UploadFile(interface, subpath, full_remote_path, overwrite);
-      if (!status) {
-        return false;
-      }
-    } else if (dir_entry.is_directory()) {
-      std::string filename = dir_entry.path();
-      auto status =
-          UploadDirectory(interface, filename, full_remote_path, overwrite);
-      if (!status) {
-        return false;
-      }
-    }
-  }
-
-  return true;
-}
-
 Command::Result CommandPutFile::operator()(
     XBOXInterface &interface, const std::vector<std::string> &args) {
   ArgParser parser(args);
@@ -1044,12 +782,16 @@ Command::Result CommandPutFile::operator()(
     return HANDLED;
   }
 
-  bool allow_overwrite = parser.ArgExists("allow_overwrite", "overwrite", "-f");
+  UploadFileOverwriteAction overwrite_action =
+      parser.ArgExists("allow_overwrite", "overwrite", "-f")
+          ? UploadFileOverwriteAction::OVERWRITE
+          : (is_directory ? UploadFileOverwriteAction::SKIP
+                          : UploadFileOverwriteAction::ABORT);
 
   if (is_directory) {
-    UploadDirectory(interface, local_path, remote_path, allow_overwrite, true);
+    UploadDirectory(interface, local_path, remote_path, overwrite_action, true);
   } else {
-    UploadFile(interface, local_path, remote_path, allow_overwrite);
+    UploadFile(interface, local_path, remote_path, overwrite_action);
   }
 
   return HANDLED;
@@ -1107,30 +849,6 @@ Command::Result CommandResume::operator()(
 
   SendAndPrintMessage(interface, std::make_shared<Resume>(thread_id));
   return HANDLED;
-}
-
-static bool SaveRawFile(const std::string &filename_root, uint32_t width,
-                        uint32_t height, uint32_t bpp, uint32_t format,
-                        const std::vector<uint8_t> &data) {
-  char buf[256] = {0};
-  snprintf(buf, 255, "%s-w%d_h%d_bpp%d_fmt%d.bin", filename_root.c_str(), width,
-           height, bpp, format);
-
-  // TODO: Check to see if the file already exists and dedup.
-  std::ofstream of(buf, std::ofstream::binary | std::ofstream::trunc);
-  if (!of) {
-    std::cout << "Failed to create local file " << buf << std::endl;
-    return false;
-  }
-
-  of.write(reinterpret_cast<const char *>(data.data()),
-           static_cast<std::streamsize>(data.size()));
-  of.close();
-
-  if (!of.good()) {
-    std::cout << "Failed to save local file " << buf << std::endl;
-  }
-  return of.good();
 }
 
 Command::Result CommandScreenshot::operator()(

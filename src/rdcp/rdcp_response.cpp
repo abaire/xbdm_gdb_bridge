@@ -101,9 +101,11 @@ long RDCPResponse::Parse(std::shared_ptr<RDCPResponse> &response,
     case OK_MULTILINE_RESPONSE: {
       const char *end_of_message = buffer + packet_size - kTerminatorLen;
       response_message.assign(buffer + 5, end_of_message);
+      auto bytes_remaining = buffer_length - (end_of_message - buffer);
       // Empty multiline responses use the message terminator as part of the
       // multiline termination.
-      if (!memcmp(end_of_message, kMultilineTerminator,
+      if (bytes_remaining >= kMultilineTerminatorLen &&
+          !memcmp(end_of_message, kMultilineTerminator,
                   kMultilineTerminatorLen)) {
         after_body_end = end_of_message + kMultilineTerminatorLen;
       } else {

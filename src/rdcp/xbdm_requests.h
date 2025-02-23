@@ -568,8 +568,8 @@ struct GetFileAttributes : public RDCPProcessedRequest {
 
   bool exists;
   int64_t filesize{0};
-  int64_t create_timestamp{0};
-  int64_t change_timestamp{0};
+  uint64_t create_timestamp{0};
+  uint64_t change_timestamp{0};
   std::set<std::string> flags;
 };
 
@@ -1573,19 +1573,19 @@ struct SetFileAttributes : public RDCPProcessedRequest {
     }
 
     if (create_timestamp.has_value()) {
-      AppendData(" createlo=");
-      AppendHexString(static_cast<uint32_t>(*create_timestamp & 0xFFFFFFFF));
       AppendData(" createhi=");
       AppendHexString(
           static_cast<uint32_t>((*create_timestamp >> 32) & 0xFFFFFFFF));
+      AppendData(" createlo=");
+      AppendHexString(static_cast<uint32_t>(*create_timestamp & 0xFFFFFFFF));
     }
 
     if (change_timestamp.has_value()) {
-      AppendData(" changelo=");
-      AppendHexString(static_cast<uint32_t>(*change_timestamp & 0xFFFFFFFF));
       AppendData(" changehi=");
       AppendHexString(
           static_cast<uint32_t>((*change_timestamp >> 32) & 0xFFFFFFFF));
+      AppendData(" changelo=");
+      AppendHexString(static_cast<uint32_t>(*change_timestamp & 0xFFFFFFFF));
     }
   }
 };

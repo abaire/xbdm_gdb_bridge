@@ -8,6 +8,7 @@
 #include "xbox/xbox_interface.h"
 
 struct Command {
+  virtual ~Command() = default;
   enum Result {
     UNHANDLED,
     HANDLED,

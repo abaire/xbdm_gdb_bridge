@@ -196,6 +196,10 @@ add_executable(
         src/shell/debugger_commands.h
         src/shell/dyndxt_commands.cpp
         src/shell/dyndxt_commands.h
+        src/shell/file_util.cpp
+        src/shell/file_util.h
+        src/shell/macro_commands.cpp
+        src/shell/macro_commands.h
         src/shell/screenshot_converter.cpp
         src/shell/screenshot_converter.h
         src/shell/shell.cpp

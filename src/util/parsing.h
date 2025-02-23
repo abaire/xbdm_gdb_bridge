@@ -9,6 +9,9 @@
 int32_t ParseInt32(const std::vector<uint8_t> &value);
 int32_t ParseInt32(const std::vector<char> &data);
 int32_t ParseInt32(const std::string &value);
+uint32_t ParseUint32(const std::vector<uint8_t> &value);
+uint32_t ParseUint32(const std::vector<char> &data);
+uint32_t ParseUint32(const std::string &value);
 
 template <typename T>
 bool MaybeParseHexInt(T &ret, const std::vector<uint8_t> &data,

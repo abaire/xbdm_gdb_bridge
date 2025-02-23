@@ -50,7 +50,7 @@ std::optional<int32_t> RDCPMapResponse::GetOptionalDWORD(
   if (it == map.end()) {
     return {};
   }
-  return ParseInt32(it->second);
+  return ParseUint32(it->second);
 }
 
 int32_t RDCPMapResponse::GetDWORD(const std::string &key,
@@ -60,7 +60,7 @@ int32_t RDCPMapResponse::GetDWORD(const std::string &key,
     return default_value;
   }
 
-  return ParseInt32(it->second);
+  return ParseUint32(it->second);
 }
 
 uint32_t RDCPMapResponse::GetUInt32(const std::string &key,
@@ -70,7 +70,7 @@ uint32_t RDCPMapResponse::GetUInt32(const std::string &key,
     return default_value;
   }
 
-  return ParseInt32(it->second);
+  return ParseUint32(it->second);
 }
 
 int64_t RDCPMapResponse::GetQWORD(const std::string &low_key,
@@ -81,7 +81,7 @@ int64_t RDCPMapResponse::GetQWORD(const std::string &low_key,
     return default_value;
   }
 
-  int64_t low = ParseInt32(it->second);
+  auto low = ParseUint32(it->second);
 
   it = map.find(high_key);
   if (it == map.end()) {
@@ -90,9 +90,8 @@ int64_t RDCPMapResponse::GetQWORD(const std::string &low_key,
     return default_value;
   }
 
-  int64_t high = ParseInt32(it->second);
-
-  return low + (high << 32);
+  auto high = static_cast<int64_t>(ParseInt32(it->second));
+  return (high << 32) + low;
 }
 
 RDCPMultiMapResponse::RDCPMultiMapResponse(const std::vector<char> &data) {

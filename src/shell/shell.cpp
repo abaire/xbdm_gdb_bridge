@@ -9,6 +9,7 @@
 #include "configure.h"
 #include "debugger_commands.h"
 #include "dyndxt_commands.h"
+#include "macro_commands.h"
 #include "shell_commands.h"
 #include "tracer_commands.h"
 #include "util/logging.h"
@@ -133,6 +134,11 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   commands_["walkmem"] = walk_mem;
   REGISTER("xbeinfo", CommandXBEInfo);
   REGISTER("xtlinfo", CommandXTLInfo);
+
+  // Macro commands perform some interesting logic and generally invoke several
+  // raw commands. They start with the percent sign (%) character.
+  REGISTER("%syncfile", MacroCommandSyncFile);
+  REGISTER("%syncdir", MacroCommandSyncDirectory);
 
 #undef REGISTER
 }
