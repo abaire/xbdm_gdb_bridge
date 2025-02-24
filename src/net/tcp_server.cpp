@@ -18,7 +18,7 @@ bool TCPServer::Listen(const IPAddress &address) {
   }
 
   const struct sockaddr_in &addr = address.Address();
-  struct sockaddr_in bind_addr {};
+  struct sockaddr_in bind_addr{};
   socklen_t bind_addr_len = sizeof(bind_addr);
 
   int enabled = 1;
@@ -96,7 +96,7 @@ bool TCPServer::Process(const fd_set &read_fds, const fd_set &write_fds,
   }
 
   if (FD_ISSET(socket_, &read_fds)) {
-    struct sockaddr_in bind_addr {};
+    struct sockaddr_in bind_addr{};
     socklen_t bind_addr_len = sizeof(bind_addr);
 
     int accepted_socket =

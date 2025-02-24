@@ -7,6 +7,7 @@
 
 class TCPSocketBase {
  public:
+  virtual ~TCPSocketBase() = default;
   explicit TCPSocketBase(std::string name, int sock = -1)
       : name_(std::move(name)), socket_(sock) {}
   TCPSocketBase(std::string name, int sock, IPAddress address)

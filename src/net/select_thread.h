@@ -2,7 +2,9 @@
 #define XBDM_GDB_BRIDGE_SELECTTHREAD_H
 
 #include <atomic>
+#include <functional>
 #include <list>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -16,7 +18,11 @@ class SelectThread {
 
   [[nodiscard]] bool IsRunning() const { return running_; }
 
-  void AddConnection(std::shared_ptr<TCPSocketBase> conn);
+  void AddConnection(const std::shared_ptr<TCPSocketBase>& conn);
+  //! Registers the given connection along with a callback function to be
+  //! invoked when the connection is closed.
+  void AddConnection(const std::shared_ptr<TCPSocketBase>& conn,
+                     std::function<void()> on_close);
 
  private:
   void ThreadMain();
@@ -28,6 +34,9 @@ class SelectThread {
 
   std::recursive_mutex connection_lock_;
   std::list<std::shared_ptr<TCPSocketBase>> connections_;
+
+  std::map<std::shared_ptr<TCPSocketBase>, std::function<void()>>
+      close_callbacks_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SELECTTHREAD_H

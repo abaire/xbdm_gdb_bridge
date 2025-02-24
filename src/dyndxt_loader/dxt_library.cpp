@@ -19,7 +19,7 @@ typedef struct IMAGE_IMPORT_BY_NAME {
 #define IMAGE_REL_BASED_ABSOLUTE 0
 #define IMAGE_REL_BASED_HIGHLOW 3
 
-#define IMAGE_SNAP_BY_ORDINAL(ordinal) (((ordinal)&0x80000000) != 0)
+#define IMAGE_SNAP_BY_ORDINAL(ordinal) (((ordinal) & 0x80000000) != 0)
 
 DXTLibrary::DXTLibrary(std::shared_ptr<std::istream> is, std::string path)
     : path_(std::move(path)) {
