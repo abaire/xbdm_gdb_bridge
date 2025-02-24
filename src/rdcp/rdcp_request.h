@@ -12,6 +12,7 @@
 
 class RDCPRequest {
  public:
+  virtual ~RDCPRequest() = default;
   explicit RDCPRequest(std::string command) : command_(std::move(command)) {}
   RDCPRequest(std::string command, std::vector<uint8_t> data)
       : command_(std::move(command)), data_(std::move(data)) {}
@@ -54,6 +55,18 @@ class RDCPRequest {
     if (data) {
       data_.insert(data_.end(), data, data + strlen(data));
     }
+  }
+
+  void AppendDecimalString(int value) {
+    char buf[32] = {0};
+    snprintf(buf, 31, "%d", value);
+    data_.insert(data_.end(), buf, buf + strlen(buf));
+  }
+
+  void AppendDecimalString(unsigned int value) {
+    char buf[32] = {0};
+    snprintf(buf, 31, "%u", value);
+    data_.insert(data_.end(), buf, buf + strlen(buf));
   }
 
   template <

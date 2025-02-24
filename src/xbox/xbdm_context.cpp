@@ -79,19 +79,27 @@ void XBDMContext::OnNotificationChannelConnected(int sock, IPAddress& address) {
 
   // After a reboot, XBDM will no longer send an initial empty message
   // indicating that the connection is fully established, and will instead
-  // reconnect the notification channel.
-  if (!xbdm_transport_->CanProcessCommands()) {
+  // reconnect the notification channel. In a real XBDM session, the reconnect
+  // would be delayed until an "execution pending" notification is received. To
+  // reproduce this would require queueing the handling of `modload`
+  // notifications, and it seems like an immediate reconnect here causes no
+  // issues.
+  if (!xbdm_transport_ || !xbdm_transport_->CanProcessCommands()) {
+    LOG_XBDM(trace) << "Reconnecting XBDM transport due to notification.";
     Reconnect();
   }
 
-  // TODO: Hold on to the transport so it can be shut down gracefully.
   auto transport = std::make_shared<XBDMNotificationTransport>(
       logging::kLoggingTagXBDMNotification, sock, address,
       [this](std::shared_ptr<XBDMNotification> notification) {
         this->OnNotificationReceived(std::move(notification));
       });
+  notification_transports_.insert(transport);
 
-  select_thread_->AddConnection(transport);
+  select_thread_->AddConnection(transport, [this, transport]() {
+    const std::lock_guard lock(notification_transports_lock_);
+    notification_transports_.erase(transport);
+  });
 }
 
 void XBDMContext::OnNotificationReceived(
@@ -101,6 +109,22 @@ void XBDMContext::OnNotificationReceived(
                         [this, notification]() mutable {
                           this->DispatchNotification(notification);
                         });
+}
+
+void XBDMContext::CloseActiveConnections() {
+  if (xbdm_transport_) {
+    xbdm_transport_->Close();
+    xbdm_transport_.reset();
+  }
+
+  ResetNotificationConnections();
+}
+
+void XBDMContext::ResetNotificationConnections() {
+  const std::lock_guard lock(notification_transports_lock_);
+  for (auto& transport : notification_transports_) {
+    transport->Close();
+  }
 }
 
 bool XBDMContext::Reconnect() {

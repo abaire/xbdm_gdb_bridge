@@ -7,7 +7,7 @@
 #include "util/logging.h"
 #include "util/timer.h"
 
-void SelectThread::ThreadMainBootstrap(SelectThread *instance) {
+void SelectThread::ThreadMainBootstrap(SelectThread* instance) {
   instance->ThreadMain();
 }
 
@@ -26,7 +26,7 @@ void SelectThread::ThreadMain() {
 
     {
       const std::lock_guard<std::recursive_mutex> lock(connection_lock_);
-      for (auto &connection : connections_) {
+      for (auto& connection : connections_) {
         int conn_max_fd = connection->Select(recv_fds, send_fds, except_fds);
         if (conn_max_fd < 0) {
           continue;
@@ -86,7 +86,14 @@ void SelectThread::Stop() {
   }
 }
 
-void SelectThread::AddConnection(std::shared_ptr<TCPSocketBase> conn) {
+void SelectThread::AddConnection(const std::shared_ptr<TCPSocketBase>& conn) {
   const std::lock_guard<std::recursive_mutex> lock(connection_lock_);
   connections_.emplace_back(conn);
+}
+
+void SelectThread::AddConnection(const std::shared_ptr<TCPSocketBase>& conn,
+                                 std::function<void()> on_close) {
+  const std::lock_guard<std::recursive_mutex> lock(connection_lock_);
+  connections_.emplace_back(conn);
+  close_callbacks_[conn] = std::move(on_close);
 }

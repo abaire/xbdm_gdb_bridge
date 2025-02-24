@@ -1278,7 +1278,7 @@ struct NotifyAt : public RDCPProcessedRequest {
                     bool debug_flag = false)
       : RDCPProcessedRequest("notifyat"), port(port) {
     SetData(" Port=");
-    AppendHexString(port);
+    AppendDecimalString(port);
     if (drop_flag) {
       AppendData(" drop");
     }

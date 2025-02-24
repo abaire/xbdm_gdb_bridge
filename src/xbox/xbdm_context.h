@@ -8,6 +8,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <unordered_set>
 
 #include "net/ip_address.h"
 
@@ -15,6 +16,7 @@ class DelegatingServer;
 class RDCPProcessedRequest;
 class SelectThread;
 class XBDMNotification;
+class XBDMNotificationTransport;
 class XBDMTransport;
 
 class XBDMContext {
@@ -27,8 +29,17 @@ class XBDMContext {
   XBDMContext(std::string name, IPAddress xbox_address,
               std::shared_ptr<SelectThread> select_thread);
 
+  //! Closes all connections.
   void Shutdown();
 
+  //! Closes the XBDM transport socket (the port 731 stream) and any active
+  //! notification streams from the Xbox.
+  void CloseActiveConnections();
+
+  //! Hard closes any outstanding notification streams.
+  void ResetNotificationConnections();
+
+  //! Drops the XBDM transport socket and immediately reconnects.
   bool Reconnect();
 
   bool StartNotificationListener(const IPAddress &address);
@@ -79,6 +90,12 @@ class XBDMContext {
   std::shared_ptr<SelectThread> select_thread_;
   std::shared_ptr<XBDMTransport> xbdm_transport_;
   std::shared_ptr<DelegatingServer> notification_server_;
+
+  //! Set of XBDMNotificationTransport instances managing notification streams
+  //! from XBDM to this bridge.
+  std::unordered_set<std::shared_ptr<XBDMNotificationTransport>>
+      notification_transports_;
+  std::recursive_mutex notification_transports_lock_;
 
   //! Map of command processor name to dedicated transport channel.
   std::map<std::string, std::shared_ptr<XBDMTransport>> dedicated_transports_;

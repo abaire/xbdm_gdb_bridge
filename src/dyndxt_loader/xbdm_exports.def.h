@@ -1,6 +1,6 @@
 #ifdef POPULATE_MAP
 #define DECLARE(base_name, string_name, ordinal) \
-  { "_" string_name, XBDM_##base_name }
+  {"_" string_name, XBDM_##base_name}
 
 #define END ,
 #define LAST_END

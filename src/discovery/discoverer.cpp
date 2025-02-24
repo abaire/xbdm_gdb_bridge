@@ -136,9 +136,10 @@ close_and_fail:
 bool Discoverer::SendDiscoveryPacket() const {
   NAPPacket packet(NAPPacket::WILDCARD);
   std::vector<uint8_t> buffer = packet.Serialize();
-  struct sockaddr_in addr {
-    .sin_family = AF_INET, .sin_port = XBDM_DISCOVERY_PORT,
-    .sin_addr = {.s_addr = INADDR_BROADCAST},
+  struct sockaddr_in addr{
+      .sin_family = AF_INET,
+      .sin_port = XBDM_DISCOVERY_PORT,
+      .sin_addr = {.s_addr = INADDR_BROADCAST},
   };
 
   ssize_t bytes_sent =
@@ -150,7 +151,7 @@ bool Discoverer::SendDiscoveryPacket() const {
 bool Discoverer::ReceiveResponse(XBDMServer &result) const {
   NAPPacket packet;
   uint8_t buffer[257] = {0};
-  struct sockaddr_in recv_addr {};
+  struct sockaddr_in recv_addr{};
   socklen_t recv_addr_len = sizeof(recv_addr);
 
   ssize_t received =

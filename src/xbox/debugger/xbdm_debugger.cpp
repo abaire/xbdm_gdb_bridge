@@ -675,27 +675,46 @@ bool XBDMDebugger::FetchMemoryMap() {
 
 bool XBDMDebugger::RestartAndReconnect(uint32_t reboot_flags) {
   assert(context_);
-  auto request = std::make_shared<::Reboot>(reboot_flags);
-  context_->SendCommandSync(request);
-  if (!request->IsOK()) {
-    LOG_DEBUGGER(error) << "'reboot' failed: " << request->status << " "
-                        << request->message;
-    return false;
+  LOG_DEBUGGER(trace) << "Rebooting remote with flags " << std::setw(8)
+                      << std::hex << reboot_flags;
+  {
+    auto request = std::make_shared<::Reboot>(reboot_flags);
+    context_->SendCommandSync(request);
+    if (!request->IsOK()) {
+      LOG_DEBUGGER(error) << "'reboot' failed: " << request->status << " "
+                          << request->message;
+      return false;
+    }
   }
 
-  // Wait for the connection to be dropped.
+  // Wait for the Xbox to indicate that it is about to reboot.
+  LOG_DEBUGGER(trace) << "Awaiting rebooting notification.";
   if (!WaitForState(S_REBOOTING, kRestartRebootingMaxWaitMilliseconds)) {
     LOG_DEBUGGER(warning) << "Timed out waiting for rebooting message.";
   }
 
-  // Then for the connection to be reestablished and a pending state set.
-  if (!WaitForState(S_PENDING, kRestartPendingMaxWaitMilliseconds)) {
-    LOG_DEBUGGER(warning) << "Timed out waiting for pending message.";
+  // Gracefully drop all connections.
+  {
+    context_->ResetNotificationConnections();
+
+    LOG_DEBUGGER(trace) << "Sending bye message.";
+    auto request = std::make_shared<::Bye>();
+    context_->SendCommandSync(request);
+    // No need to check for success or failure.
+
+    context_->CloseActiveConnections();
   }
 
-  // Reconnect the control channel.
-  if (!context_->Reconnect()) {
-    LOG_DEBUGGER(error) << "Failed to reconnect after reboot.";
+  // Then for the notification connection to be reestablished. A real devkit
+  // interaction waits for a pending notification before reconnecting the 731
+  // transport, but the bridge fetches module information on the modload
+  // notifications that come in before pending. To avoid having to delay these
+  // fetches, the notification channel reconnect triggers the transport level
+  // reconnect in .
+
+  LOG_DEBUGGER(trace) << "Awaiting pending notification.";
+  if (!WaitForState(S_PENDING, kRestartPendingMaxWaitMilliseconds)) {
+    LOG_DEBUGGER(warning) << "Timed out waiting for pending message.";
     return false;
   }
 

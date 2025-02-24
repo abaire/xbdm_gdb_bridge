@@ -28,7 +28,7 @@ class IPAddress {
 
  private:
   std::string hostname_;
-  struct sockaddr_in addr_ {};
+  struct sockaddr_in addr_{};
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_NET_ADDRESS_H_
