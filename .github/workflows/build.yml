@@ -19,12 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone tree
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
           path: xbdm_gdb_bridge
       - name: Clone nxdk
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: XboxDev/nxdk
           ref: 500354ef264f35a46a31643876b06ed614b0aed8
@@ -61,14 +61,19 @@ jobs:
         run: |
           cd xbdm_gdb_bridge
           ctest --test-dir build --output-on-failure
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: xbdm_gdb_bridge_linux
+          path: xbdm_gdb_bridge/build/xbdm_gdb_bridge          
       - name: Create release
         if: github.ref == 'refs/heads/main'
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: "latest-linux"
-          prerelease: true
-          title: "Development Build - Linux"
+          prerelease: false
+          title: "xbdm_gdb_bridge - Linux"
           files: |
             xbdm_gdb_bridge/build/xbdm_gdb_bridge
 
@@ -77,12 +82,12 @@ jobs:
     runs-on: macOS-latest
     steps:
       - name: Clone tree
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
           path: xbdm_gdb_bridge
       - name: Clone nxdk
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: XboxDev/nxdk
           ref: 500354ef264f35a46a31643876b06ed614b0aed8
@@ -122,13 +127,18 @@ jobs:
         run: |
           cd xbdm_gdb_bridge
           ctest --test-dir build --output-on-failure
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: xbdm_gdb_bridge_macOS
+          path: xbdm_gdb_bridge/build/xbdm_gdb_bridge
       - name: Create release
         if: github.ref == 'refs/heads/main'
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: "latest-macOS"
-          prerelease: true
-          title: "Development Build - macOS"
+          prerelease: false
+          title: "xbdm_gdb_bridge - macOS"
           files: |
             xbdm_gdb_bridge/build/xbdm_gdb_bridge
