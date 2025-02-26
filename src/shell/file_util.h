@@ -81,4 +81,7 @@ bool SyncDirectory(XBOXInterface &interface, const std::string &local_directory,
                    const std::string &remote_directory,
                    SyncFileMissingAction missing_action);
 
+//! Converts a path that may be POSIX style to an XFAT path.
+std::string EnsureXFATStylePath(const std::string &path);
+
 #endif  // XBDM_GDB_BRIDGE_FILE_UTIL_H

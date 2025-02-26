@@ -27,6 +27,8 @@ Command::Result MacroCommandSyncFile::operator()(
     return HANDLED;
   }
 
+  remote_path = EnsureXFATStylePath(remote_path);
+
   bool remote_exists;
   bool remote_is_dir;
   uint64_t remote_filesize;
@@ -77,6 +79,7 @@ Command::Result MacroCommandSyncDirectory::operator()(
               << "', must be a directory." << std::endl;
     return HANDLED;
   }
+  remote_path = EnsureXFATStylePath(remote_path);
 
   SyncFileMissingAction missing_action =
       parser.ArgExists("allow_delete", "delete", "-d")

@@ -170,6 +170,7 @@ Command::Result CommandDelete::operator()(
     PrintUsage();
     return HANDLED;
   }
+  path = EnsureXFATStylePath(path);
   bool recursive = parser.ArgExists("-r");
   if (recursive) {
     bool exists;
@@ -194,6 +195,7 @@ Command::Result CommandDirList::operator()(
     PrintUsage();
     return HANDLED;
   }
+  path = EnsureXFATStylePath(path);
 
   // Prevent access denied errors when trying to list the base of a drive path.
   if (path.back() == ':') {
@@ -380,6 +382,7 @@ Command::Result CommandGetFile::operator()(
     PrintUsage();
     return HANDLED;
   }
+  path = EnsureXFATStylePath(path);
 
   bool exists;
   bool is_directory;
@@ -430,6 +433,7 @@ Command::Result CommandGetFileAttributes::operator()(
     PrintUsage();
     return HANDLED;
   }
+  path = EnsureXFATStylePath(path);
 
   auto request = std::make_shared<GetFileAttributes>(path);
   interface.SendCommandSync(request);
@@ -616,6 +620,7 @@ Command::Result CommandMagicBoot::operator()(
     PrintUsage();
     return HANDLED;
   }
+  path = EnsureXFATStylePath(path);
   bool nodebug = parser.ArgExists("nodebug");
   bool cold = parser.ArgExists("cold");
   SendAndPrintMessage(interface,
@@ -660,6 +665,7 @@ Command::Result CommandMakeDirectory::operator()(
     PrintUsage();
     return HANDLED;
   }
+  path = EnsureXFATStylePath(path);
   SendAndPrintMessage(interface, std::make_shared<Mkdir>(path));
   return HANDLED;
 }
@@ -673,7 +679,7 @@ Command::Result CommandModuleSections::operator()(
     PrintUsage();
     return HANDLED;
   }
-
+  path = EnsureXFATStylePath(path);
   auto request = std::make_shared<ModSections>(path);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
@@ -774,6 +780,7 @@ Command::Result CommandPutFile::operator()(
     PrintUsage();
     return HANDLED;
   }
+  remote_path = EnsureXFATStylePath(remote_path);
 
   bool is_directory = std::filesystem::is_directory(local_path);
   if (!is_directory && !std::filesystem::is_regular_file(local_path)) {
@@ -807,11 +814,13 @@ Command::Result CommandRename::operator()(
     PrintUsage();
     return HANDLED;
   }
-  if (!parser.Parse(1, path)) {
+  if (!parser.Parse(1, new_path)) {
     std::cout << "Missing required new_path argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
+  path = EnsureXFATStylePath(path);
+  new_path = EnsureXFATStylePath(new_path);
 
   SendAndPrintMessage(interface, std::make_shared<Rename>(path, new_path));
   return HANDLED;
@@ -1037,6 +1046,7 @@ Command::Result CommandXBEInfo::operator()(
   if (!parser.Parse(0, path)) {
     request = std::make_shared<XBEInfo>();
   } else {
+    path = EnsureXFATStylePath(path);
     bool on_disk_only = parser.ArgExists("disk_only", "true");
     request = std::make_shared<XBEInfo>(path, on_disk_only);
   }

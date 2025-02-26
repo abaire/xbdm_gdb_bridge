@@ -1,6 +1,7 @@
 #include "debugger_commands.h"
 
 #include "rdcp/xbdm_requests.h"
+#include "shell/file_util.h"
 #include "util/parsing.h"
 #include "xbox/debugger/xbdm_debugger.h"
 
@@ -23,7 +24,8 @@ static bool DebugXBE(XBOXInterface &interface,
   auto debugger = interface.Debugger();
   assert(debugger);
 
-  debugger->DebugXBE(path, command_line_args, wait_forever, break_at_start);
+  debugger->DebugXBE(EnsureXFATStylePath(path), command_line_args, wait_forever,
+                     break_at_start);
   return true;
 }
 
