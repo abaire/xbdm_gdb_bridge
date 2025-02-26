@@ -22,11 +22,10 @@ static std::string EnsureTrailingBackslash(const std::string &dir_path) {
   return dir_path;
 }
 
-static std::string EnsureXFATStylePath(const std::string remote_path) {
-  auto safe_full_remote_path = remote_path;
-  std::replace(safe_full_remote_path.begin(), safe_full_remote_path.end(), '/',
-               '\\');
-  return std::move(safe_full_remote_path);
+std::string EnsureXFATStylePath(const std::string &path) {
+  auto safe_path = path;
+  std::replace(safe_path.begin(), safe_path.end(), '/', '\\');
+  return std::move(safe_path);
 }
 
 static std::string XFATPathToLocalPath(const std::string &relative_path) {
