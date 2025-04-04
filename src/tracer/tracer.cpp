@@ -130,16 +130,17 @@ void Tracer::OnNotification(
 }
 
 void Tracer::OnNewState(int new_state, XBDMContext &context) {
-#define PRINT_STATE(lvl, val) \
-  case val:                   \
-    LOG_TRACER(lvl) << #val;  \
+#define PRINT_FATAL_STATE(lvl, val) \
+  case val:                         \
+    LOG_TRACER(lvl) << #val;        \
+    request_failed_ = true;         \
     return
 
   switch (new_state) {
-    PRINT_STATE(error, STATE_FATAL_NOT_IN_NEW_FRAME_STATE);
-    PRINT_STATE(error, STATE_FATAL_NOT_IN_STABLE_STATE);
-    PRINT_STATE(error, STATE_FATAL_DISCARDING_FAILED);
-    PRINT_STATE(error, STATE_FATAL_PROCESS_PUSH_BUFFER_COMMAND_FAILED);
+    PRINT_FATAL_STATE(error, STATE_FATAL_NOT_IN_NEW_FRAME_STATE);
+    PRINT_FATAL_STATE(error, STATE_FATAL_NOT_IN_STABLE_STATE);
+    PRINT_FATAL_STATE(error, STATE_FATAL_DISCARDING_FAILED);
+    PRINT_FATAL_STATE(error, STATE_FATAL_PROCESS_PUSH_BUFFER_COMMAND_FAILED);
 
     case STATE_SHUTDOWN_REQUESTED:
       LOG_TRACER(info) << "Shutting down...";
@@ -273,6 +274,7 @@ bool Tracer::TraceFrame(XBOXInterface &interface,
   in_progress_frame_.Setup(artifact_path, verbose);
 
   request_processed_ = false;
+  request_failed_ = false;
   pgraph_data_available_ = false;
   aux_data_available_ = false;
 
@@ -285,6 +287,9 @@ bool Tracer::TraceFrame(XBOXInterface &interface,
   }
 
   while (!request_processed_) {
+    if (request_failed_) {
+      return false;
+    }
     if (pgraph_data_available_.exchange(false)) {
       if (in_progress_frame_.FetchPGRAPHTraceData(interface) ==
           FrameCapture::FetchResult::ERROR) {
