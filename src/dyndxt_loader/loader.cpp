@@ -432,9 +432,8 @@ SplitResolutionTable(
         resolution_table) {
 #define COMMAND_LEN sizeof("ldxt!r")
   // " b=0x00000000"
-#define BASE_LEN 13
-  // " o=0xFFFF"
-#define ORDINAL_LEN 9
+  // " o=0x00000000"
+#define ADDR_LEN 13
   auto ret = std::list<
       std::map<uint32_t, std::vector<ResolveExportList::ResolveRequest>>>();
 
@@ -452,16 +451,16 @@ SplitResolutionTable(
   };
 
   for (auto& table_it : resolution_table) {
-    remaining_length -= BASE_LEN;
+    remaining_length -= ADDR_LEN;
     auto* values = new_entry(table_it.first);
 
     for (auto& req_it : table_it.second) {
-      remaining_length -= ORDINAL_LEN;
+      remaining_length -= ADDR_LEN;
       values->emplace_back(req_it);
 
       // Make sure there's enough room to handle a new base address, splitting
       // the table if not.
-      if (remaining_length < BASE_LEN) {
+      if (remaining_length <= ADDR_LEN) {
         current = new_table();
         values = new_entry(table_it.first);
       }
