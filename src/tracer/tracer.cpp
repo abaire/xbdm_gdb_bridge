@@ -141,6 +141,7 @@ void Tracer::OnNewState(int new_state, XBDMContext &context) {
     PRINT_FATAL_STATE(error, STATE_FATAL_NOT_IN_STABLE_STATE);
     PRINT_FATAL_STATE(error, STATE_FATAL_DISCARDING_FAILED);
     PRINT_FATAL_STATE(error, STATE_FATAL_PROCESS_PUSH_BUFFER_COMMAND_FAILED);
+    PRINT_FATAL_STATE(error, STATE_FATAL_PERMANENT_STALL);
 
     case STATE_SHUTDOWN_REQUESTED:
       LOG_TRACER(info) << "Shutting down...";
@@ -308,7 +309,7 @@ bool Tracer::TraceFrame(XBOXInterface &interface,
   }
 
   // Consume any remaining PGRAPH data.
-  while (true) {
+  while (!request_failed_) {
     auto result = in_progress_frame_.FetchPGRAPHTraceData(interface);
     if (result == FrameCapture::FetchResult::NO_DATA_AVAILABLE) {
       break;
@@ -320,7 +321,7 @@ bool Tracer::TraceFrame(XBOXInterface &interface,
   }
 
   // Consume any remaining graphics data.
-  while (true) {
+  while (!request_failed_) {
     auto result = in_progress_frame_.FetchAuxTraceData(interface);
     if (result == FrameCapture::FetchResult::NO_DATA_AVAILABLE) {
       break;
