@@ -78,6 +78,11 @@ typedef struct PushBufferCommandTraceInfo {
   // If populated, this will always be exactly (command.parameter_count * 4)
   // bytes.
   PushBufferCommandParameters data;
+
+  //! Address to return to in response to a DMA return command.
+  //! This value must be initialized to zero to detect (unsupported) nested
+  //! subroutines.
+  uint32_t subroutine_return_address;
 } __attribute((packed)) PushBufferCommandTraceInfo;
 
 //! Describes some auxiliary buffer data type.
