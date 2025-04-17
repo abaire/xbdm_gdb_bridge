@@ -22,6 +22,13 @@ class Tracer {
   static bool Initialize(XBOXInterface &interface);
 
   //! Attaches to the tracer instance on the XBOX.
+  //!
+  //! \param tcap - enable texture capture
+  //! \param dcap - enable depth surface capture
+  //! \param ccap - enable color surface (framebuffer) capture
+  //! \param rdicap - enable RDI capture
+  //! \param rawpgraph - enable capture of PGRAPH registers
+  //! \param rawpfb - enable capture of PFB region
   static bool Attach(XBOXInterface &interface, bool tcap = true,
                      bool dcap = false, bool ccap = true, bool rdicap = false,
                      bool rawpgraph = false, bool rawpfb = false);
