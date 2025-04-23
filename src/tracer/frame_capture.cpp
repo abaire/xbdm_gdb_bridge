@@ -200,24 +200,24 @@ void FrameCapture::ProcessAuxBuffer() {
 
     switch (packet.data_type) {
       case ADT_PGRAPH_DUMP:
-        LogPGRAPH(packet, packet.len - header_size, packet_end);
+        LogPGRAPH(packet, packet.len, packet_end);
         break;
 
       case ADT_PFB_DUMP:
-        LogPFB(packet, packet.len - header_size, packet_end);
+        LogPFB(packet, packet.len, packet_end);
         LOG_CAP(error) << "TODO: Save PFB";
         break;
 
       case ADT_RDI_DUMP:
-        LogRDI(packet, packet.len - header_size, packet_end);
+        LogRDI(packet, packet.len, packet_end);
         break;
 
       case ADT_SURFACE:
-        LogSurface(packet, packet.len - header_size, packet_end);
+        LogSurface(packet, packet.len, packet_end);
         break;
 
       case ADT_TEXTURE:
-        LogTexture(packet, packet.len - header_size, packet_end);
+        LogTexture(packet, packet.len, packet_end);
         break;
 
       default:
