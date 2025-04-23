@@ -10,6 +10,7 @@ import os
 import re
 import sys
 from argparse import Namespace
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -22,16 +23,17 @@ HEX_CAPTURE = r"(0x[0-9a-fA-F]+)"
 # '640 x 480 [pitch = 2560 (0xA00)], at 0x01308000, format 0x7, type: 0x21000001, swizzled: N'
 SURFACE_DESCRIPTION_RE = re.compile(r".*format " + HEX_CAPTURE + r", type: " + HEX_CAPTURE + r", swizzled: ([NY])")
 
-NV097_SET_SURFACE_FORMAT_COLOR_LE_X1R5G5B5_Z1R5G5B5 = 0x01
-NV097_SET_SURFACE_FORMAT_COLOR_LE_X1R5G5B5_O1R5G5B5 = 0x02
-NV097_SET_SURFACE_FORMAT_COLOR_LE_R5G6B5 = 0x03
-NV097_SET_SURFACE_FORMAT_COLOR_LE_X8R8G8B8_Z8R8G8B8 = 0x04
-NV097_SET_SURFACE_FORMAT_COLOR_LE_X8R8G8B8_O8R8G8B8 = 0x05
-NV097_SET_SURFACE_FORMAT_COLOR_LE_X1A7R8G8B8_Z1A7R8G8B8 = 0x06
-NV097_SET_SURFACE_FORMAT_COLOR_LE_X1A7R8G8B8_O1A7R8G8B8 = 0x07
-NV097_SET_SURFACE_FORMAT_COLOR_LE_A8R8G8B8 = 0x08
-NV097_SET_SURFACE_FORMAT_COLOR_LE_B8 = 0x09
-NV097_SET_SURFACE_FORMAT_COLOR_LE_G8B8 = 0x0A
+SURFACE_FORMAT_X1R5G5B5_Z1R5G5B5 = 0x02
+SURFACE_FORMAT_X1R5G5B5_O1R5G5B5 = 0x03
+SURFACE_FORMAT_A1R5G5B5 = 0x04
+SURFACE_FORMAT_R5G6B5 = 0x05
+SURFACE_FORMAT_X8R8G8B8_Z8R8G8B8 = 0x07
+SURFACE_FORMAT_X8R8G8B8_O1Z7R8G8B8 = 0x08
+SURFACE_FORMAT_X1A7R8G8B8_Z1A7R8G8B8 = 0x09
+SURFACE_FORMAT_X1A7R8G8B8_O1A7R8G8B8 = 0x0A
+SURFACE_FORMAT_X8R8G8B8_O8R8G8B8 = 0x0B
+SURFACE_FORMAT_A8R8G8B8 = 0x0C
+
 NV097_SET_TEXTURE_FORMAT_COLOR_SZ_Y8 = 0x00
 NV097_SET_TEXTURE_FORMAT_COLOR_SZ_AY8 = 0x01
 NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A1R5G5B5 = 0x02
@@ -75,6 +77,90 @@ NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8B8G8R8 = 0x3F
 NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_B8G8R8A8 = 0x40
 NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R8G8B8A8 = 0x41
 
+# Maps raw format to pillow image format.
+TEXTURE_FORMAT_8888 = {
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A8R8G8B8: "BGRA",
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_X8R8G8B8: "BGRA",
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_I8_A8R8G8B8: "BGRA",
+    NV097_SET_TEXTURE_FORMAT_COLOR_L_DXT23_A8R8G8B8: "BGRA",
+    NV097_SET_TEXTURE_FORMAT_COLOR_L_DXT45_A8R8G8B8: "BGRA",
+    NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8R8G8B8: "BGRA",
+    NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_X8R8G8B8: "BGRA",
+    NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8B8G8R8: "BGRA",
+    NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_B8G8R8A8: "RGBA",
+    NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R8G8B8A8: "ABGR",
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A8B8G8R8: "BGRA",
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_B8G8R8A8: "RGBA",
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_R8G8B8A8: "BGRA",
+    NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_DEPTH_X8_Y24_FIXED: "BGRA",
+}
+
+TEXTURE_BORDER_SOURCE_TEXTURE = 0
+TEXTURE_BORDER_SOURCE_COLOR = 1
+
+
+@dataclass
+class TextureFormat:
+    """Encapsulates detailed information about a texture."""
+
+    cubemap: bool
+    border_source: int
+    dimensionality: int
+    color_format: int
+    mipmap_levels: int
+    base_size_u: int
+    base_size_v: int
+    base_size_p: int
+
+    # NV_PGRAPH_TEXFMT0_DIMENSIONALITY          0x000000C0
+    # NV_PGRAPH_TEXFMT0_COLOR                   0x00007F00
+    # NV_PGRAPH_TEXFMT0_MIPMAP_LEVELS           0x000F0000
+    # NV_PGRAPH_TEXFMT0_BASE_SIZE_U             0x00F00000
+    # NV_PGRAPH_TEXFMT0_BASE_SIZE_V             0x0F000000
+    # NV_PGRAPH_TEXFMT0_BASE_SIZE_P             0xF0000000
+
+    @property
+    def uses_pitch(self) -> bool:
+        return self.color_format in (
+            NV097_SET_TEXTURE_FORMAT_COLOR_L_DXT1_A1R5G5B5,
+            NV097_SET_TEXTURE_FORMAT_COLOR_L_DXT23_A8R8G8B8,
+            NV097_SET_TEXTURE_FORMAT_COLOR_L_DXT45_A8R8G8B8,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A1R5G5B5,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R5G6B5,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8R8G8B8,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_Y8,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R8B8,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_G8B8,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_AY8,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_X1R5G5B5,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A4R4G4B4,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_X8R8G8B8,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8Y8,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LC_IMAGE_CR8YB8CB8YA8,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LC_IMAGE_YB8CR8YA8CB8,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_DEPTH_X8_Y24_FIXED,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_DEPTH_Y16_FIXED,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_DEPTH_Y16_FLOAT,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_Y16,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8B8G8R8,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_B8G8R8A8,
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R8G8B8A8,
+        )
+
+    @classmethod
+    def from_texture_format(cls, tex_format: int) -> TextureFormat:
+        return cls(
+            cubemap=((tex_format >> 2) & 0x01) != 0,
+            border_source=(tex_format >> 3) & 0x01,
+            dimensionality=(tex_format >> 6) & 0x03,
+            color_format=(tex_format >> 8) & 0x7F,
+            mipmap_levels=(tex_format >> 16) & 0x0F,
+            base_size_u=(tex_format >> 20) & 0x0F,
+            base_size_v=(tex_format >> 24) & 0x0F,
+            base_size_p=(tex_format >> 28) & 0x0F,
+        )
+
 
 class Processor:
     def __init__(self, *, overwrite_existing: bool = False, output_no_alpha: bool = False):
@@ -116,10 +202,13 @@ class Processor:
         return f"{filename[:-4]}-noalpha.png"
 
     def _write_png_argb(
-        self, output_path: str, bin_path: str, width: int, height: int, pitch: int, byte_order: str = "BGRA"
+        self, output_path: str, bin_path: str, width: int, height: int, pitch: int | None, byte_order: str = "BGRA"
     ) -> bool:
         with open(bin_path, "rb") as infile:
             pixel_data = infile.read()
+
+        if pitch is None:
+            pitch = 4 * width
 
         # A bug in older versions of xbdm may have truncated the bin file early. Pad with 0 bytes.
         expected_bytes = height * pitch
@@ -144,15 +233,14 @@ class Processor:
             return None
 
         surface_format = int(match.group(1), 16)
-        print(f"{bin_path}: {match.group(1)}")
         # swizzled = match.group(3) == "Y"
 
         if surface_format in (
-            NV097_SET_SURFACE_FORMAT_COLOR_LE_X8R8G8B8_Z8R8G8B8,
-            NV097_SET_SURFACE_FORMAT_COLOR_LE_X8R8G8B8_O8R8G8B8,
-            NV097_SET_SURFACE_FORMAT_COLOR_LE_X1A7R8G8B8_Z1A7R8G8B8,
-            NV097_SET_SURFACE_FORMAT_COLOR_LE_X1A7R8G8B8_O1A7R8G8B8,
-            NV097_SET_SURFACE_FORMAT_COLOR_LE_A8R8G8B8,
+            SURFACE_FORMAT_X8R8G8B8_Z8R8G8B8,
+            SURFACE_FORMAT_X8R8G8B8_O8R8G8B8,
+            SURFACE_FORMAT_X1A7R8G8B8_Z1A7R8G8B8,
+            SURFACE_FORMAT_X1A7R8G8B8_O1A7R8G8B8,
+            SURFACE_FORMAT_A8R8G8B8,
         ):
             result = self._write_png_argb(
                 output_path,
@@ -166,9 +254,81 @@ class Processor:
         print(f"Unimplemented surface format 0x{surface_format:x}")
         return None
 
-    def _convert_texture(self, output_path: str, bin_path: str, texture_description: dict[str, Any]) -> str | None:
-        print(output_path, bin_path, texture_description)
+    def _convert_texture_with_format(
+        self,
+        output_path: str,
+        bin_path: str,
+        tex_format: TextureFormat,
+        width: int,
+        height: int,
+        depth: int,
+        pitch: int,
+    ) -> str | None:
+        # NV097_SET_TEXTURE_FORMAT_COLOR_SZ_Y8 = 0x00
+        # NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_Y8 = 0x13
+        # NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A8 = 0x19
+        # NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_AY8 = 0x1B
+        # NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8 = 0x1F
+        #
+        # NV097_SET_TEXTURE_FORMAT_COLOR_SZ_AY8 = 0x01
+        # NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A8Y8 = 0x1A
+        # NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R8B8 = 0x16
+        # NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_G8B8 = 0x17
+        # NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8Y8 = 0x20
+        # NV097_SET_TEXTURE_FORMAT_COLOR_SZ_R6G5B5 = 0x27
+        # NV097_SET_TEXTURE_FORMAT_COLOR_SZ_G8B8 = 0x28
+        # NV097_SET_TEXTURE_FORMAT_COLOR_SZ_R8B8 = 0x29
+        # NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_Y16 = 0x35
+        # NV097_SET_TEXTURE_FORMAT_COLOR_SZ_DEPTH_Y16_FIXED = 0x2C
+        # NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_DEPTH_Y16_FIXED = 0x30
+        #
+        # NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_DEPTH_Y16_FLOAT = 0x31
+        #
+        # NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A1R5G5B5 = 0x02
+        # NV097_SET_TEXTURE_FORMAT_COLOR_SZ_X1R5G5B5 = 0x03
+        # NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A4R4G4B4 = 0x04
+        # NV097_SET_TEXTURE_FORMAT_COLOR_SZ_R5G6B5 = 0x05
+        # NV097_SET_TEXTURE_FORMAT_COLOR_L_DXT1_A1R5G5B5 = 0x0C
+        # NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A1R5G5B5 = 0x10
+        # NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R5G6B5 = 0x11
+        # NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_X1R5G5B5 = 0x1C
+        # NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A4R4G4B4 = 0x1D
+        #
+        # NV097_SET_TEXTURE_FORMAT_COLOR_LC_IMAGE_CR8YB8CB8YA8 = 0x24
+        # NV097_SET_TEXTURE_FORMAT_COLOR_LC_IMAGE_YB8CR8YA8CB8 = 0x25
+
+        if depth != 1:
+            msg = "3d textures not yet implemented"
+            raise NotImplementedError(msg)
+
+        del bin_path
+
+        # if format.color_format in TEXTURE_FORMAT_8888:
+        #     print(output_path, format, width, height, depth, pitch)
+        #     result = self._write_png_argb(
+        #         output_path,
+        #         bin_path,
+        #         width,
+        #         height,
+        #         pitch if format.uses_pitch else None,
+        #         TEXTURE_FORMAT_8888[format.color_format]
+        #     )
+        #     return output_path if result else None
+
+        print("WARNING: Unsupported format: ", output_path, tex_format, width, height, depth, pitch)
         return None
+
+    def _convert_texture(self, output_path: str, bin_path: str, texture_description: dict[str, Any]) -> str | None:
+        texture_format = TextureFormat.from_texture_format(texture_description["format"])
+        return self._convert_texture_with_format(
+            output_path,
+            bin_path,
+            texture_format,
+            texture_description["width"],
+            texture_description["height"],
+            texture_description["depth"],
+            texture_description["pitch"],
+        )
 
     def _convert_artifact(self, bin_file, description: dict[str, Any]) -> str | None:
         output_path = os.path.join(os.path.dirname(bin_file), f"{bin_file[:-3]}png")
