@@ -200,24 +200,24 @@ void FrameCapture::ProcessAuxBuffer() {
 
     switch (packet.data_type) {
       case ADT_PGRAPH_DUMP:
-        LogPGRAPH(packet, packet.len - header_size, packet_end);
+        LogPGRAPH(packet, packet.len, packet_end);
         break;
 
       case ADT_PFB_DUMP:
-        LogPFB(packet, packet.len - header_size, packet_end);
+        LogPFB(packet, packet.len, packet_end);
         LOG_CAP(error) << "TODO: Save PFB";
         break;
 
       case ADT_RDI_DUMP:
-        LogRDI(packet, packet.len - header_size, packet_end);
+        LogRDI(packet, packet.len, packet_end);
         break;
 
       case ADT_SURFACE:
-        LogSurface(packet, packet.len - header_size, packet_end);
+        LogSurface(packet, packet.len, packet_end);
         break;
 
       case ADT_TEXTURE:
-        LogTexture(packet, packet.len - header_size, packet_end);
+        LogTexture(packet, packet.len, packet_end);
         break;
 
       default:
@@ -335,12 +335,16 @@ void FrameCapture::LogSurface(const NTRCTracer::AuxDataHeader &packet,
     auto os = std::ofstream(artifact_path_ / filename,
                             std::ios_base::out | std::ios_base::trunc);
     auto description = std::string(d, d + header->description_len);
-    os << "[\"surface\": {" << std::endl;
-    os << R"("description": ")" << description << "\"," << std::endl;
-    os << R"("type": ")" << surface_type << "\"," << std::endl;
-    os << R"("width": )" << header->width << "," << std::endl;
-    os << R"("height": )" << header->height << "," << std::endl;
-    os << R"("pitch": )" << header->pitch << std::endl;
+    os << "{" << std::endl;
+
+    os << "  \"surface\": {" << std::endl;
+    os << R"(    "description": ")" << description << "\"," << std::endl;
+    os << R"(    "type": ")" << surface_type << "\"," << std::endl;
+    os << R"(    "width": )" << header->width << "," << std::endl;
+    os << R"(    "height": )" << header->height << "," << std::endl;
+    os << R"(    "pitch": )" << header->pitch << std::endl;
+
+    os << "  }" << std::endl;
     os << "}" << std::endl;
     os.close();
   }
@@ -376,25 +380,29 @@ void FrameCapture::LogTexture(const NTRCTracer::AuxDataHeader &packet,
 
     auto os = std::ofstream(artifact_path_ / filename,
                             std::ios_base::out | std::ios_base::trunc);
-    os << "[\"texture\": {" << std::endl;
-    os << R"("stage": ")" << header->stage << "\"," << std::endl;
-    os << R"("layer": ")" << header->layer << "\"," << std::endl;
-    os << R"("width": )" << header->width << "," << std::endl;
-    os << R"("height": )" << header->height << "," << std::endl;
-    os << R"("depth": )" << header->depth << "," << std::endl;
-    os << R"("pitch": )" << header->pitch << "," << std::endl;
-    os << R"("format": )" << header->format << std::endl;
-    os << R"("format_hex": "0x)" << std::hex << std::setw(8)
-       << std::setfill('0') << header->format << "\"," << std::endl;
+    os << "{" << std::endl;
+    os << "  \"texture\": {" << std::endl;
+    os << R"(    "stage": ")" << header->stage << "\"," << std::endl;
+    os << R"(    "layer": ")" << header->layer << "\"," << std::endl;
+    os << R"(    "width": )" << header->width << "," << std::endl;
+    os << R"(    "height": )" << header->height << "," << std::endl;
+    os << R"(    "depth": )" << header->depth << "," << std::endl;
+    os << R"(    "pitch": )" << header->pitch << "," << std::endl;
+    os << R"(    "format": )" << header->format << "," << std::endl;
+    os << R"(    "format_hex": "0x)" << std::hex << std::setw(8)
+       << std::setfill('0') << header->format << std::dec << "\"," << std::endl;
 
-    os << R"("control0": )" << header->control0 << std::endl;
-    os << R"("control0_hex": "0x)" << std::hex << std::setw(8)
-       << std::setfill('0') << header->control0 << "\"," << std::endl;
+    os << R"(    "control0": )" << header->control0 << "," << std::endl;
+    os << R"(    "control0_hex": "0x)" << std::hex << std::setw(8)
+       << std::setfill('0') << header->control0 << std::dec << "\","
+       << std::endl;
 
-    os << R"("control1": )" << header->control1 << std::endl;
-    os << R"("control1_hex": "0x)" << std::hex << std::setw(8)
-       << std::setfill('0') << header->control1 << "\"," << std::endl;
+    os << R"(    "control1": )" << header->control1 << "," << std::endl;
+    os << R"(    "control1_hex": "0x)" << std::hex << std::setw(8)
+       << std::setfill('0') << header->control1 << std::dec << "\""
+       << std::endl;
 
+    os << "  }" << std::endl;
     os << "}" << std::endl;
     os.close();
   }
