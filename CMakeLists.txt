@@ -131,6 +131,26 @@ pack_resource(
 )
 
 
+# lodepng --------------------------------------------
+
+add_library(
+        lodepng
+        third_party/lodepng/lodepng.cpp
+        third_party/lodepng/lodepng.h
+)
+
+target_compile_definitions(
+        lodepng
+        PRIVATE
+        LODEPNG_COMPILE_ENCODER
+)
+
+target_include_directories(
+        lodepng
+        PUBLIC
+        third_party/lodepng
+)
+
 # xbdm executable ------------------------------------
 
 add_executable(
@@ -234,6 +254,8 @@ add_executable(
         src/rdcp/types/section.h
         src/tracer/frame_capture.cpp
         src/tracer/frame_capture.h
+        src/tracer/image_util.cpp
+        src/tracer/image_util.h
         src/tracer/notification_ntrc.cpp
         src/tracer/notification_ntrc.h
         src/tracer/tracer.cpp
@@ -245,6 +267,8 @@ add_executable(
         src/xbox/debugger/xbdm_debugger.h
         third_party/nxdk/winapi/winnt.h
         third_party/nxdk/xboxkrnl/xboxdef.h
+        third_party/xemu/swizzle.c
+        third_party/xemu/swizzle.h
         ${GENERATED_FILES_DIR}/bootstrap_l1_xbox.h
         ${GENERATED_FILES_DIR}/bootstrap_l2_xbox.h
         ${GENERATED_FILES_DIR}/dynamic_dxt_loader_xbox.h
@@ -258,6 +282,7 @@ target_include_directories(
         handler_loader_bootstrap
         src
         third_party/nxdk
+        third_party/xemu
         ${ntrc_dyndxt_include_dir}
 )
 
@@ -268,6 +293,8 @@ target_link_libraries(
         ${SDL2_LINK_LIBRARIES}
         ${SDL2IMAGE_LINK_LIBRARIES}
         ${RC_DEPENDS}
+        LINK_PRIVATE
+        lodepng
 )
 
 add_dependencies(xbdm_gdb_bridge dyndxt_loader ntrc_dyndxt)

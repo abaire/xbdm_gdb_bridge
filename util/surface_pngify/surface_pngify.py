@@ -82,8 +82,6 @@ TEXTURE_FORMAT_8888 = {
     NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A8R8G8B8: "BGRA",
     NV097_SET_TEXTURE_FORMAT_COLOR_SZ_X8R8G8B8: "BGRA",
     NV097_SET_TEXTURE_FORMAT_COLOR_SZ_I8_A8R8G8B8: "BGRA",
-    NV097_SET_TEXTURE_FORMAT_COLOR_L_DXT23_A8R8G8B8: "BGRA",
-    NV097_SET_TEXTURE_FORMAT_COLOR_L_DXT45_A8R8G8B8: "BGRA",
     NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8R8G8B8: "BGRA",
     NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_X8R8G8B8: "BGRA",
     NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8B8G8R8: "BGRA",
@@ -93,6 +91,33 @@ TEXTURE_FORMAT_8888 = {
     NV097_SET_TEXTURE_FORMAT_COLOR_SZ_B8G8R8A8: "RGBA",
     NV097_SET_TEXTURE_FORMAT_COLOR_SZ_R8G8B8A8: "BGRA",
     NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_DEPTH_X8_Y24_FIXED: "BGRA",
+}
+
+TEXTURE_FORMAT_DXT = {
+    NV097_SET_TEXTURE_FORMAT_COLOR_L_DXT1_A1R5G5B5,
+    NV097_SET_TEXTURE_FORMAT_COLOR_L_DXT23_A8R8G8B8,
+    NV097_SET_TEXTURE_FORMAT_COLOR_L_DXT45_A8R8G8B8,
+}
+
+SWIZZLED_FORMATS = {
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_Y8,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_AY8,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A1R5G5B5,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_X1R5G5B5,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A4R4G4B4,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_R5G6B5,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A8R8G8B8,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_X8R8G8B8,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_I8_A8R8G8B8,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A8,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A8Y8,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_R6G5B5,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_G8B8,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_R8B8,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_DEPTH_Y16_FIXED,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A8B8G8R8,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_B8G8R8A8,
+    NV097_SET_TEXTURE_FORMAT_COLOR_SZ_R8G8B8A8,
 }
 
 TEXTURE_BORDER_SOURCE_TEXTURE = 0
@@ -161,6 +186,166 @@ class TextureFormat:
             base_size_p=(tex_format >> 28) & 0x0F,
         )
 
+def generate_swizzle_masks(width: int, height: int, depth: int) -> tuple[int, int, int]:
+    """
+    Create masks representing the interleaving of each linear texture dimension (x, y, z).
+    These can be used to map linear texture coordinates to a swizzled "Z" offset.
+    For example, a 2D 8x32 texture needs 3 bits for x, and 5 bits for y:
+    mask_x:  00010101
+    mask_y:  11101010
+    mask_z:  00000000
+    for "Z": yyyxyxyx
+
+    Args:
+        width: The width of the texture/volume.
+        height: The height of the texture/volume.
+        depth: The depth of the texture/volume.
+
+    Returns:
+        A tuple containing the swizzle masks (mask_x, mask_y, mask_z).
+    """
+    x = 0
+    y = 0
+    z = 0
+    bit = 1
+    mask_bit = 1
+    done = False
+
+    while not done:
+        done = True
+        # The C code checks `bit < dimension`. This means if the dimension is, say, 8 (binary 1000),
+        # it processes bits up to 4 (binary 0100). This effectively allocates bits for dimensions
+        # up to the next power of 2 greater than or equal to the dimension.
+        # A more common approach for Z-order is to allocate bits based on the *maximum* bits needed
+        # across all dimensions (i.e., max(width, height, depth)). The C code's logic seems to
+        # interleave bits as long as 'bit' is less than *any* dimension. Let's follow the C logic.
+
+        if bit < width:
+            x |= mask_bit
+            mask_bit <<= 1
+            done = False
+        if bit < height:
+            y |= mask_bit
+            mask_bit <<= 1
+            done = False
+        if bit < depth:
+            z |= mask_bit
+            mask_bit <<= 1
+            done = False
+        bit <<= 1
+
+    # In Python, assert is a statement
+    # The check is that all mask bits are mutually exclusive and cover all bits set in the masks.
+    if (x ^ y ^ z) != (mask_bit - 1):
+        msg = "masks are not mutually exclusive or don't cover all bits"
+        raise ValueError(msg)
+
+    return x, y, z
+
+def unswizzle_box(
+    src_buf: bytearray | bytes | memoryview, # Swizzled source buffer
+    width: int,
+    height: int,
+    depth: int,
+    dst_buf: bytearray | memoryview, # Linear destination buffer
+    row_pitch: int, # Bytes per row in dst_buf
+    slice_pitch: int, # Bytes per slice (plane) in dst_buf
+    bytes_per_pixel: int
+):
+    """
+    Unswizzles raw pixel data from a Z-order (Morton) layout back to a linear layout.
+
+    Args:
+        src_buf: The source buffer containing swizzled pixel data.
+                 Must be large enough to hold width * height * depth * bytes_per_pixel.
+        width, height, depth: Dimensions of the texture/volume.
+        dst_buf: The destination buffer for linear pixel data.
+        row_pitch: The pitch (stride) of the destination buffer in bytes per row.
+        slice_pitch: The pitch (stride) of the destination buffer in bytes per slice.
+        bytes_per_pixel: The number of bytes per pixel/voxel.
+    """
+    if not isinstance(src_buf, (bytes, bytearray, memoryview)):
+         print("Warning: src_buf is not a byte-like object. This function expects raw bytes.", file=sys.stderr)
+    if not isinstance(dst_buf, (bytearray, memoryview)):
+         print("Warning: dst_buf is not a mutable byte-like object (bytearray/memoryview). This function writes raw bytes.", file=sys.stderr)
+
+    mask_x, mask_y, mask_z = generate_swizzle_masks(width, height, depth)
+
+    # Map swizzled texture back to linear texture using swizzle masks.
+
+    # Iterate through linear coordinates (x, y, z) to calculate their swizzled source offsets
+    off_z = 0 # Swizzled z-offset (index component)
+    # In C, src_buf was calculated using off_y + off_z scaled by bytes_per_pixel outside the y loop.
+    # In Python, we calculate the base swizzled offset directly.
+    # src_base_offset_for_slice = off_z * bytes_per_pixel # This is wrong, off_z is an index, not byte offset yet.
+
+    for z in range(depth):
+        off_y = 0 # Swizzled y-offset (index component)
+        # In C, dst_buf was incremented by slice_pitch outside the y loop.
+        # In Python, we calculate the linear offset directly using z and slice_pitch.
+        dst_slice_start_offset = z * slice_pitch
+
+        # In C, src_tmp was calculated using off_y + off_z scaled by bytes_per_pixel relative to src_buf (start of swizzled buffer).
+        # Let's calculate the base swizzled byte offset for the current "linear" row/slice combination based on off_y and off_z.
+        src_base_offset_for_row_slice = (off_y + off_z) * bytes_per_pixel
+
+
+        for y in range(height):
+            off_x = 0 # Swizzled x-offset (index component)
+            # In C, dst_tmp was calculated using y * row_pitch relative to dst_buf (current slice start).
+            # In Python, we calculate the linear offset directly using y and row_pitch.
+            dst_row_start_offset = dst_slice_start_offset + y * row_pitch
+
+            # In C, src was calculated using src_tmp + off_x scaled by bytes_per_pixel.
+            # The total swizzled source byte offset will be (off_x + off_y + off_z) * bytes_per_pixel
+            # Let's calculate the total swizzled byte offset directly.
+
+            for x in range(width):
+                # Calculate swizzled source byte offset
+                src_byte_offset = src_base_offset_for_row_slice + off_x * bytes_per_pixel
+                 # This calculation is simpler than the C code's two-step pointer arithmetic but equivalent.
+                 # It's ( (off_y + off_z) * bytes_per_pixel ) + ( off_x * bytes_per_pixel )
+                 # = (off_y + off_z + off_x) * bytes_per_pixel
+                 # So, the total swizzled index is off_x + off_y + off_z
+
+                src_byte_offset = (off_x + off_y + off_z) * bytes_per_pixel
+
+
+                # Calculate linear destination byte offset
+                dst_byte_offset = dst_row_start_offset + x * bytes_per_pixel
+
+
+                # Copy bytes_per_pixel bytes from source to destination
+                if src_byte_offset + bytes_per_pixel > len(src_buf):
+                     print(f"Error: Source buffer too small at offset {src_byte_offset}", file=sys.stderr)
+                     return # Or raise an exception
+                if dst_byte_offset + bytes_per_pixel > len(dst_buf):
+                     print(f"Error: Destination buffer too small at offset {dst_byte_offset}", file=sys.stderr)
+                     return # Or raise an exception
+
+                dst_buf[dst_byte_offset : dst_byte_offset + bytes_per_pixel] = \
+                    src_buf[src_byte_offset : src_byte_offset + bytes_per_pixel]
+
+                # Increment x offset using the bit trick
+                off_x = (off_x - mask_x) & mask_x
+
+            # Increment y offset using the bit trick
+            off_y = (off_y - mask_y) & mask_y
+            # Update the base swizzled offset for the next row within this slice
+            # This is implicitly handled by the recalculation in the next iteration if we follow the direct index calculation.
+            # Let's recalculate src_base_offset_for_row_slice based on the updated off_y for clarity.
+            src_base_offset_for_row_slice = (off_y + off_z) * bytes_per_pixel
+
+
+        # Increment z offset using the bit trick
+        off_z = (off_z - mask_z) & mask_z
+        # Update the base swizzled offset for the next slice
+        # This is implicitly handled by the recalculation in the next iteration if we follow the direct index calculation.
+
+
+def unswizzle_rect(src_buf, width, height, dst_buf, pitch, bpp):
+    unswizzle_box(src_buf, width, height, 1, dst_buf, pitch, 0, bpp)
+
 
 class Processor:
     def __init__(self, *, overwrite_existing: bool = False, output_no_alpha: bool = False):
@@ -202,8 +387,8 @@ class Processor:
         return f"{filename[:-4]}-noalpha.png"
 
     def _write_png_argb(
-        self, output_path: str, bin_path: str, width: int, height: int, pitch: int | None, byte_order: str = "BGRA"
-    ) -> bool:
+        self, output_path: str, bin_path: str, width: int, height: int, pitch: int | None, byte_order: str = "BGRA", *, swizzled: bool = False
+    ):
         with open(bin_path, "rb") as infile:
             pixel_data = infile.read()
 
@@ -216,14 +401,17 @@ class Processor:
         if missing_bytes > 0:
             pixel_data += b"\0" * missing_bytes
 
+        # if swizzled:
+        #     dest_buf = bytearray(len(pixel_data))
+        #     unswizzle_rect(pixel_data, width, height, dest_buf, pitch, 8)
+        #     pixel_data = dest_buf
+
         img = Image.frombytes("RGBA", (width, height), pixel_data, "raw", byte_order, pitch)
         img.save(output_path, "PNG")
 
         if self._output_no_alpha:
             rgb = img.convert("RGB")
             rgb.save(self._no_alpha_filename(output_path), "PNG")
-
-        return True
 
     def _convert_surface(self, output_path: str, bin_path: str, surface_description: dict[str, Any]) -> str | None:
         description_line = surface_description["description"]
@@ -301,29 +489,28 @@ class Processor:
             msg = "3d textures not yet implemented"
             raise NotImplementedError(msg)
 
-        del bin_path
-
-        # if format.color_format in TEXTURE_FORMAT_8888:
-        #     print(output_path, format, width, height, depth, pitch)
-        #     result = self._write_png_argb(
-        #         output_path,
-        #         bin_path,
-        #         width,
-        #         height,
-        #         pitch if format.uses_pitch else None,
-        #         TEXTURE_FORMAT_8888[format.color_format]
-        #     )
-        #     return output_path if result else None
+        if tex_format.color_format in TEXTURE_FORMAT_8888:
+            for layer in range(depth):
+                del layer
+                self._write_png_argb(
+                    output_path,
+                    bin_path,
+                    width,
+                    height,
+                    pitch if tex_format.uses_pitch else None,
+                    TEXTURE_FORMAT_8888[tex_format.color_format],
+                    swizzled=tex_format.color_format in SWIZZLED_FORMATS,
+                )
+            return output_path
 
         print("WARNING: Unsupported format: ", output_path, tex_format, width, height, depth, pitch)
         return None
 
     def _convert_texture(self, output_path: str, bin_path: str, texture_description: dict[str, Any]) -> str | None:
-        texture_format = TextureFormat.from_texture_format(texture_description["format"])
         return self._convert_texture_with_format(
             output_path,
             bin_path,
-            texture_format,
+            TextureFormat.from_texture_format(texture_description["format"]),
             texture_description["width"],
             texture_description["height"],
             texture_description["depth"],
