@@ -432,7 +432,8 @@ void FrameCapture::ProcessAuxBuffer() {
 void FrameCapture::LogPGRAPH(const AuxDataHeader &packet, uint32_t data_len,
                              std::vector<uint8_t>::const_iterator data) const {
   char filename[64];
-  snprintf(filename, sizeof(filename), "%010u_PGRAPH.bin", packet.packet_index);
+  snprintf(filename, sizeof(filename), "%010u_%u_PGRAPH.bin",
+           packet.packet_index, packet.draw_index);
 
   auto os = std::ofstream(artifact_path_ / filename, std::ios_base::out |
                                                          std::ios_base::trunc |
@@ -447,7 +448,8 @@ void FrameCapture::LogPFB(const NTRCTracer::AuxDataHeader &packet,
                           uint32_t data_len,
                           std::vector<uint8_t>::const_iterator data) const {
   char filename[64];
-  snprintf(filename, sizeof(filename), "%010u_PFB.bin", packet.packet_index);
+  snprintf(filename, sizeof(filename), "%010u_%u_PFB.bin", packet.packet_index,
+           packet.draw_index);
 
   auto os = std::ofstream(artifact_path_ / filename, std::ios_base::out |
                                                          std::ios_base::trunc |
@@ -486,8 +488,8 @@ void FrameCapture::LogRDI(const NTRCTracer::AuxDataHeader &packet,
   }
 
   char filename[64];
-  snprintf(filename, sizeof(filename), "%010u_RDI_%s.bin", packet.packet_index,
-           region.c_str());
+  snprintf(filename, sizeof(filename), "%010u_%u_RDI_%s.bin",
+           packet.packet_index, packet.draw_index, region.c_str());
 
   auto os = std::ofstream(artifact_path_ / filename, std::ios_base::out |
                                                          std::ios_base::trunc |
@@ -572,8 +574,8 @@ void FrameCapture::LogSurface(const NTRCTracer::AuxDataHeader &packet,
 
   if (header->description_len) {
     char filename[64];
-    snprintf(filename, sizeof(filename), "%010u_Surface_%s.txt",
-             packet.packet_index, surface_type.c_str());
+    snprintf(filename, sizeof(filename), "%010u_%u_Surface_%s.txt",
+             packet.packet_index, packet.draw_index, surface_type.c_str());
 
     auto os = std::ofstream(artifact_path_ / filename,
                             std::ios_base::out | std::ios_base::trunc);
@@ -582,6 +584,7 @@ void FrameCapture::LogSurface(const NTRCTracer::AuxDataHeader &packet,
 
     os << "  \"surface\": {" << std::endl;
     os << R"(    "description": ")" << description << "\"," << std::endl;
+    os << R"(    "draw": )" << packet.draw_index << "," << std::endl;
     os << R"(    "type": ")" << surface_type << "\"," << std::endl;
     os << R"(    "format_hex": "0x)" << std::hex << std::setw(8)
        << std::setfill('0') << header->format << std::dec << "\"," << std::endl;
@@ -616,8 +619,8 @@ void FrameCapture::LogSurface(const NTRCTracer::AuxDataHeader &packet,
 
   {
     char filename[64];
-    snprintf(filename, sizeof(filename), "%010u_Surface_%s.bin",
-             packet.packet_index, surface_type.c_str());
+    snprintf(filename, sizeof(filename), "%010u_%u_Surface_%s.bin",
+             packet.packet_index, packet.draw_index, surface_type.c_str());
     auto os = std::ofstream(
         artifact_path_ / filename,
         std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
@@ -626,8 +629,8 @@ void FrameCapture::LogSurface(const NTRCTracer::AuxDataHeader &packet,
     os.close();
 
     if (surface_format) {
-      snprintf(filename, sizeof(filename), "%010u_Surface_%s.png",
-               packet.packet_index, surface_type.c_str());
+      snprintf(filename, sizeof(filename), "%010u_%u_Surface_%s.png",
+               packet.packet_index, packet.draw_index, surface_type.c_str());
       os = std::ofstream(artifact_path_ / filename, std::ios_base::out |
                                                         std::ios_base::trunc |
                                                         std::ios_base::binary);
@@ -708,8 +711,9 @@ void FrameCapture::LogTexture(const NTRCTracer::AuxDataHeader &packet,
 
   {
     char filename[64];
-    snprintf(filename, sizeof(filename), "%010u_Texture_%d_%d.txt",
-             packet.packet_index, header->stage, header->layer);
+    snprintf(filename, sizeof(filename), "%010u_%u_Texture_%d_%d.txt",
+             packet.packet_index, packet.draw_index, header->stage,
+             header->layer);
 
     auto os = std::ofstream(artifact_path_ / filename,
                             std::ios_base::out | std::ios_base::trunc);
@@ -717,6 +721,7 @@ void FrameCapture::LogTexture(const NTRCTracer::AuxDataHeader &packet,
     os << "  \"texture\": {" << std::endl;
     os << R"(    "stage": ")" << header->stage << "\"," << std::endl;
     os << R"(    "layer": ")" << header->layer << "\"," << std::endl;
+    os << R"(    "draw": )" << packet.draw_index << "," << std::endl;
     os << R"(    "width": )" << header->width << "," << std::endl;
     os << R"(    "height": )" << header->height << "," << std::endl;
     os << R"(    "depth": )" << header->depth << "," << std::endl;
@@ -746,8 +751,9 @@ void FrameCapture::LogTexture(const NTRCTracer::AuxDataHeader &packet,
 
   {
     char filename[64];
-    snprintf(filename, sizeof(filename), "%010u_Texture_%d_%d.bin",
-             packet.packet_index, header->stage, header->layer);
+    snprintf(filename, sizeof(filename), "%010u_%u_Texture_%d_%d.bin",
+             packet.packet_index, packet.draw_index, header->stage,
+             header->layer);
     auto os = std::ofstream(
         artifact_path_ / filename,
         std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
@@ -758,9 +764,9 @@ void FrameCapture::LogTexture(const NTRCTracer::AuxDataHeader &packet,
     assert(texture_format_entry != kTextureFormats.end());
     const auto &texture_format = texture_format_entry->second;
 
-    snprintf(filename, sizeof(filename), "%010u_Texture_%d_%d.%s",
-             packet.packet_index, header->stage, header->layer,
-             texture_format.compressed ? "dds" : "png");
+    snprintf(filename, sizeof(filename), "%010u_%u_Texture_%d_%d.%s",
+             packet.packet_index, packet.draw_index, header->stage,
+             header->layer, texture_format.compressed ? "dds" : "png");
     os = std::ofstream(artifact_path_ / filename, std::ios_base::out |
                                                       std::ios_base::trunc |
                                                       std::ios_base::binary);

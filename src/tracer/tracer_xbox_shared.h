@@ -65,6 +65,9 @@ typedef struct PushBufferCommandTraceInfo {
   //! captures (e.g., framebuffer dumps).
   uint32_t packet_index;
 
+  //! The number of BEGIN_END(end) calls since the trace began.
+  uint32_t draw_index;
+
   //! The actual command.
   PushBufferCommand command;
 
@@ -108,6 +111,10 @@ typedef struct AuxDataHeader {
   //! The index of the PushBufferCommandTraceInfo packet with which this data is
   //! associated.
   uint32_t packet_index;
+
+  //! The draw count of the PushBufferCommandTraceInfo packet with which this
+  //! data is associated.
+  uint32_t draw_index;
 
   //! A value from AuxDataType indicating the type of data.
   uint32_t data_type;
