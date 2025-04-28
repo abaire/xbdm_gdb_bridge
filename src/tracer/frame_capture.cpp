@@ -49,6 +49,21 @@ static const std::map<uint32_t, SurfaceFormatDefinition> kSurfaceFormats = {
     {SURFACE_FORMAT_A8R8G8B8, {4, BGRAToRGBA, true}},
 };
 
+static const std::map<uint32_t, std::string> kSurfaceFormatNames = {
+    {SURFACE_FORMAT_Y8, "Y8"},
+    {SURFACE_FORMAT_X1R5G5B5_Z1R5G5B5, "X1R5G5B5_Z1R5G5B5"},
+    {SURFACE_FORMAT_X1R5G5B5_O1R5G5B5, "X1R5G5B5_O1R5G5B5"},
+    {SURFACE_FORMAT_A1R5G5B5, "A1R5G5B5"},
+    {SURFACE_FORMAT_R5G6B5, "R5G6B5"},
+    {SURFACE_FORMAT_Y16, "Y16"},
+    {SURFACE_FORMAT_X8R8G8B8_Z8R8G8B8, "X8R8G8B8_Z8R8G8B8"},
+    {SURFACE_FORMAT_X8R8G8B8_O1Z7R8G8B8, "X8R8G8B8_O1Z7R8G8B8"},
+    {SURFACE_FORMAT_X1A7R8G8B8_Z1A7R8G8B8, "X1A7R8G8B8_Z1A7R8G8B8"},
+    {SURFACE_FORMAT_X1A7R8G8B8_O1A7R8G8B8, "X1A7R8G8B8_O1A7R8G8B8"},
+    {SURFACE_FORMAT_X8R8G8B8_O8R8G8B8, "X8R8G8B8_O8R8G8B8"},
+    {SURFACE_FORMAT_A8R8G8B8, "A8R8G8B8"},
+};
+
 static constexpr uint32_t NV097_SET_TEXTURE_FORMAT_COLOR_SZ_Y8 = 0x00;
 static constexpr uint32_t NV097_SET_TEXTURE_FORMAT_COLOR_SZ_AY8 = 0x01;
 static constexpr uint32_t NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A1R5G5B5 = 0x02;
@@ -206,7 +221,57 @@ static const std::map<uint32_t, TextureFormatDefinition> kTextureFormats = {
     //  {false, 2, false, nullptr, false}},
     {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_DEPTH_X8_Y24_FIXED,
      {false, 4, false, nullptr, true}},
-};  // namespace NTRCTracer
+};
+
+static const std::map<uint32_t, std::string> kTextureFormatNames = {
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_Y8, "SZ_Y8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_AY8, "SZ_AY8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A1R5G5B5, "SZ_A1R5G5B5"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_X1R5G5B5, "SZ_X1R5G5B5"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A4R4G4B4, "SZ_A4R4G4B4"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_R5G6B5, "SZ_R5G6B5"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A8R8G8B8, "SZ_A8R8G8B8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_X8R8G8B8, "SZ_X8R8G8B8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_I8_A8R8G8B8, "SZ_I8_A8R8G8B8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_L_DXT1_A1R5G5B5, "L_DXT1_A1R5G5B5"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_L_DXT23_A8R8G8B8, "L_DXT23_A8R8G8B8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_L_DXT45_A8R8G8B8, "L_DXT45_A8R8G8B8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A1R5G5B5, "LU_IMAGE_A1R5G5B5"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R5G6B5, "LU_IMAGE_R5G6B5"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8R8G8B8, "LU_IMAGE_A8R8G8B8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_Y8, "LU_IMAGE_Y8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R8B8, "LU_IMAGE_R8B8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_G8B8, "LU_IMAGE_G8B8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A8, "SZ_A8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A8Y8, "SZ_A8Y8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_AY8, "LU_IMAGE_AY8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_X1R5G5B5, "LU_IMAGE_X1R5G5B5"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A4R4G4B4, "LU_IMAGE_A4R4G4B4"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_X8R8G8B8, "LU_IMAGE_X8R8G8B8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8, "LU_IMAGE_A8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8Y8, "LU_IMAGE_A8Y8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LC_IMAGE_CR8YB8CB8YA8,
+     "LC_IMAGE_CR8YB8CB8YA8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LC_IMAGE_YB8CR8YA8CB8,
+     "LC_IMAGE_YB8CR8YA8CB8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_R6G5B5, "SZ_R6G5B5"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_G8B8, "SZ_G8B8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_R8B8, "SZ_R8B8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_DEPTH_Y16_FIXED, "SZ_DEPTH_Y16_FIXED"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_DEPTH_X8_Y24_FIXED,
+     "LU_IMAGE_DEPTH_X8_Y24_FIXED"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_DEPTH_Y16_FIXED,
+     "LU_IMAGE_DEPTH_Y16_FIXED"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_DEPTH_Y16_FLOAT,
+     "LU_IMAGE_DEPTH_Y16_FLOAT"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_Y16, "LU_IMAGE_Y16"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A8B8G8R8, "SZ_A8B8G8R8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_B8G8R8A8, "SZ_B8G8R8A8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_SZ_R8G8B8A8, "SZ_R8G8B8A8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8B8G8R8, "LU_IMAGE_A8B8G8R8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_B8G8R8A8, "LU_IMAGE_B8G8R8A8"},
+    {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R8G8B8A8, "LU_IMAGE_R8G8B8A8"},
+};
 
 void FrameCapture::Setup(const std::filesystem::path &artifact_path,
                          bool verbose) {
@@ -324,6 +389,16 @@ void FrameCapture::ProcessPGRAPHBuffer() {
   }
 }
 
+static bool is_surface_dump_trigger(uint32_t command) {
+  static constexpr uint32_t NV097_CLEAR_SURFACE = 0x1D94;
+  static constexpr uint32_t NV097_BACK_END_WRITE_SEMAPHORE_RELEASE = 0x1D70;
+  static constexpr uint32_t NV097_SET_BEGIN_END = 0x17FC;
+
+  return command == NV097_CLEAR_SURFACE ||
+         command == NV097_BACK_END_WRITE_SEMAPHORE_RELEASE ||
+         command == NV097_SET_BEGIN_END;
+}
+
 void FrameCapture::LogPacket(const PushBufferCommandTraceInfo &packet) {
   auto log = [this, &packet](uint32_t method, const uint32_t *param) {
     nv2a_log_ << "nv2a_pgraph_method " << std::dec << packet.command.subchannel
@@ -335,7 +410,12 @@ void FrameCapture::LogPacket(const PushBufferCommandTraceInfo &packet) {
     } else {
       nv2a_log_ << " 0x" << std::hex << *param;
     }
-    nv2a_log_ << std::endl;
+    nv2a_log_ << std::dec << std::endl;
+
+    if (packet.graphics_class == 0x97 && is_surface_dump_trigger(method)) {
+      nv2a_log_ << "// Surface dump: frame_draw=" << packet.draw_index
+                << " surface_dump=" << packet.surface_dump_index << std::endl;
+    }
   };
 
   const uint32_t *data = nullptr;
@@ -574,8 +654,9 @@ void FrameCapture::LogSurface(const NTRCTracer::AuxDataHeader &packet,
 
   if (header->description_len) {
     char filename[64];
-    snprintf(filename, sizeof(filename), "%010u_%u_Surface_%s.txt",
-             packet.packet_index, packet.draw_index, surface_type.c_str());
+    snprintf(filename, sizeof(filename), "%010u_%u_%u_Surface_%s.txt",
+             packet.packet_index, packet.draw_index,
+             header->save_context.surface_dump_index, surface_type.c_str());
 
     auto os = std::ofstream(artifact_path_ / filename,
                             std::ios_base::out | std::ios_base::trunc);
@@ -585,7 +666,17 @@ void FrameCapture::LogSurface(const NTRCTracer::AuxDataHeader &packet,
     os << "  \"surface\": {" << std::endl;
     os << R"(    "description": ")" << description << "\"," << std::endl;
     os << R"(    "draw": )" << packet.draw_index << "," << std::endl;
+    os << R"(    "surface_dump": )" << header->save_context.surface_dump_index
+       << "," << std::endl;
+    os << R"(    "provoking_command_hex": "0x)" << std::hex << std::setw(8)
+       << std::setfill('0') << header->save_context.provoking_command
+       << std::dec << "\"," << std::endl;
     os << R"(    "type": ")" << surface_type << "\"," << std::endl;
+
+    auto format_name = kSurfaceFormatNames.find(header->format);
+    if (format_name != kSurfaceFormatNames.end()) {
+      os << R"(    "format": ")" << format_name->second << "\"," << std::endl;
+    }
     os << R"(    "format_hex": "0x)" << std::hex << std::setw(8)
        << std::setfill('0') << header->format << std::dec << "\"," << std::endl;
     os << R"(    "swizzle": )" << header->swizzle << "," << std::endl;
@@ -619,8 +710,9 @@ void FrameCapture::LogSurface(const NTRCTracer::AuxDataHeader &packet,
 
   {
     char filename[64];
-    snprintf(filename, sizeof(filename), "%010u_%u_Surface_%s.bin",
-             packet.packet_index, packet.draw_index, surface_type.c_str());
+    snprintf(filename, sizeof(filename), "%010u_%u_%u_Surface_%s.bin",
+             packet.packet_index, packet.draw_index,
+             header->save_context.surface_dump_index, surface_type.c_str());
     auto os = std::ofstream(
         artifact_path_ / filename,
         std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
@@ -629,8 +721,9 @@ void FrameCapture::LogSurface(const NTRCTracer::AuxDataHeader &packet,
     os.close();
 
     if (surface_format) {
-      snprintf(filename, sizeof(filename), "%010u_%u_Surface_%s.png",
-               packet.packet_index, packet.draw_index, surface_type.c_str());
+      snprintf(filename, sizeof(filename), "%010u_%u_%u_Surface_%s.png",
+               packet.packet_index, packet.draw_index,
+               header->save_context.surface_dump_index, surface_type.c_str());
       os = std::ofstream(artifact_path_ / filename, std::ios_base::out |
                                                         std::ios_base::trunc |
                                                         std::ios_base::binary);
@@ -711,8 +804,9 @@ void FrameCapture::LogTexture(const NTRCTracer::AuxDataHeader &packet,
 
   {
     char filename[64];
-    snprintf(filename, sizeof(filename), "%010u_%u_Texture_%d_%d.txt",
-             packet.packet_index, packet.draw_index, header->stage,
+    snprintf(filename, sizeof(filename), "%010u_%u_%u_Texture_%d_%d.txt",
+             packet.packet_index, packet.draw_index,
+             header->save_context.surface_dump_index, header->stage,
              header->layer);
 
     auto os = std::ofstream(artifact_path_ / filename,
@@ -722,13 +816,25 @@ void FrameCapture::LogTexture(const NTRCTracer::AuxDataHeader &packet,
     os << R"(    "stage": ")" << header->stage << "\"," << std::endl;
     os << R"(    "layer": ")" << header->layer << "\"," << std::endl;
     os << R"(    "draw": )" << packet.draw_index << "," << std::endl;
+    os << R"(    "surface_dump": )" << header->save_context.surface_dump_index
+       << "," << std::endl;
+    os << R"(    "provoking_command_hex": "0x)" << std::hex << std::setw(8)
+       << std::setfill('0') << header->save_context.provoking_command
+       << std::dec << "\"," << std::endl;
+
     os << R"(    "width": )" << header->width << "," << std::endl;
     os << R"(    "height": )" << header->height << "," << std::endl;
     os << R"(    "depth": )" << header->depth << "," << std::endl;
     os << R"(    "pitch": )" << header->pitch << "," << std::endl;
     os << R"(    "mipmap_levels": )" << mipmap_levels << "," << std::endl;
+
+    auto format_name = kTextureFormatNames.find(texture_type);
+    if (format_name != kTextureFormatNames.end()) {
+      os << R"(    "type": ")" << format_name->second << "\"," << std::endl;
+    }
     os << R"(    "type_hex": "0x)" << std::hex << std::setw(8)
        << std::setfill('0') << texture_type << std::dec << "\"," << std::endl;
+
     os << R"(    "format": )" << header->format << "," << std::endl;
     os << R"(    "format_hex": "0x)" << std::hex << std::setw(8)
        << std::setfill('0') << header->format << std::dec << "\"," << std::endl;
@@ -751,8 +857,9 @@ void FrameCapture::LogTexture(const NTRCTracer::AuxDataHeader &packet,
 
   {
     char filename[64];
-    snprintf(filename, sizeof(filename), "%010u_%u_Texture_%d_%d.bin",
-             packet.packet_index, packet.draw_index, header->stage,
+    snprintf(filename, sizeof(filename), "%010u_%u_%u_Texture_%d_%d.bin",
+             packet.packet_index, packet.draw_index,
+             header->save_context.surface_dump_index, header->stage,
              header->layer);
     auto os = std::ofstream(
         artifact_path_ / filename,
@@ -764,8 +871,9 @@ void FrameCapture::LogTexture(const NTRCTracer::AuxDataHeader &packet,
     assert(texture_format_entry != kTextureFormats.end());
     const auto &texture_format = texture_format_entry->second;
 
-    snprintf(filename, sizeof(filename), "%010u_%u_Texture_%d_%d.%s",
-             packet.packet_index, packet.draw_index, header->stage,
+    snprintf(filename, sizeof(filename), "%010u_%u_%u_Texture_%d_%d.%s",
+             packet.packet_index, packet.draw_index,
+             header->save_context.surface_dump_index, header->stage,
              header->layer, texture_format.compressed ? "dds" : "png");
     os = std::ofstream(artifact_path_ / filename, std::ios_base::out |
                                                       std::ios_base::trunc |

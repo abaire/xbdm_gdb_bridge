@@ -68,6 +68,9 @@ typedef struct PushBufferCommandTraceInfo {
   //! The number of BEGIN_END(end) calls since the trace began.
   uint32_t draw_index;
 
+  //! The number of times surfaces have been stored since the trace began.
+  uint32_t surface_dump_index;
+
   //! The actual command.
   PushBufferCommand command;
 
@@ -141,6 +144,19 @@ typedef enum SurfaceType {
   ST_DEPTH,
 } SurfaceType;
 
+//! Subheader providing contextual information associated with a surface or
+//! texture.
+typedef struct ImageSaveContext {
+  //! The PGRAPH command that caused this surface to be saved.
+  uint32_t provoking_command;
+
+  //! The number of BEGIN_END(end) calls since the trace began.
+  uint32_t draw_index;
+
+  //! The number of times surfaces have been stored since the trace began.
+  uint32_t surface_dump_index;
+} __attribute((packed)) ImageSaveContext;
+
 //! Header describing surface data.
 //!
 //! Keep in sync with pgraph_command_callbacks.h
@@ -170,6 +186,8 @@ typedef struct SurfaceHeader {
   //! Whether this surface is swizzled or not.
   uint32_t swizzle;
   uint32_t swizzle_param;
+
+  ImageSaveContext save_context;
 } __attribute((packed)) SurfaceHeader;
 
 //! Header describing texture data.
@@ -197,6 +215,8 @@ typedef struct TextureHeader {
 
   //! Packed image width ((x >> 16) & 0x1FFF) | height (x & 0x1FFF).
   uint32_t image_rect;
+
+  ImageSaveContext save_context;
 } __attribute((packed)) TextureHeader;
 
 }  // namespace NTRCTracer
