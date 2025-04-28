@@ -389,15 +389,22 @@ void FrameCapture::ProcessPGRAPHBuffer() {
   }
 }
 
-static bool is_surface_dump_trigger(uint32_t command) {
-  static constexpr uint32_t NV097_CLEAR_SURFACE = 0x1D94;
-  static constexpr uint32_t NV097_BACK_END_WRITE_SEMAPHORE_RELEASE = 0x1D70;
-  static constexpr uint32_t NV097_SET_BEGIN_END = 0x17FC;
+static constexpr uint32_t NV097_CLEAR_SURFACE = 0x1D94;
+static constexpr uint32_t NV097_BACK_END_WRITE_SEMAPHORE_RELEASE = 0x1D70;
+static constexpr uint32_t NV097_SET_BEGIN_END = 0x17FC;
 
+static bool is_surface_dump_trigger(uint32_t command) {
   return command == NV097_CLEAR_SURFACE ||
          command == NV097_BACK_END_WRITE_SEMAPHORE_RELEASE ||
          command == NV097_SET_BEGIN_END;
 }
+
+static const std::map<uint32_t, std::string> kProvokingCommandNames = {
+    {NV097_CLEAR_SURFACE, "NV097_CLEAR_SURFACE"},
+    {NV097_BACK_END_WRITE_SEMAPHORE_RELEASE,
+     "NV097_BACK_END_WRITE_SEMAPHORE_RELEASE"},
+    {NV097_SET_BEGIN_END, "NV097_SET_BEGIN_END"},
+};
 
 void FrameCapture::LogPacket(const PushBufferCommandTraceInfo &packet) {
   auto log = [this, &packet](uint32_t method, const uint32_t *param) {
@@ -668,6 +675,13 @@ void FrameCapture::LogSurface(const NTRCTracer::AuxDataHeader &packet,
     os << R"(    "draw": )" << packet.draw_index << "," << std::endl;
     os << R"(    "surface_dump": )" << header->save_context.surface_dump_index
        << "," << std::endl;
+
+    auto provoking_command =
+        kProvokingCommandNames.find(header->save_context.provoking_command);
+    if (provoking_command != kProvokingCommandNames.end()) {
+      os << R"(    "provoking_command": ")" << provoking_command->second
+         << "\"," << std::endl;
+    }
     os << R"(    "provoking_command_hex": "0x)" << std::hex << std::setw(8)
        << std::setfill('0') << header->save_context.provoking_command
        << std::dec << "\"," << std::endl;
@@ -818,6 +832,12 @@ void FrameCapture::LogTexture(const NTRCTracer::AuxDataHeader &packet,
     os << R"(    "draw": )" << packet.draw_index << "," << std::endl;
     os << R"(    "surface_dump": )" << header->save_context.surface_dump_index
        << "," << std::endl;
+    auto provoking_command =
+        kProvokingCommandNames.find(header->save_context.provoking_command);
+    if (provoking_command != kProvokingCommandNames.end()) {
+      os << R"(    "provoking_command": ")" << provoking_command->second
+         << "\"," << std::endl;
+    }
     os << R"(    "provoking_command_hex": "0x)" << std::hex << std::setw(8)
        << std::setfill('0') << header->save_context.provoking_command
        << std::dec << "\"," << std::endl;
