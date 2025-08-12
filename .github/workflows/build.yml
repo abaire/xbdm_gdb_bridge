@@ -3,7 +3,7 @@ name: Build
 on:
   push:
     branches:
-      - main  
+      - main
     paths-ignore:
       - '.github/**'
       - '!.github/workflows/**'
@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: XboxDev/nxdk
-          ref: 500354ef264f35a46a31643876b06ed614b0aed8
+          ref: 5f75e56f78a07546705fc59c0a115858654551be
           submodules: recursive
           path: nxdk
       - name: Install dependencies
@@ -71,7 +71,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: xbdm_gdb_bridge_linux
-          path: xbdm_gdb_bridge/build/xbdm_gdb_bridge          
+          path: xbdm_gdb_bridge/build/xbdm_gdb_bridge
       - name: Create release
         if: github.ref == 'refs/heads/main'
         uses: "marvinpinto/action-automatic-releases@latest"
@@ -96,7 +96,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: XboxDev/nxdk
-          ref: 500354ef264f35a46a31643876b06ed614b0aed8
+          ref: 5f75e56f78a07546705fc59c0a115858654551be
           submodules: recursive
           path: nxdk
       - name: Install dependencies
