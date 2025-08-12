@@ -48,6 +48,7 @@ ExternalProject_Get_Property(ntrc_dyndxt INSTALL_DIR)
 set(ntrc_dyndxt_lib_dir ${INSTALL_DIR}/lib)
 set(ntrc_dyndxt_include_dir ${INSTALL_DIR}/include)
 
+cmake_policy(SET CMP0167 NEW)
 find_package(
         Boost 1.70
         COMPONENTS
@@ -65,8 +66,6 @@ set(GENERATED_FILES_DIR "${CMAKE_BINARY_DIR}/generated")
 include_directories(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS})
 
 option(ENABLE_HIGH_VERBOSITY_LOGGING  "Enable low level, highly verbose logging")
-
-include_directories("${Boost_INCLUDE_DIR}" "${GENERATED_FILES_DIR}")
 
 cmake_push_check_state(RESET)
 set(CMAKE_REQUIRED_LIBRARIES ${SOCKET_LIBRARIES})
@@ -86,6 +85,8 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 configure_file("src/configure.h.cmake" "${GENERATED_FILES_DIR}/configure.h")
 configure_file("test/configure_test.h.cmake" "${GENERATED_FILES_DIR}/configure_test.h")
+
+include_directories("${GENERATED_FILES_DIR}")
 
 # Resource packer ------------------------------------
 add_executable(resource_packer EXCLUDE_FROM_ALL util/resource_packer/resource_packer.cpp)
@@ -289,7 +290,8 @@ target_include_directories(
 target_link_libraries(
         xbdm_gdb_bridge
         LINK_PUBLIC
-        ${Boost_LIBRARIES}
+        Boost::log
+        Boost::program_options
         ${SDL2_LINK_LIBRARIES}
         ${SDL2IMAGE_LINK_LIBRARIES}
         ${RC_DEPENDS}
@@ -330,7 +332,9 @@ target_include_directories(
 target_link_libraries(
         rdcp_tests
         LINK_PRIVATE
-        ${Boost_LIBRARIES}
+        Boost::log
+        Boost::program_options
+        Boost::unit_test_framework
         LINK_PRIVATE
         test_util
 )
@@ -355,7 +359,9 @@ target_include_directories(
 target_link_libraries(
         util_tests
         LINK_PRIVATE
-        ${Boost_LIBRARIES}
+        Boost::log
+        Boost::program_options
+        Boost::unit_test_framework
         LINK_PRIVATE
         test_util
 )
@@ -378,7 +384,9 @@ target_include_directories(
 target_link_libraries(
         dxt_library_loader_tests
         LINK_PRIVATE
-        ${Boost_LIBRARIES}
+        Boost::log
+        Boost::program_options
+        Boost::unit_test_framework
         LINK_PRIVATE
         test_util
 )
