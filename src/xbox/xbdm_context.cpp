@@ -230,6 +230,7 @@ void XBDMContext::ExecuteXBDMPromise(
   if (!XBDMConnect(transport)) {
     request->status = StatusCode::ERR_NOT_CONNECTED;
   } else {
+    LOG_XBDM(trace) << "Send " << *request;
     transport->Send(request);
     request->WaitUntilCompleted();
   }

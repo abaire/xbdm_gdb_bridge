@@ -138,6 +138,8 @@ class XBDMDebugger {
   bool WaitForStateNotIn(const std::set<ExecutionState> &banned_states,
                          uint32_t max_wait_milliseconds);
 
+  ExecutionState CurrentKnownState();
+
  private:
   [[nodiscard]] bool BreakAtStart() const;
   bool SetDebugger(bool enabled);

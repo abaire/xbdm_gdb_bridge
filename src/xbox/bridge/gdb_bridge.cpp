@@ -232,20 +232,14 @@ void GDBBridge::HandleInterruptRequest(const GDBPacket& packet) {
   LOG_GDB(trace) << "Processing GDB interrupt request";
 #endif
 
-  if (!debugger_->Stop()) {
-    LOG_GDB(error) << "Failed to stop on GDB interrupt request";
+  if (!debugger_->HaltAll()) {
+    LOG_GDB(error) << "Failed to halt on GDB interrupt request";
     SendError(EBADMSG);
     return;
   }
 
-  if (!debugger_->HaltAll()) {
-    LOG_GDB(error) << "Failed to halt on GDB interrupt request";
-    SendError(EBADMSG);
-
-    if (!debugger_->Go()) {
-      LOG_GDB(error) << "Failed to Go after failing to halt all";
-    }
-    return;
+  if (debugger_->CurrentKnownState() != S_STARTED && !debugger_->Go()) {
+    LOG_GDB(error) << "Failed to Go after halt all";
   }
 
   auto thread = debugger_->ActiveThread();

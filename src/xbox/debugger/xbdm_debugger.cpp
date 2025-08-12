@@ -8,7 +8,9 @@
 
 static constexpr uint32_t kRestartRebootingMaxWaitMilliseconds = 5 * 1000;
 static constexpr uint32_t kRestartPendingMaxWaitMilliseconds = 15 * 1000;
-static constexpr uint32_t kRestartStoppedMaxAtStartWaitMilliseconds = 1 * 1000;
+static constexpr uint32_t kBreakAtStartMaxWaitMilliseconds = 10 * 1000;
+static constexpr uint32_t kPostBreakAtStartThreadCreateMakeWaitMilliseconds =
+    1 * 1000;
 
 XBDMDebugger::XBDMDebugger(std::shared_ptr<XBDMContext> context)
     : context_(std::move(context)) {}
@@ -143,8 +145,10 @@ bool XBDMDebugger::DebugXBE(const std::string &path,
     return false;
   }
 
-  if (!WaitForState(S_STOPPED, kRestartStoppedMaxAtStartWaitMilliseconds)) {
-    LOG_DEBUGGER(warning) << "Timed out waiting for pending message.";
+  if (!WaitForState(S_STOPPED, kBreakAtStartMaxWaitMilliseconds)) {
+    // This indicates that the target has failed to break at start. It may be
+    // worthwhile to stop and halt all threads to attempt to recover.
+    LOG_DEBUGGER(error) << "Timed out waiting for break at start.";
   }
 
   if (!FetchThreads()) {
@@ -173,18 +177,46 @@ bool XBDMDebugger::DebugXBE(const std::string &path,
     return false;
   }
 
-  if (!WaitForState(S_STOPPED, kRestartStoppedMaxAtStartWaitMilliseconds)) {
-    LOG_DEBUGGER(warning) << "Timed out waiting for first app thread.";
-  }
-
-  // Stop breaking on threads.
-  {
+  auto remove_break_on_create = [this]() -> bool {
     auto request = std::make_shared<NoStopOn>(NoStopOn::kCreateThread);
     context_->SendCommandSync(request);
     if (!request->IsOK()) {
       LOG_DEBUGGER(error) << "Failed to disable StopOn CreateThread "
                           << request->status << " " << request->message;
       return false;
+    }
+
+    return true;
+  };
+
+  if (WaitForState(S_STOPPED,
+                   kPostBreakAtStartThreadCreateMakeWaitMilliseconds)) {
+    if (!remove_break_on_create()) {
+      return false;
+    }
+  } else {
+    remove_break_on_create();
+
+    // This indicates that no new threads were created within the timeout. This
+    // may be normal operation, particularly for alternatives to the official
+    // XDK.
+    LOG_DEBUGGER(warning) << "Timed out waiting for first app thread.";
+
+    // If no threads are known, force a stop in order to determine an active
+    // thread and produce a consistent state.
+    if (!ActiveThread()) {
+      if (!Stop()) {
+        LOG_DEBUGGER(warning)
+            << "Failed to stop when attempting to determine active thread.";
+      }
+      if (!FetchThreads()) {
+        LOG_DEBUGGER(warning) << "Failed to fetch threads when attempting to "
+                                 "determine active thread.";
+      }
+      if (!Go()) {
+        LOG_DEBUGGER(error) << "Failed to Go after determining active thread.";
+        return false;
+      }
     }
   }
 
@@ -748,6 +780,11 @@ bool XBDMDebugger::WaitForStateNotIn(
       [this, &banned_states] {
         return banned_states.find(this->state_) == banned_states.end();
       });
+}
+
+ExecutionState XBDMDebugger::CurrentKnownState() {
+  std::unique_lock<std::mutex> lock(state_lock_);
+  return state_;
 }
 
 bool XBDMDebugger::StepInstruction() {
