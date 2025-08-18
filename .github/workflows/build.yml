@@ -25,12 +25,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone tree
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
           path: xbdm_gdb_bridge
       - name: Clone nxdk
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: XboxDev/nxdk
           ref: 5f75e56f78a07546705fc59c0a115858654551be
@@ -88,12 +88,12 @@ jobs:
     runs-on: macOS-latest
     steps:
       - name: Clone tree
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
           path: xbdm_gdb_bridge
       - name: Clone nxdk
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: XboxDev/nxdk
           ref: 5f75e56f78a07546705fc59c0a115858654551be
