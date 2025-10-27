@@ -122,7 +122,7 @@ jobs:
           ctest --test-dir build --output-on-failure
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.artifact_name }}
           path: xbdm_gdb_bridge/build/xbdm_gdb_bridge
