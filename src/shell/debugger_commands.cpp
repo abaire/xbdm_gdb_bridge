@@ -1,5 +1,6 @@
 #include "debugger_commands.h"
 
+#include "commands.h"
 #include "rdcp/xbdm_requests.h"
 #include "shell/file_util.h"
 #include "util/parsing.h"
@@ -165,6 +166,34 @@ Command::Result DebuggerCommandGetThreadInfo::operator()(
 
   std::cout << *thread << std::endl;
   return HANDLED;
+}
+
+Command::Result DebuggerCommandGetThreadInfoAndContext::operator()(
+    XBOXInterface& interface, const std::vector<std::string>& args) {
+  auto debugger = interface.Debugger();
+  if (!debugger) {
+    std::cout << "Debugger not attached." << std::endl;
+    return HANDLED;
+  }
+
+  auto thread = debugger->ActiveThread();
+  if (!thread) {
+    std::cout << "No active thread." << std::endl;
+    return HANDLED;
+  }
+
+  auto context = interface.Context();
+  thread->FetchInfoSync(*context);
+  thread->FetchContextSync(*context);
+  thread->FetchFloatContextSync(*context);
+
+  std::cout << *thread << std::endl;
+
+  std::vector<std::string> augmented_args;
+  augmented_args.push_back(std::to_string(thread->thread_id));
+  augmented_args.insert(augmented_args.end(), args.begin(), args.end());
+  auto context_command = CommandGetContext();
+  return context_command(interface, augmented_args);
 }
 
 Command::Result DebuggerCommandHaltAll::operator()(
