@@ -90,12 +90,29 @@ struct ThreadContext {
 
   friend std::ostream& operator<<(std::ostream& os,
                                   const ThreadContext& context) {
-    os << std::hex << "ebp: " << context.ebp << " esp: " << context.esp
-       << " eip: " << context.eip << " eflags: " << context.eflags
-       << " eax: " << context.eax << " ebx: " << context.ebx
-       << " ecx: " << context.ecx << " edx: " << context.edx
-       << " edi: " << context.edi << " esi: " << context.esi
-       << " cr0_npx_state: " << context.cr0_npx_state;
+    os << std::hex << "";
+#define PRINTREG(name, prefix)                                        \
+  do {                                                                \
+    char buffer[16] = "<N/A>";                                        \
+    if (context.name.has_value()) {                                   \
+      snprintf(buffer, sizeof(buffer), "0x%X", context.name.value()); \
+    }                                                                 \
+    os << prefix << #name ": " << buffer;                             \
+  } while (0)
+
+    PRINTREG(ebp, "");
+    PRINTREG(esp, " ");
+    PRINTREG(eip, " ");
+    PRINTREG(eflags, " ");
+    PRINTREG(eax, " ");
+    PRINTREG(ebx, " ");
+    PRINTREG(ecx, " ");
+    PRINTREG(edx, " ");
+    PRINTREG(edi, " ");
+    PRINTREG(esi, " ");
+    PRINTREG(cr0_npx_state, " ");
+
+#undef PRINTREG
     return os;
   }
 };
