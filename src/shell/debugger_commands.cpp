@@ -5,8 +5,8 @@
 #include "util/parsing.h"
 #include "xbox/debugger/xbdm_debugger.h"
 
-static bool DebugXBE(XBOXInterface &interface,
-                     const std::vector<std::string> &args, bool wait_forever,
+static bool DebugXBE(XBOXInterface& interface,
+                     const std::vector<std::string>& args, bool wait_forever,
                      bool break_at_start) {
   ArgParser parser(args);
   std::string path;
@@ -30,7 +30,7 @@ static bool DebugXBE(XBOXInterface &interface,
 }
 
 Command::Result DebuggerCommandRun::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   if (!DebugXBE(interface, args, false, false)) {
     PrintUsage();
   }
@@ -38,7 +38,7 @@ Command::Result DebuggerCommandRun::operator()(
 }
 
 Command::Result DebuggerCommandLaunch::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   if (!DebugXBE(interface, args, false, true)) {
     PrintUsage();
   }
@@ -46,7 +46,7 @@ Command::Result DebuggerCommandLaunch::operator()(
 }
 
 Command::Result DebuggerCommandLaunchWait::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   if (!DebugXBE(interface, args, true, true)) {
     PrintUsage();
   }
@@ -54,7 +54,7 @@ Command::Result DebuggerCommandLaunchWait::operator()(
 }
 
 Command::Result DebuggerCommandAttach::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface& interface, const std::vector<std::string>&) {
   if (!interface.AttachDebugger()) {
     std::cout << "Failed to attach debugger." << std::endl;
   }
@@ -62,13 +62,13 @@ Command::Result DebuggerCommandAttach::operator()(
 }
 
 Command::Result DebuggerCommandDetach::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface& interface, const std::vector<std::string>&) {
   interface.DetachDebugger();
   return HANDLED;
 }
 
 Command::Result DebuggerCommandRestart::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface& interface, const std::vector<std::string>&) {
   auto debugger = interface.Debugger();
   if (!debugger) {
     std::cout << "Debugger not attached." << std::endl;
@@ -81,7 +81,7 @@ Command::Result DebuggerCommandRestart::operator()(
 }
 
 Command::Result DebuggerCommandSetActiveThread::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   auto debugger = interface.Debugger();
   if (!debugger) {
     std::cout << "Debugger not attached." << std::endl;
@@ -105,7 +105,7 @@ Command::Result DebuggerCommandSetActiveThread::operator()(
 }
 
 Command::Result DebuggerCommandStepFunction::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface& interface, const std::vector<std::string>&) {
   auto debugger = interface.Debugger();
   if (!debugger) {
     std::cout << "Debugger not attached." << std::endl;
@@ -121,7 +121,7 @@ Command::Result DebuggerCommandStepFunction::operator()(
 }
 
 Command::Result DebuggerCommandGetThreads::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface& interface, const std::vector<std::string>&) {
   auto debugger = interface.Debugger();
   if (!debugger) {
     std::cout << "Debugger not attached." << std::endl;
@@ -134,7 +134,7 @@ Command::Result DebuggerCommandGetThreads::operator()(
   }
 
   auto active_thread_id = debugger->ActiveThreadID();
-  for (auto &thread : debugger->Threads()) {
+  for (auto& thread : debugger->Threads()) {
     if (thread->thread_id == active_thread_id) {
       std::cout << "[Active thread]" << std::endl;
     }
@@ -145,7 +145,7 @@ Command::Result DebuggerCommandGetThreads::operator()(
 }
 
 Command::Result DebuggerCommandGetThreadInfo::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface& interface, const std::vector<std::string>&) {
   auto debugger = interface.Debugger();
   if (!debugger) {
     std::cout << "Debugger not attached." << std::endl;
@@ -168,7 +168,7 @@ Command::Result DebuggerCommandGetThreadInfo::operator()(
 }
 
 Command::Result DebuggerCommandHaltAll::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface& interface, const std::vector<std::string>&) {
   auto debugger = interface.Debugger();
   if (!debugger) {
     std::cout << "Debugger not attached." << std::endl;
@@ -181,7 +181,7 @@ Command::Result DebuggerCommandHaltAll::operator()(
 }
 
 Command::Result DebuggerCommandHalt::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface& interface, const std::vector<std::string>&) {
   auto debugger = interface.Debugger();
   if (!debugger) {
     std::cout << "Debugger not attached." << std::endl;
@@ -203,7 +203,7 @@ Command::Result DebuggerCommandHalt::operator()(
 }
 
 Command::Result DebuggerCommandContinueAll::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   ArgParser parser(args);
   bool no_break_on_exception =
       parser.ArgExists("nobreak", "n", "false", "no", "no_break_on_exception");
@@ -220,7 +220,7 @@ Command::Result DebuggerCommandContinueAll::operator()(
 }
 
 Command::Result DebuggerCommandContinue::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   ArgParser parser(args);
   bool no_break_on_exception = parser.ArgExists("nobreak", "n", "false", "no");
 
@@ -245,7 +245,7 @@ Command::Result DebuggerCommandContinue::operator()(
 }
 
 Command::Result DebuggerCommandSuspend::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface& interface, const std::vector<std::string>&) {
   auto debugger = interface.Debugger();
   if (!debugger) {
     std::cout << "Debugger not attached." << std::endl;
@@ -267,7 +267,7 @@ Command::Result DebuggerCommandSuspend::operator()(
 }
 
 Command::Result DebuggerCommandResume::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface& interface, const std::vector<std::string>&) {
   auto debugger = interface.Debugger();
   if (!debugger) {
     std::cout << "Debugger not attached." << std::endl;
@@ -289,7 +289,7 @@ Command::Result DebuggerCommandResume::operator()(
 }
 
 Command::Result DebuggerCommandGetModules::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface& interface, const std::vector<std::string>&) {
   auto debugger = interface.Debugger();
   if (!debugger) {
     std::cout << "Debugger not attached." << std::endl;
@@ -297,14 +297,14 @@ Command::Result DebuggerCommandGetModules::operator()(
   }
 
   auto modules = debugger->Modules();
-  for (auto &module : modules) {
+  for (auto& module : modules) {
     std::cout << *module << std::endl;
   }
   return HANDLED;
 }
 
 Command::Result DebuggerCommandGetSections::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface& interface, const std::vector<std::string>&) {
   auto debugger = interface.Debugger();
   if (!debugger) {
     std::cout << "Debugger not attached." << std::endl;
@@ -312,8 +312,30 @@ Command::Result DebuggerCommandGetSections::operator()(
   }
 
   auto sections = debugger->Sections();
-  for (auto &section : sections) {
+  for (auto& section : sections) {
     std::cout << *section << std::endl;
   }
+  return HANDLED;
+}
+
+Command::Result DebuggerCommandContinueAllAndGo::operator()(
+    XBOXInterface& interface, const std::vector<std::string>& args) {
+  ArgParser parser(args);
+  bool no_break_on_exception =
+      parser.ArgExists("nobreak", "n", "false", "no", "no_break_on_exception");
+
+  auto debugger = interface.Debugger();
+  if (!debugger) {
+    std::cout << "Debugger not attached." << std::endl;
+    return HANDLED;
+  }
+
+  if (!debugger->Go()) {
+    std::cout << "'go' command failed." << std::endl;
+    return HANDLED;
+  }
+
+  debugger->ContinueAll(no_break_on_exception);
+
   return HANDLED;
 }
