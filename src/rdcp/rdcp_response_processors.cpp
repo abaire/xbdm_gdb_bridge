@@ -8,7 +8,7 @@
 #include "util/parsing.h"
 
 static std::vector<std::vector<char>> SplitMultiline(
-    const std::vector<char> &data) {
+    const std::vector<char>& data) {
   std::vector<std::vector<char>> ret;
   if (data.empty()) {
     return ret;
@@ -23,19 +23,19 @@ static std::vector<std::vector<char>> SplitMultiline(
   return ret;
 }
 
-RDCPMultilineResponse::RDCPMultilineResponse(const std::vector<char> &data) {
+RDCPMultilineResponse::RDCPMultilineResponse(const std::vector<char>& data) {
   lines = SplitMultiline(data);
 }
 
-RDCPMapResponse::RDCPMapResponse(const std::vector<char> &data)
+RDCPMapResponse::RDCPMapResponse(const std::vector<char>& data)
     : RDCPMapResponse(data.begin(), data.end()) {}
 
-bool RDCPMapResponse::HasKey(const std::string &key) const {
+bool RDCPMapResponse::HasKey(const std::string& key) const {
   return map.find(key) != map.end();
 }
 
-std::string RDCPMapResponse::GetString(const std::string &key,
-                                       const std::string &default_value) const {
+std::string RDCPMapResponse::GetString(const std::string& key,
+                                       const std::string& default_value) const {
   auto it = map.find(key);
   if (it == map.end()) {
     return default_value;
@@ -45,7 +45,7 @@ std::string RDCPMapResponse::GetString(const std::string &key,
 }
 
 std::optional<int32_t> RDCPMapResponse::GetOptionalDWORD(
-    const std::string &key) const {
+    const std::string& key) const {
   auto it = map.find(key);
   if (it == map.end()) {
     return {};
@@ -53,7 +53,7 @@ std::optional<int32_t> RDCPMapResponse::GetOptionalDWORD(
   return ParseUint32(it->second);
 }
 
-int32_t RDCPMapResponse::GetDWORD(const std::string &key,
+int32_t RDCPMapResponse::GetDWORD(const std::string& key,
                                   int32_t default_value) const {
   auto it = map.find(key);
   if (it == map.end()) {
@@ -63,7 +63,7 @@ int32_t RDCPMapResponse::GetDWORD(const std::string &key,
   return ParseUint32(it->second);
 }
 
-uint32_t RDCPMapResponse::GetUInt32(const std::string &key,
+uint32_t RDCPMapResponse::GetUInt32(const std::string& key,
                                     uint32_t default_value) const {
   auto it = map.find(key);
   if (it == map.end()) {
@@ -73,8 +73,8 @@ uint32_t RDCPMapResponse::GetUInt32(const std::string &key,
   return ParseUint32(it->second);
 }
 
-int64_t RDCPMapResponse::GetQWORD(const std::string &low_key,
-                                  const std::string &high_key,
+int64_t RDCPMapResponse::GetQWORD(const std::string& low_key,
+                                  const std::string& high_key,
                                   int64_t default_value) const {
   auto it = map.find(low_key);
   if (it == map.end()) {
@@ -94,15 +94,15 @@ int64_t RDCPMapResponse::GetQWORD(const std::string &low_key,
   return (high << 32) + low;
 }
 
-RDCPMultiMapResponse::RDCPMultiMapResponse(const std::vector<char> &data) {
+RDCPMultiMapResponse::RDCPMultiMapResponse(const std::vector<char>& data) {
   auto lines = SplitMultiline(data);
-  for (auto &line : lines) {
+  for (auto& line : lines) {
     maps.emplace_back(line);
   }
 }
 
-std::ostream &operator<<(std::ostream &os, const RDCPMapResponse &r) {
-  for (const auto &it : r.map) {
+std::ostream& operator<<(std::ostream& os, const RDCPMapResponse& r) {
+  for (const auto& it : r.map) {
     os << it.first << " = " << it.second << " ; ";
   }
   return os;

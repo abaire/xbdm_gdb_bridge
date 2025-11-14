@@ -19,7 +19,7 @@ class RDCPRequest {
 
   explicit operator std::vector<uint8_t>() const;
 
-  virtual void Complete(const std::shared_ptr<RDCPResponse> &response) = 0;
+  virtual void Complete(const std::shared_ptr<RDCPResponse>& response) = 0;
   virtual void Abandon() = 0;
 
   [[nodiscard]] RDCPResponse::ReadBinarySizeFunc BinaryResponseSizeParser()
@@ -27,19 +27,19 @@ class RDCPRequest {
     return binary_response_size_parser_;
   }
 
-  [[nodiscard]] virtual const std::vector<uint8_t> *BinaryPayload() {
+  [[nodiscard]] virtual const std::vector<uint8_t>* BinaryPayload() {
     return nullptr;
   }
 
-  void SetData(const std::vector<uint8_t> &data) { data_ = data; }
+  void SetData(const std::vector<uint8_t>& data) { data_ = data; }
 
   template <typename T>
-  void SetData(const T &data) {
+  void SetData(const T& data) {
     data_.clear();
     data_.assign(data.begin(), data.end());
   }
 
-  void SetData(const char *data) {
+  void SetData(const char* data) {
     data_.clear();
     if (data) {
       data_.assign(data, data + strlen(data));
@@ -47,11 +47,11 @@ class RDCPRequest {
   }
 
   template <typename T>
-  void AppendData(const T &data) {
+  void AppendData(const T& data) {
     data_.insert(data_.end(), data.begin(), data.end());
   }
 
-  void AppendData(const char *data) {
+  void AppendData(const char* data) {
     if (data) {
       data_.insert(data_.end(), data, data + strlen(data));
     }
@@ -79,12 +79,12 @@ class RDCPRequest {
   }
 
   template <typename T>
-  void AppendHexBuffer(const std::vector<T> &buffer) {
+  void AppendHexBuffer(const std::vector<T>& buffer) {
     boost::algorithm::hex(buffer.begin(), buffer.end(), back_inserter(data_));
   }
 
  protected:
-  friend std::ostream &operator<<(std::ostream &, RDCPRequest const &);
+  friend std::ostream& operator<<(std::ostream&, RDCPRequest const&);
 
  protected:
   std::string command_;

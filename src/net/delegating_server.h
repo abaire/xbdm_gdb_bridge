@@ -8,7 +8,7 @@
 
 class DelegatingServer : public TCPServer {
  public:
-  typedef std::function<void(int, IPAddress &)> ConnectionAcceptedHandler;
+  typedef std::function<void(int, IPAddress&)> ConnectionAcceptedHandler;
 
  public:
   explicit DelegatingServer(std::string name,
@@ -17,7 +17,7 @@ class DelegatingServer : public TCPServer {
         connection_accepted_(std::move(connection_accepted)) {}
 
  protected:
-  void OnAccepted(int sock, IPAddress &address) override {
+  void OnAccepted(int sock, IPAddress& address) override {
     connection_accepted_(sock, address);
   }
 

@@ -8,7 +8,7 @@
 #include "net/ip_address.h"
 #include "util/logging.h"
 
-bool TCPServer::Listen(const IPAddress &address) {
+bool TCPServer::Listen(const IPAddress& address) {
   const std::lock_guard<std::recursive_mutex> lock(socket_lock_);
   address_ = address;
 
@@ -17,7 +17,7 @@ bool TCPServer::Listen(const IPAddress &address) {
     return false;
   }
 
-  const struct sockaddr_in &addr = address.Address();
+  const struct sockaddr_in& addr = address.Address();
   struct sockaddr_in bind_addr{};
   socklen_t bind_addr_len = sizeof(bind_addr);
 
@@ -29,7 +29,7 @@ bool TCPServer::Listen(const IPAddress &address) {
     LOG(warning) << "Failed to set reuseaddr " << errno << " - " << buffer;
   }
 
-  if (bind(socket_, reinterpret_cast<struct sockaddr const *>(&addr),
+  if (bind(socket_, reinterpret_cast<struct sockaddr const*>(&addr),
            sizeof(addr))) {
     char buffer[256];
     strerror_r(errno, buffer, 256);
@@ -37,7 +37,7 @@ bool TCPServer::Listen(const IPAddress &address) {
     goto close_and_fail;
   }
 
-  if (getsockname(socket_, reinterpret_cast<struct sockaddr *>(&bind_addr),
+  if (getsockname(socket_, reinterpret_cast<struct sockaddr*>(&bind_addr),
                   &bind_addr_len) < 0) {
     char buffer[256];
     strerror_r(errno, buffer, 256);
@@ -65,11 +65,11 @@ close_and_fail:
   return false;
 }
 
-void TCPServer::SetConnection(int sock, const IPAddress &address) {
+void TCPServer::SetConnection(int sock, const IPAddress& address) {
   assert(false);
 }
 
-int TCPServer::Select(fd_set &read_fds, fd_set &write_fds, fd_set &except_fds) {
+int TCPServer::Select(fd_set& read_fds, fd_set& write_fds, fd_set& except_fds) {
   const std::lock_guard<std::recursive_mutex> lock(socket_lock_);
   if (socket_ < 0) {
     return socket_;
@@ -80,8 +80,8 @@ int TCPServer::Select(fd_set &read_fds, fd_set &write_fds, fd_set &except_fds) {
   return socket_;
 }
 
-bool TCPServer::Process(const fd_set &read_fds, const fd_set &write_fds,
-                        const fd_set &except_fds) {
+bool TCPServer::Process(const fd_set& read_fds, const fd_set& write_fds,
+                        const fd_set& except_fds) {
   const std::lock_guard<std::recursive_mutex> lock(socket_lock_);
   if (socket_ < 0) {
     // If the socket was previously connected and is now shutdown, request
@@ -100,7 +100,7 @@ bool TCPServer::Process(const fd_set &read_fds, const fd_set &write_fds,
     socklen_t bind_addr_len = sizeof(bind_addr);
 
     int accepted_socket =
-        accept(socket_, reinterpret_cast<struct sockaddr *>(&bind_addr),
+        accept(socket_, reinterpret_cast<struct sockaddr*>(&bind_addr),
                &bind_addr_len);
     if (accepted_socket < 0) {
       char buffer[256];

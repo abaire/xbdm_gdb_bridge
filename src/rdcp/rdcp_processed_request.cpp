@@ -4,12 +4,12 @@
 
 #include "util/parsing.h"
 
-std::ostream &operator<<(std::ostream &os, RDCPProcessedRequest const &r) {
+std::ostream& operator<<(std::ostream& os, RDCPProcessedRequest const& r) {
   return os << r.command_ << ": " << r.status << " " << r.message;
 }
 
 void RDCPProcessedRequest::Complete(
-    const std::shared_ptr<RDCPResponse> &response) {
+    const std::shared_ptr<RDCPResponse>& response) {
   status = response->Status();
   message = response->Message();
 

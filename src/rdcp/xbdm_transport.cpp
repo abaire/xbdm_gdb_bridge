@@ -7,7 +7,7 @@
 #include "rdcp/rdcp_response.h"
 #include "util/logging.h"
 
-bool XBDMTransport::Connect(const IPAddress &address) {
+bool XBDMTransport::Connect(const IPAddress& address) {
   if (socket_ >= 0) {
     Close();
   }
@@ -19,8 +19,8 @@ bool XBDMTransport::Connect(const IPAddress &address) {
   }
 
   address_ = address;
-  const struct sockaddr_in &addr = address.Address();
-  if (connect(socket_, reinterpret_cast<struct sockaddr const *>(&addr),
+  const struct sockaddr_in& addr = address.Address();
+  if (connect(socket_, reinterpret_cast<struct sockaddr const*>(&addr),
               sizeof(addr))) {
     LOG_XBDM(error) << "connect failed " << errno;
     close(socket_);
@@ -37,7 +37,7 @@ void XBDMTransport::Close() {
   TCPConnection::Close();
 
   const std::lock_guard<std::recursive_mutex> lock(request_queue_lock_);
-  for (auto &request : request_queue_) {
+  for (auto& request : request_queue_) {
     request->Abandon();
   }
   request_queue_.clear();
@@ -49,7 +49,7 @@ void XBDMTransport::SetConnected() {
   }
 }
 
-void XBDMTransport::Send(const std::shared_ptr<RDCPRequest> &request) {
+void XBDMTransport::Send(const std::shared_ptr<RDCPRequest>& request) {
   const std::lock_guard<std::recursive_mutex> lock(request_queue_lock_);
   request_queue_.push_back(request);
 
@@ -66,7 +66,7 @@ void XBDMTransport::WriteNextRequest() {
     return;
   }
 
-  const auto &request = request_queue_.front();
+  const auto& request = request_queue_.front();
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
   LOG_XBDM(trace) << "XBDM request: '" << *request << "'";
   request_sent_.Start();
@@ -79,7 +79,7 @@ void XBDMTransport::OnBytesRead() {
   TCPConnection::OnBytesRead();
 
   const std::lock_guard<std::recursive_mutex> read_lock(read_lock_);
-  char const *char_buffer = reinterpret_cast<char *>(read_buffer_.data());
+  char const* char_buffer = reinterpret_cast<char*>(read_buffer_.data());
 
   std::shared_ptr<RDCPRequest> request;
   if (!request_queue_.empty()) {
@@ -142,7 +142,7 @@ void XBDMTransport::OnBytesRead() {
 }
 
 void XBDMTransport::HandleInitialConnectResponse(
-    const std::shared_ptr<RDCPResponse> &response) {
+    const std::shared_ptr<RDCPResponse>& response) {
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
   LOG_XBDM(trace) << "Initial connect response: " << *response;
 #endif

@@ -8,23 +8,23 @@
 class IPAddress {
  public:
   IPAddress() = default;
-  explicit IPAddress(const std::string &addr);
+  explicit IPAddress(const std::string& addr);
   explicit IPAddress(uint16_t port);
-  IPAddress(const std::string &addr, uint16_t default_port);
-  explicit IPAddress(const struct sockaddr_in &addr);
+  IPAddress(const std::string& addr, uint16_t default_port);
+  explicit IPAddress(const struct sockaddr_in& addr);
 
-  [[nodiscard]] const std::string &Hostname() const { return hostname_; }
-  [[nodiscard]] const struct sockaddr_in &Address() const { return addr_; }
+  [[nodiscard]] const std::string& Hostname() const { return hostname_; }
+  [[nodiscard]] const struct sockaddr_in& Address() const { return addr_; }
   [[nodiscard]] struct in_addr IP() const { return addr_.sin_addr; }
   [[nodiscard]] uint16_t Port() const { return ntohs(addr_.sin_port); }
 
-  explicit operator struct sockaddr const *() const {
-    return reinterpret_cast<struct sockaddr const *>(&addr_);
+  explicit operator struct sockaddr const*() const {
+    return reinterpret_cast<struct sockaddr const*>(&addr_);
   }
-  bool operator<(const IPAddress &other) const;
+  bool operator<(const IPAddress& other) const;
 
  private:
-  friend std::ostream &operator<<(std::ostream &, IPAddress const &);
+  friend std::ostream& operator<<(std::ostream&, IPAddress const&);
 
  private:
   std::string hostname_;

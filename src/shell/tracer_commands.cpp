@@ -8,7 +8,7 @@
 #include "util/parsing.h"
 
 Command::Result TracerCommandInit::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   if (!NTRCTracer::Tracer::Initialize(interface)) {
     std::cout << "Failed to initialize tracer." << std::endl;
     return HANDLED;
@@ -47,7 +47,7 @@ Command::Result TracerCommandInit::operator()(
 }
 
 Command::Result TracerCommandDetach::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface& interface, const std::vector<std::string>&) {
   if (!NTRCTracer::Tracer::Detach(interface)) {
     std::cout << "Failed to detach from the tracer." << std::endl;
     return HANDLED;
@@ -57,7 +57,7 @@ Command::Result TracerCommandDetach::operator()(
 }
 
 Command::Result TracerCommandBreakOnNextFlip::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   if (!NTRCTracer::Tracer::BreakOnFrameStart(interface, !args.empty())) {
     std::cout << "Failed to request break." << std::endl;
     return HANDLED;
@@ -67,7 +67,7 @@ Command::Result TracerCommandBreakOnNextFlip::operator()(
 }
 
 Command::Result TracerCommandTraceFrames::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   auto local_artifact_path = std::filesystem::current_path();
   auto num_frames = 1;
   auto verbose = false;
@@ -102,7 +102,7 @@ Command::Result TracerCommandTraceFrames::operator()(
     } else if (key == "frames") {
       try {
         num_frames = std::stoi((*it++));
-      } catch (std::invalid_argument &e) {
+      } catch (std::invalid_argument& e) {
         std::cout << "Invalid '" << key << "' argument." << std::endl;
         return HANDLED;
       }

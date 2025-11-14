@@ -10,13 +10,13 @@
 
 class Shell {
  public:
-  explicit Shell(std::shared_ptr<XBOXInterface> &interface);
+  explicit Shell(std::shared_ptr<XBOXInterface>& interface);
 
   void Run();
-  Command::Result ProcessCommand(const std::vector<std::string> &args);
+  Command::Result ProcessCommand(const std::vector<std::string>& args);
 
  private:
-  void PrintHelp(std::vector<std::string> &args) const;
+  void PrintHelp(std::vector<std::string>& args) const;
 
  private:
   std::shared_ptr<XBOXInterface> interface_;

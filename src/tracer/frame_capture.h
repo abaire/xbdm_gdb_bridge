@@ -17,7 +17,7 @@ class FrameCapture {
  public:
   //! Prepares this FrameCapture for use, creating artifacts within the given
   //! path.
-  void Setup(const std::filesystem::path &artifact_path, bool verbose = false);
+  void Setup(const std::filesystem::path& artifact_path, bool verbose = false);
 
   //! Closes this capture and flushes any pending writes.
   void Close();
@@ -28,10 +28,10 @@ class FrameCapture {
     DATA_FETCHED,
   };
   //! Retrieves and consumes PGRAPH trace data from the given XBOX.
-  FetchResult FetchPGRAPHTraceData(XBOXInterface &interface);
+  FetchResult FetchPGRAPHTraceData(XBOXInterface& interface);
 
   //! Retrieves and consumes graphics trace information from the given XBOX.
-  FetchResult FetchAuxTraceData(XBOXInterface &interface);
+  FetchResult FetchAuxTraceData(XBOXInterface& interface);
 
  private:
   //! Reads as many PushBufferCommandTraceInfo instances from
@@ -39,25 +39,25 @@ class FrameCapture {
   void ProcessPGRAPHBuffer();
 
   //! Writes information about the given packet to the nv2a_log.
-  void LogPacket(const PushBufferCommandTraceInfo &packet);
+  void LogPacket(const PushBufferCommandTraceInfo& packet);
 
   //! Reads as many aux data structures from aux_trace_buffer_ as possible,
   //! erasing consumed bytes.
   void ProcessAuxBuffer();
 
-  void LogPGRAPH(const AuxDataHeader &packet, uint32_t data_len,
+  void LogPGRAPH(const AuxDataHeader& packet, uint32_t data_len,
                  std::vector<uint8_t>::const_iterator data) const;
 
-  void LogPFB(const AuxDataHeader &packet, uint32_t data_len,
+  void LogPFB(const AuxDataHeader& packet, uint32_t data_len,
               std::vector<uint8_t>::const_iterator data) const;
 
-  void LogRDI(const AuxDataHeader &packet, uint32_t data_len,
+  void LogRDI(const AuxDataHeader& packet, uint32_t data_len,
               std::vector<uint8_t>::const_iterator data) const;
 
-  void LogSurface(const AuxDataHeader &packet, uint32_t data_len,
+  void LogSurface(const AuxDataHeader& packet, uint32_t data_len,
                   std::vector<uint8_t>::const_iterator data) const;
 
-  void LogTexture(const AuxDataHeader &packet, uint32_t data_len,
+  void LogTexture(const AuxDataHeader& packet, uint32_t data_len,
                   std::vector<uint8_t>::const_iterator data) const;
 
  public:

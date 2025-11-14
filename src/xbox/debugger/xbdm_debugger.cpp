@@ -61,8 +61,8 @@ bool XBDMDebugger::Attach() {
 
   context_->UnregisterNotificationHandler(notification_handler_id_);
   notification_handler_id_ = context_->RegisterNotificationHandler(
-      [this](const std::shared_ptr<XBDMNotification> &notification,
-             XBDMContext &) { this->OnNotification(notification); });
+      [this](const std::shared_ptr<XBDMNotification>& notification,
+             XBDMContext&) { this->OnNotification(notification); });
 
   if (!RequestDebugNotifications(address.Port(), context_)) {
     context_->UnregisterNotificationHandler(notification_handler_id_);
@@ -98,13 +98,13 @@ void XBDMDebugger::Shutdown() {
   notification_handler_id_ = 0;
 }
 
-bool XBDMDebugger::DebugXBE(const std::string &path, bool wait_forever,
+bool XBDMDebugger::DebugXBE(const std::string& path, bool wait_forever,
                             bool break_at_start) {
   return DebugXBE(path, "", wait_forever, break_at_start);
 }
 
-bool XBDMDebugger::DebugXBE(const std::string &path,
-                            const std::string &command_line, bool wait_forever,
+bool XBDMDebugger::DebugXBE(const std::string& path,
+                            const std::string& command_line, bool wait_forever,
                             bool break_at_start) {
   std::string xbe_dir;
   std::string xbe_name;
@@ -252,7 +252,7 @@ std::vector<int32_t> XBDMDebugger::GetThreadIDs() {
     ret.push_back(active_thread_id);
   }
 
-  for (auto &thread : threads_) {
+  for (auto& thread : threads_) {
     if (thread->thread_id == active_thread_id) {
       continue;
     }
@@ -331,7 +331,7 @@ bool XBDMDebugger::SetActiveThread(int thread_id) {
 }
 
 void XBDMDebugger::OnNotification(
-    const std::shared_ptr<XBDMNotification> &notification) {
+    const std::shared_ptr<XBDMNotification>& notification) {
   if (notification->Type() == NT_CUSTOM) {
     return;
   }
@@ -408,12 +408,12 @@ void XBDMDebugger::OnNotification(
   }
 }
 
-void XBDMDebugger::OnVX(const std::shared_ptr<NotificationVX> &msg) {
+void XBDMDebugger::OnVX(const std::shared_ptr<NotificationVX>& msg) {
   LOG_DEBUGGER(info) << "XBDMNotif: VX notification: " << std::endl << *msg;
 }
 
 void XBDMDebugger::OnDebugStr(
-    const std::shared_ptr<NotificationDebugStr> &msg) {
+    const std::shared_ptr<NotificationDebugStr>& msg) {
   if (!msg->is_terminated) {
     auto existing = debugstr_accumulator_.find(msg->thread_id);
     if (existing != debugstr_accumulator_.end()) {
@@ -435,7 +435,7 @@ void XBDMDebugger::OnDebugStr(
 }
 
 void XBDMDebugger::OnModuleLoaded(
-    const std::shared_ptr<NotificationModuleLoaded> &msg) {
+    const std::shared_ptr<NotificationModuleLoaded>& msg) {
   LOG_DEBUGGER(info) << "Module loaded";
   std::unique_lock<std::recursive_mutex> lock(modules_lock_);
   modules_.push_back(std::make_shared<Module>(msg->module));
@@ -443,17 +443,17 @@ void XBDMDebugger::OnModuleLoaded(
 }
 
 void XBDMDebugger::OnSectionLoaded(
-    const std::shared_ptr<NotificationSectionLoaded> &msg) {
+    const std::shared_ptr<NotificationSectionLoaded>& msg) {
   std::unique_lock<std::recursive_mutex> lock(sections_lock_);
   sections_.push_back(std::make_shared<Section>(msg->section));
   FetchMemoryMap();
 }
 
 void XBDMDebugger::OnSectionUnloaded(
-    const std::shared_ptr<NotificationSectionUnloaded> &msg) {
+    const std::shared_ptr<NotificationSectionUnloaded>& msg) {
   std::unique_lock<std::recursive_mutex> lock(sections_lock_);
-  auto &section = msg->section;
-  sections_.remove_if([&section](const std::shared_ptr<Section> &other) {
+  auto& section = msg->section;
+  sections_.remove_if([&section](const std::shared_ptr<Section>& other) {
     if (!other) {
       return false;
     }
@@ -464,7 +464,7 @@ void XBDMDebugger::OnSectionUnloaded(
 }
 
 void XBDMDebugger::OnThreadCreated(
-    const std::shared_ptr<NotificationThreadCreated> &msg) {
+    const std::shared_ptr<NotificationThreadCreated>& msg) {
   LOG_DEBUGGER(info) << "Thread created: " << msg->thread_id;
   const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
   for (auto thread : threads_) {
@@ -479,11 +479,11 @@ void XBDMDebugger::OnThreadCreated(
 }
 
 void XBDMDebugger::OnThreadTerminated(
-    const std::shared_ptr<NotificationThreadTerminated> &msg) {
+    const std::shared_ptr<NotificationThreadTerminated>& msg) {
   LOG_DEBUGGER(info) << "Thread terminated: " << msg->thread_id;
   const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
   for (auto it = threads_.begin(); it != threads_.end(); ++it) {
-    auto &thread = *it;
+    auto& thread = *it;
     if (thread->thread_id == msg->thread_id) {
       if (thread->thread_id == active_thread_id_) {
         active_thread_id_ = -1;
@@ -499,7 +499,7 @@ void XBDMDebugger::OnThreadTerminated(
 }
 
 void XBDMDebugger::OnExecutionStateChanged(
-    const std::shared_ptr<NotificationExecutionStateChanged> &msg) {
+    const std::shared_ptr<NotificationExecutionStateChanged>& msg) {
   LOG_DEBUGGER(info) << "XBDMNotif: State changed: " << *msg;
 
   {
@@ -521,7 +521,7 @@ void XBDMDebugger::OnExecutionStateChanged(
 }
 
 void XBDMDebugger::OnBreakpoint(
-    const std::shared_ptr<NotificationBreakpoint> &msg) {
+    const std::shared_ptr<NotificationBreakpoint>& msg) {
   auto thread = GetThread(msg->thread_id);
   if (!thread) {
     LOG_DEBUGGER(warning)
@@ -544,14 +544,14 @@ void XBDMDebugger::OnBreakpoint(
 }
 
 void XBDMDebugger::OnWatchpoint(
-    const std::shared_ptr<NotificationWatchpoint> &msg) {
+    const std::shared_ptr<NotificationWatchpoint>& msg) {
   LOG_DEBUGGER(trace) << "Watchpoint " << msg->thread_id << "@" << std::hex
                       << msg->address << " accessing " << msg->watched_address
                       << std::dec;
 }
 
 void XBDMDebugger::OnSingleStep(
-    const std::shared_ptr<NotificationSingleStep> &msg) {
+    const std::shared_ptr<NotificationSingleStep>& msg) {
   auto thread = GetThread(msg->thread_id);
   if (!thread) {
     LOG_DEBUGGER(warning)
@@ -567,7 +567,7 @@ void XBDMDebugger::OnSingleStep(
 }
 
 void XBDMDebugger::OnException(
-    const std::shared_ptr<NotificationException> &msg) {
+    const std::shared_ptr<NotificationException>& msg) {
   LOG_DEBUGGER(warning) << "Received exception: " << *msg;
   auto thread = GetThread(msg->thread_id);
   if (!thread) {
@@ -654,8 +654,8 @@ bool XBDMDebugger::FetchThreads() {
     threads_.emplace_back(std::make_shared<Thread>(thread_id));
   }
 
-  auto &context = *context_;
-  for (auto &thread : threads_) {
+  auto& context = *context_;
+  for (auto& thread : threads_) {
     if (!thread->FetchInfoSync(context)) {
       LOG_DEBUGGER(error) << "Failed to fetch info for thread "
                           << thread->thread_id;
@@ -676,7 +676,7 @@ bool XBDMDebugger::FetchModules() {
 
   const std::lock_guard<std::recursive_mutex> lock(modules_lock_);
   modules_.clear();
-  for (auto &module : request->modules) {
+  for (auto& module : request->modules) {
     modules_.emplace_back(std::make_shared<Module>(module));
   }
 
@@ -694,11 +694,11 @@ bool XBDMDebugger::FetchMemoryMap() {
 
   const std::lock_guard<std::recursive_mutex> lock(memory_regions_lock_);
   memory_regions_.clear();
-  for (auto &region : request->regions) {
+  for (auto& region : request->regions) {
     memory_regions_.emplace_back(std::make_shared<MemoryRegion>(region));
   }
-  memory_regions_.sort([](const std::shared_ptr<MemoryRegion> &a,
-                          const std::shared_ptr<MemoryRegion> &b) {
+  memory_regions_.sort([](const std::shared_ptr<MemoryRegion>& a,
+                          const std::shared_ptr<MemoryRegion>& b) {
     return a->start < b->start;
   });
 
@@ -761,7 +761,7 @@ bool XBDMDebugger::WaitForState(ExecutionState s,
       [this, s] { return this->state_ == s; });
 }
 
-bool XBDMDebugger::WaitForStateIn(const std::set<ExecutionState> &target_states,
+bool XBDMDebugger::WaitForStateIn(const std::set<ExecutionState>& target_states,
                                   uint32_t max_wait_milliseconds) {
   std::unique_lock<std::mutex> lock(state_lock_);
   return state_condition_variable_.wait_for(
@@ -772,7 +772,7 @@ bool XBDMDebugger::WaitForStateIn(const std::set<ExecutionState> &target_states,
 }
 
 bool XBDMDebugger::WaitForStateNotIn(
-    const std::set<ExecutionState> &banned_states,
+    const std::set<ExecutionState>& banned_states,
     uint32_t max_wait_milliseconds) {
   std::unique_lock<std::mutex> lock(state_lock_);
   return state_condition_variable_.wait_for(
@@ -825,7 +825,7 @@ bool XBDMDebugger::StepFunction() {
 bool XBDMDebugger::ContinueAll(bool no_break_on_exception) {
   std::list<std::shared_ptr<Thread>> threads = Threads();
   bool ret = true;
-  for (auto &thread : threads) {
+  for (auto& thread : threads) {
     if (!thread->Continue(*context_, no_break_on_exception)) {
       LOG_DEBUGGER(error) << "Failed to continue thread " << thread->thread_id;
       ret = false;
@@ -932,11 +932,11 @@ std::optional<uint32_t> XBDMDebugger::GetDWORD(uint32_t address) {
     return std::nullopt;
   }
 
-  return *reinterpret_cast<uint32_t *>(raw->data());
+  return *reinterpret_cast<uint32_t*>(raw->data());
 }
 
 bool XBDMDebugger::SetMemory(uint32_t address,
-                             const std::vector<uint8_t> &data) {
+                             const std::vector<uint8_t>& data) {
   if (!ValidateMemoryAccess(address, data.size(), true)) {
     return false;
   }
@@ -992,7 +992,7 @@ bool XBDMDebugger::ValidateMemoryAccess(uint32_t address, uint32_t length,
 
   uint32_t start = address;
   uint32_t end = address + length;
-  for (auto &region : memory_regions_) {
+  for (auto& region : memory_regions_) {
     if (region->Contains(start)) {
       if (region->Contains(end)) {
         if (is_write && !region->IsWritable()) {
@@ -1008,9 +1008,9 @@ bool XBDMDebugger::ValidateMemoryAccess(uint32_t address, uint32_t length,
 }
 
 std::shared_ptr<Module> XBDMDebugger::GetModule(
-    const std::string &module_name) const {
+    const std::string& module_name) const {
   auto modules = Modules();
-  for (auto &module : modules) {
+  for (auto& module : modules) {
     if (module->name == module_name) {
       return module;
     }

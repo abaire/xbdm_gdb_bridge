@@ -7,8 +7,8 @@
 
 struct ShellCommandQuit : Command {
   ShellCommandQuit() : Command("Terminate the connection and exit.") {}
-  Result operator()(XBOXInterface &interface,
-                    const std::vector<std::string> &) override {
+  Result operator()(XBOXInterface& interface,
+                    const std::vector<std::string>&) override {
     return Result::EXIT_REQUESTED;
   }
 };
@@ -16,8 +16,8 @@ struct ShellCommandQuit : Command {
 struct ShellCommandReconnect : Command {
   ShellCommandReconnect()
       : Command("Attempt to disconnect and reconnect from XBDM.") {}
-  Result operator()(XBOXInterface &interface,
-                    const std::vector<std::string> &) override;
+  Result operator()(XBOXInterface& interface,
+                    const std::vector<std::string>&) override;
 };
 
 struct ShellCommandGDB : Command {
@@ -35,8 +35,8 @@ struct ShellCommandGDB : Command {
             "[xbe_launch_path] - An XBOX path to an XBE (or directory "
             "containing a default.xbe) that should be launched "
             "when a GDB debugger first connects.") {}
-  Result operator()(XBOXInterface &interface,
-                    const std::vector<std::string> &args) override;
+  Result operator()(XBOXInterface& interface,
+                    const std::vector<std::string>& args) override;
 };
 
 struct ShellCommandTrace : Command {
@@ -64,8 +64,8 @@ struct ShellCommandTrace : Command {
                 "  pfb <on|off> - Enables or disables capture of the raw "
                 "PFB region. Default: off.") {}
 
-  Result operator()(XBOXInterface &interface,
-                    const std::vector<std::string> &args) override;
+  Result operator()(XBOXInterface& interface,
+                    const std::vector<std::string>& args) override;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SHELL_COMMANDS_H

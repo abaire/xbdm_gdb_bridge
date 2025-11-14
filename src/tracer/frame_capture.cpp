@@ -30,7 +30,7 @@ static constexpr uint32_t SURFACE_FORMAT_A8R8G8B8 = 0x0C;
 
 struct SurfaceFormatDefinition {
   uint32_t bytes_per_pixel;
-  std::shared_ptr<uint8_t[]> (*converter)(const void *src, uint32_t src_size);
+  std::shared_ptr<uint8_t[]> (*converter)(const void* src, uint32_t src_size);
   bool has_alpha;
 };
 
@@ -127,7 +127,7 @@ struct TextureFormatDefinition {
   bool swizzled;
   uint32_t bytes_per_pixel;
   bool compressed;
-  std::shared_ptr<uint8_t[]> (*converter)(const void *src, uint32_t src_size);
+  std::shared_ptr<uint8_t[]> (*converter)(const void* src, uint32_t src_size);
   bool has_alpha;
 };
 static const std::map<uint32_t, TextureFormatDefinition> kTextureFormats = {
@@ -273,7 +273,7 @@ static const std::map<uint32_t, std::string> kTextureFormatNames = {
     {NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_R8G8B8A8, "LU_IMAGE_R8G8B8A8"},
 };
 
-void FrameCapture::Setup(const std::filesystem::path &artifact_path,
+void FrameCapture::Setup(const std::filesystem::path& artifact_path,
                          bool verbose) {
   artifact_path_ = artifact_path;
   verbose_logging_ = verbose;
@@ -288,7 +288,7 @@ void FrameCapture::Setup(const std::filesystem::path &artifact_path,
 void FrameCapture::Close() { nv2a_log_.close(); }
 
 FrameCapture::FetchResult FrameCapture::FetchPGRAPHTraceData(
-    XBOXInterface &interface) {
+    XBOXInterface& interface) {
   auto request =
       std::make_shared<DynDXTLoader::InvokeReceiveSizePrefixedBinary>(
           NTRC_HANDLER_NAME "!read_pgraph maxsize=0x100000");
@@ -304,7 +304,7 @@ FrameCapture::FetchResult FrameCapture::FetchPGRAPHTraceData(
     return FetchResult::ERROR;
   }
 
-  auto &data = request->response_data;
+  auto& data = request->response_data;
   if (data.empty()) {
     return FetchResult::NO_DATA_AVAILABLE;
   }
@@ -317,7 +317,7 @@ FrameCapture::FetchResult FrameCapture::FetchPGRAPHTraceData(
 }
 
 FrameCapture::FetchResult FrameCapture::FetchAuxTraceData(
-    XBOXInterface &interface) {
+    XBOXInterface& interface) {
   // The aux buffer is read in its entirety, since a single read may not be
   // sufficient to retrieve the data that spawned the triggering notification.
   bool has_fetched_data = false;
@@ -334,7 +334,7 @@ FrameCapture::FetchResult FrameCapture::FetchAuxTraceData(
       return FetchResult::ERROR;
     }
 
-    auto &data = request->response_data;
+    auto& data = request->response_data;
     if (data.empty()) {
       break;
     }
@@ -372,7 +372,7 @@ void FrameCapture::ProcessPGRAPHBuffer() {
       assert(next_free_id < 0xFFFFFFFF);
 
       auto data_id = next_free_id++;
-      const auto *params = reinterpret_cast<const uint32_t *>(
+      const auto* params = reinterpret_cast<const uint32_t*>(
           pgraph_trace_buffer_.data() + packet_size);
       pgraph_parameter_map.emplace(
           data_id, std::vector<uint32_t>(
@@ -406,8 +406,8 @@ static const std::map<uint32_t, std::string> kProvokingCommandNames = {
     {NV097_SET_BEGIN_END, "NV097_SET_BEGIN_END"},
 };
 
-void FrameCapture::LogPacket(const PushBufferCommandTraceInfo &packet) {
-  auto log = [this, &packet](uint32_t method, const uint32_t *param) {
+void FrameCapture::LogPacket(const PushBufferCommandTraceInfo& packet) {
+  auto log = [this, &packet](uint32_t method, const uint32_t* param) {
     nv2a_log_ << "nv2a_pgraph_method " << std::dec << packet.command.subchannel
               << ": 0x" << std::hex << packet.graphics_class << " -> 0x"
               << method;
@@ -425,7 +425,7 @@ void FrameCapture::LogPacket(const PushBufferCommandTraceInfo &packet) {
     }
   };
 
-  const uint32_t *data = nullptr;
+  const uint32_t* data = nullptr;
   switch (packet.data.data_state) {
     case PBCPDS_INVALID:
       break;
@@ -441,7 +441,7 @@ void FrameCapture::LogPacket(const PushBufferCommandTraceInfo &packet) {
 
   uint32_t method = packet.command.method;
   for (auto i = 0; i < packet.command.parameter_count; ++i) {
-    const uint32_t *param = nullptr;
+    const uint32_t* param = nullptr;
     if (data) {
       param = data + i;
     }
@@ -516,7 +516,7 @@ void FrameCapture::ProcessAuxBuffer() {
   }
 }
 
-void FrameCapture::LogPGRAPH(const AuxDataHeader &packet, uint32_t data_len,
+void FrameCapture::LogPGRAPH(const AuxDataHeader& packet, uint32_t data_len,
                              std::vector<uint8_t>::const_iterator data) const {
   char filename[64];
   snprintf(filename, sizeof(filename), "%010u_%u_PGRAPH.bin",
@@ -526,12 +526,12 @@ void FrameCapture::LogPGRAPH(const AuxDataHeader &packet, uint32_t data_len,
                                                          std::ios_base::trunc |
                                                          std::ios_base::binary);
 
-  const char *d = reinterpret_cast<const char *>(&data[0]);
+  const char* d = reinterpret_cast<const char*>(&data[0]);
   os.write(d, data_len);
   os.close();
 }
 
-void FrameCapture::LogPFB(const NTRCTracer::AuxDataHeader &packet,
+void FrameCapture::LogPFB(const NTRCTracer::AuxDataHeader& packet,
                           uint32_t data_len,
                           std::vector<uint8_t>::const_iterator data) const {
   char filename[64];
@@ -542,16 +542,16 @@ void FrameCapture::LogPFB(const NTRCTracer::AuxDataHeader &packet,
                                                          std::ios_base::trunc |
                                                          std::ios_base::binary);
 
-  const char *d = reinterpret_cast<const char *>(&data[0]);
+  const char* d = reinterpret_cast<const char*>(&data[0]);
   os.write(d, data_len);
   os.close();
 }
 
-void FrameCapture::LogRDI(const NTRCTracer::AuxDataHeader &packet,
+void FrameCapture::LogRDI(const NTRCTracer::AuxDataHeader& packet,
                           uint32_t data_len,
                           std::vector<uint8_t>::const_iterator data) const {
-  const char *d = reinterpret_cast<const char *>(&data[0]);
-  auto header = reinterpret_cast<const RDIHeader *>(d);
+  const char* d = reinterpret_cast<const char*>(&data[0]);
+  auto header = reinterpret_cast<const RDIHeader*>(d);
 
   std::string region;
   switch (header->offset) {
@@ -589,24 +589,24 @@ void FrameCapture::LogRDI(const NTRCTracer::AuxDataHeader &packet,
   os.close();
 }
 
-static void SaveSurfaceImage(const void *raw, uint32_t data_len,
-                             std::ofstream &os, uint32_t surface_type,
+static void SaveSurfaceImage(const void* raw, uint32_t data_len,
+                             std::ofstream& os, uint32_t surface_type,
                              uint32_t width, uint32_t height, uint32_t pitch,
                              bool swizzle) {
   auto surface_format_entry = kSurfaceFormats.find(surface_type);
   assert(surface_format_entry != kSurfaceFormats.end());
-  const auto &surface_format = surface_format_entry->second;
+  const auto& surface_format = surface_format_entry->second;
 
   std::unique_ptr<uint8_t[]> buffer;
 
   if (swizzle) {
     buffer = std::unique_ptr<uint8_t[]>(new uint8_t[data_len]);
-    unswizzle_rect(static_cast<const uint8_t *>(raw), width, height,
+    unswizzle_rect(static_cast<const uint8_t*>(raw), width, height,
                    buffer.get(), pitch, surface_format.bytes_per_pixel);
   }
 
-  const uint8_t *input =
-      buffer ? buffer.get() : static_cast<const uint8_t *>(raw);
+  const uint8_t* input =
+      buffer ? buffer.get() : static_cast<const uint8_t*>(raw);
   std::shared_ptr<uint8_t[]> converted_buffer;
   if (surface_format.converter) {
     converted_buffer = surface_format.converter(input, data_len);
@@ -629,15 +629,15 @@ static void SaveSurfaceImage(const void *raw, uint32_t data_len,
     auto error_message = lodepng_error_text(error);
     LOG_CAP(error) << " PNG encoding failed " << error_message << std::endl;
   } else {
-    os.write(reinterpret_cast<const char *>(png_data.data()), png_data.size());
+    os.write(reinterpret_cast<const char*>(png_data.data()), png_data.size());
   }
 }
 
-void FrameCapture::LogSurface(const NTRCTracer::AuxDataHeader &packet,
+void FrameCapture::LogSurface(const NTRCTracer::AuxDataHeader& packet,
                               uint32_t data_len,
                               std::vector<uint8_t>::const_iterator data) const {
-  const char *d = reinterpret_cast<const char *>(&data[0]);
-  auto header = reinterpret_cast<const SurfaceHeader *>(d);
+  const char* d = reinterpret_cast<const char*>(&data[0]);
+  auto header = reinterpret_cast<const SurfaceHeader*>(d);
 
   std::string surface_type;
   switch (header->type) {
@@ -748,21 +748,21 @@ void FrameCapture::LogSurface(const NTRCTracer::AuxDataHeader &packet,
   }
 }
 
-static void SaveTextureImage(const void *raw, uint32_t data_len,
-                             std::ofstream &os, uint32_t texture_type,
-                             const TextureFormatDefinition &texture_format,
+static void SaveTextureImage(const void* raw, uint32_t data_len,
+                             std::ofstream& os, uint32_t texture_type,
+                             const TextureFormatDefinition& texture_format,
                              uint32_t mipmap_count, uint32_t width,
                              uint32_t height, uint32_t depth, uint32_t pitch) {
   std::unique_ptr<uint8_t[]> buffer;
 
   if (texture_format.swizzled) {
     buffer = std::unique_ptr<uint8_t[]>(new uint8_t[data_len]);
-    unswizzle_rect(static_cast<const uint8_t *>(raw), width, height,
+    unswizzle_rect(static_cast<const uint8_t*>(raw), width, height,
                    buffer.get(), pitch, texture_format.bytes_per_pixel);
   }
 
-  const uint8_t *input =
-      buffer ? buffer.get() : static_cast<const uint8_t *>(raw);
+  const uint8_t* input =
+      buffer ? buffer.get() : static_cast<const uint8_t*>(raw);
 
   std::shared_ptr<uint8_t[]> converted_buffer;
   if (texture_format.converter) {
@@ -800,15 +800,15 @@ static void SaveTextureImage(const void *raw, uint32_t data_len,
     auto error_message = lodepng_error_text(error);
     LOG_CAP(error) << " PNG encoding failed " << error_message << std::endl;
   } else {
-    os.write(reinterpret_cast<const char *>(png_data.data()), png_data.size());
+    os.write(reinterpret_cast<const char*>(png_data.data()), png_data.size());
   }
 }
 
-void FrameCapture::LogTexture(const NTRCTracer::AuxDataHeader &packet,
+void FrameCapture::LogTexture(const NTRCTracer::AuxDataHeader& packet,
                               uint32_t data_len,
                               std::vector<uint8_t>::const_iterator data) const {
-  const char *d = reinterpret_cast<const char *>(&data[0]);
-  auto header = reinterpret_cast<const TextureHeader *>(d);
+  const char* d = reinterpret_cast<const char*>(&data[0]);
+  auto header = reinterpret_cast<const TextureHeader*>(d);
 
   d += sizeof(*header);
   data_len -= sizeof(*header);
@@ -889,7 +889,7 @@ void FrameCapture::LogTexture(const NTRCTracer::AuxDataHeader &packet,
 
     auto texture_format_entry = kTextureFormats.find(texture_type);
     assert(texture_format_entry != kTextureFormats.end());
-    const auto &texture_format = texture_format_entry->second;
+    const auto& texture_format = texture_format_entry->second;
 
     snprintf(filename, sizeof(filename), "%010u_%u_%u_Texture_%d_%d.%s",
              packet.packet_index, packet.draw_index,

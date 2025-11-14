@@ -42,16 +42,16 @@ class XBDMDebugger {
   inline bool IsAttached() const { return is_attached_; }
   void Shutdown();
 
-  bool DebugXBE(const std::string &path, bool wait_forever = false,
+  bool DebugXBE(const std::string& path, bool wait_forever = false,
                 bool break_at_start = true);
-  bool DebugXBE(const std::string &path, const std::string &command_line,
+  bool DebugXBE(const std::string& path, const std::string& command_line,
                 bool wait_forever = false, bool break_at_start = true);
 
   [[nodiscard]] std::list<std::shared_ptr<Thread>> Threads();
   [[nodiscard]] std::list<std::shared_ptr<Module>> Modules();
   [[nodiscard]] std::list<std::shared_ptr<Section>> Sections();
 
-  std::shared_ptr<Module> GetModule(const std::string &module_name) const;
+  std::shared_ptr<Module> GetModule(const std::string& module_name) const;
 
   std::vector<int32_t> GetThreadIDs();
 
@@ -87,11 +87,11 @@ class XBDMDebugger {
 
   bool SetActiveThread(int thread_id);
 
-  [[nodiscard]] const std::list<std::shared_ptr<Module>> &Modules() const {
+  [[nodiscard]] const std::list<std::shared_ptr<Module>>& Modules() const {
     return modules_;
   }
 
-  [[nodiscard]] const std::list<std::shared_ptr<Section>> &Sections() const {
+  [[nodiscard]] const std::list<std::shared_ptr<Section>>& Sections() const {
     return sections_;
   }
 
@@ -116,7 +116,7 @@ class XBDMDebugger {
   std::optional<std::vector<uint8_t>> GetMemory(uint32_t address,
                                                 uint32_t length);
   std::optional<uint32_t> GetDWORD(uint32_t address);
-  bool SetMemory(uint32_t address, const std::vector<uint8_t> &data);
+  bool SetMemory(uint32_t address, const std::vector<uint8_t>& data);
 
   bool AddBreakpoint(uint32_t address);
   bool AddReadWatch(uint32_t address, uint32_t length);
@@ -130,12 +130,12 @@ class XBDMDebugger {
 
   //! Waits up to max_wait_milliseconds for the target to be in one of the given
   //! ExecutionStates.
-  bool WaitForStateIn(const std::set<ExecutionState> &target_states,
+  bool WaitForStateIn(const std::set<ExecutionState>& target_states,
                       uint32_t max_wait_milliseconds);
 
   //! Waits up to max_wait_milliseconds for the target to be in a state other
   //! than one of the ExecutionStates.
-  bool WaitForStateNotIn(const std::set<ExecutionState> &banned_states,
+  bool WaitForStateNotIn(const std::set<ExecutionState>& banned_states,
                          uint32_t max_wait_milliseconds);
 
   ExecutionState CurrentKnownState();
@@ -149,22 +149,21 @@ class XBDMDebugger {
   //! ExecutionState.
   bool WaitForState(ExecutionState s, uint32_t max_wait_milliseconds);
 
-  void OnNotification(const std::shared_ptr<XBDMNotification> &);
+  void OnNotification(const std::shared_ptr<XBDMNotification>&);
 
-  static void OnVX(const std::shared_ptr<NotificationVX> &);
-  void OnDebugStr(const std::shared_ptr<NotificationDebugStr> &);
-  void OnModuleLoaded(const std::shared_ptr<NotificationModuleLoaded> &);
-  void OnSectionLoaded(const std::shared_ptr<NotificationSectionLoaded> &);
-  void OnSectionUnloaded(const std::shared_ptr<NotificationSectionUnloaded> &);
-  void OnThreadCreated(const std::shared_ptr<NotificationThreadCreated> &);
-  void OnThreadTerminated(
-      const std::shared_ptr<NotificationThreadTerminated> &);
+  static void OnVX(const std::shared_ptr<NotificationVX>&);
+  void OnDebugStr(const std::shared_ptr<NotificationDebugStr>&);
+  void OnModuleLoaded(const std::shared_ptr<NotificationModuleLoaded>&);
+  void OnSectionLoaded(const std::shared_ptr<NotificationSectionLoaded>&);
+  void OnSectionUnloaded(const std::shared_ptr<NotificationSectionUnloaded>&);
+  void OnThreadCreated(const std::shared_ptr<NotificationThreadCreated>&);
+  void OnThreadTerminated(const std::shared_ptr<NotificationThreadTerminated>&);
   void OnExecutionStateChanged(
-      const std::shared_ptr<NotificationExecutionStateChanged> &);
-  void OnBreakpoint(const std::shared_ptr<NotificationBreakpoint> &);
-  void OnWatchpoint(const std::shared_ptr<NotificationWatchpoint> &);
-  void OnSingleStep(const std::shared_ptr<NotificationSingleStep> &);
-  void OnException(const std::shared_ptr<NotificationException> &);
+      const std::shared_ptr<NotificationExecutionStateChanged>&);
+  void OnBreakpoint(const std::shared_ptr<NotificationBreakpoint>&);
+  void OnWatchpoint(const std::shared_ptr<NotificationWatchpoint>&);
+  void OnSingleStep(const std::shared_ptr<NotificationSingleStep>&);
+  void OnException(const std::shared_ptr<NotificationException>&);
 
  private:
   bool is_attached_{false};

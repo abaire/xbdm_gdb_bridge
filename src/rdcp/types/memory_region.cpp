@@ -10,7 +10,7 @@ MemoryRegion::MemoryRegion(uint32_t start, uint32_t size, uint32_t protect,
   end = start + size;
 }
 
-MemoryRegion::MemoryRegion(const RDCPMapResponse &parsed) {
+MemoryRegion::MemoryRegion(const RDCPMapResponse& parsed) {
   start = parsed.GetUInt32("base");
   size = parsed.GetUInt32("size");
   protect = parsed.GetUInt32("protect");

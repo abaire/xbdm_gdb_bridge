@@ -24,8 +24,8 @@ struct Command {
     }
   }
 
-  virtual Result operator()(XBOXInterface &interface,
-                            const std::vector<std::string> &args) = 0;
+  virtual Result operator()(XBOXInterface& interface,
+                            const std::vector<std::string>& args) = 0;
 
   void PrintUsage() const { std::cout << help << std::endl; }
 

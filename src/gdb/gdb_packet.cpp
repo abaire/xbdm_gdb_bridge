@@ -13,7 +13,7 @@ static constexpr char kEscapeCharacterSet[] = {kPacketEscapeChar, kPacketLeader,
                                                kPacketTrailer, 0};
 
 struct GDBPacketEscaper {
-  static std::vector<uint8_t> EscapeBuffer(const std::vector<uint8_t> &buffer) {
+  static std::vector<uint8_t> EscapeBuffer(const std::vector<uint8_t>& buffer) {
     auto escaped_body = boost::algorithm::find_format_all_copy(
         buffer, boost::token_finder(boost::is_any_of(kEscapeCharacterSet)),
         GDBPacketEscaper());
@@ -21,7 +21,7 @@ struct GDBPacketEscaper {
   }
 
   template <typename FindResultT>
-  std::vector<char> operator()(const FindResultT &match) const {
+  std::vector<char> operator()(const FindResultT& match) const {
     std::vector<char> ret;
     ret.reserve(match.size() * 2);
     for (auto it = match.begin(); it != match.end(); ++it) {
@@ -32,7 +32,7 @@ struct GDBPacketEscaper {
   }
 };
 
-static uint8_t Mod256Checksum(const uint8_t *buffer, long buffer_len) {
+static uint8_t Mod256Checksum(const uint8_t* buffer, long buffer_len) {
   int ret = 0;
 
   if (!buffer || buffer_len <= 0) {
@@ -54,17 +54,17 @@ std::vector<uint8_t>::const_iterator GDBPacket::FindFirst(char item) const {
   return std::find(data_.cbegin(), data_.cend(), static_cast<uint8_t>(item));
 }
 
-long GDBPacket::Parse(const uint8_t *buffer, size_t buffer_length) {
-  const auto *packet_start = static_cast<const uint8_t *>(
-      memchr(buffer, kPacketLeader, buffer_length));
+long GDBPacket::Parse(const uint8_t* buffer, size_t buffer_length) {
+  const auto* packet_start =
+      static_cast<const uint8_t*>(memchr(buffer, kPacketLeader, buffer_length));
   if (!packet_start) {
     return 0;
   }
 
-  const uint8_t *body_start = packet_start + 1;
+  const uint8_t* body_start = packet_start + 1;
   size_t max_size = buffer_length - (body_start - buffer);
-  const auto *terminator = static_cast<const uint8_t *>(
-      memchr(body_start, kPacketTrailer, max_size));
+  const auto* terminator =
+      static_cast<const uint8_t*>(memchr(body_start, kPacketTrailer, max_size));
   if (!terminator) {
     return 0;
   }
@@ -79,7 +79,7 @@ long GDBPacket::Parse(const uint8_t *buffer, size_t buffer_length) {
 
   char checksum_str[3] = {0};
   memcpy(checksum_str, terminator + 1, 2);
-  char *checksum_end;
+  char* checksum_end;
   long checksum = strtol(checksum_str, &checksum_end, 16);
   if (checksum_end != checksum_str + 2) {
     LOG_GDB(error) << "Non-numeric checksum " << checksum_str << std::endl;
@@ -116,8 +116,8 @@ std::vector<uint8_t> GDBPacket::Serialize() const {
   return ret;
 }
 
-long GDBPacket::UnescapeBuffer(const std::vector<uint8_t> &buffer,
-                               std::vector<uint8_t> &out_buffer) {
+long GDBPacket::UnescapeBuffer(const std::vector<uint8_t>& buffer,
+                               std::vector<uint8_t>& out_buffer) {
   if (buffer.empty()) {
     return 0;
   }

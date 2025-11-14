@@ -10,7 +10,7 @@
 #include "util/logging.h"
 #include "util/parsing.h"
 
-static bool StartsWith(const char *buffer, long buffer_len, const char *prefix,
+static bool StartsWith(const char* buffer, long buffer_len, const char* prefix,
                        long prefix_len);
 
 //! Mutex to guard interaction with the custom notification constructors.
@@ -20,7 +20,7 @@ static std::recursive_mutex customNotificationMutex;
 static std::map<std::string, XBDMNotificationConstructor>
     customNotificationConstructors;
 
-std::shared_ptr<XBDMNotification> ParseXBDMNotification(const char *buffer,
+std::shared_ptr<XBDMNotification> ParseXBDMNotification(const char* buffer,
                                                         long buffer_len) {
 #define SETIF(prefix, type)                                         \
   if (StartsWith(buffer, buffer_len, prefix, sizeof(prefix) - 1)) { \
@@ -62,7 +62,7 @@ std::shared_ptr<XBDMNotification> ParseXBDMNotification(const char *buffer,
 
 //! Registers an XBDMNotification constructor for a custom event prefix.
 bool RegisterXBDMNotificationConstructor(
-    const char *prefix, XBDMNotificationConstructor constructor) {
+    const char* prefix, XBDMNotificationConstructor constructor) {
   const std::lock_guard<std::recursive_mutex> lock(customNotificationMutex);
 
   if (customNotificationConstructors.find(prefix) !=
@@ -78,7 +78,7 @@ bool RegisterXBDMNotificationConstructor(
 }
 
 //! Unregisters the custom constructor for the given event prefix.
-bool UnregisterXBDMNotificationConstructor(const char *prefix) {
+bool UnregisterXBDMNotificationConstructor(const char* prefix) {
   const std::lock_guard<std::recursive_mutex> lock(customNotificationMutex);
 
   auto entry = customNotificationConstructors.find(prefix);
@@ -92,7 +92,7 @@ bool UnregisterXBDMNotificationConstructor(const char *prefix) {
   return true;
 }
 
-static bool StartsWith(const char *buffer, long buffer_len, const char *prefix,
+static bool StartsWith(const char* buffer, long buffer_len, const char* prefix,
                        long prefix_len) {
   if (prefix_len > buffer_len) {
     return false;
@@ -101,12 +101,12 @@ static bool StartsWith(const char *buffer, long buffer_len, const char *prefix,
   return !memcmp(buffer, prefix, prefix_len);
 }
 
-NotificationVX::NotificationVX(const char *buffer_start,
-                               const char *buffer_end) {
+NotificationVX::NotificationVX(const char* buffer_start,
+                               const char* buffer_end) {
   message.assign(buffer_start, buffer_end);
 }
 
-std::ostream &NotificationVX::WriteStream(std::ostream &os) const {
+std::ostream& NotificationVX::WriteStream(std::ostream& os) const {
   os << "VX message: " << message;
   return os;
 }
@@ -115,8 +115,8 @@ std::ostream &NotificationVX::WriteStream(std::ostream &os) const {
 static std::regex notification_regex(
     R"(thread=(\d+)\s+(lf|cr|crlf)?\s*string=(.*))");
 
-NotificationDebugStr::NotificationDebugStr(const char *buffer_start,
-                                           const char *buffer_end) {
+NotificationDebugStr::NotificationDebugStr(const char* buffer_start,
+                                           const char* buffer_end) {
   std::string buffer(buffer_start, buffer_end);
   std::smatch match;
   if (!std::regex_match(buffer, match, notification_regex)) {
@@ -142,65 +142,65 @@ NotificationDebugStr::NotificationDebugStr(const char *buffer_start,
   is_terminated = !termination.empty();
 }
 
-std::ostream &NotificationDebugStr::WriteStream(std::ostream &os) const {
+std::ostream& NotificationDebugStr::WriteStream(std::ostream& os) const {
   os << "DebugStr: thread_id: " << thread_id << " text: " << text
      << termination;
   return os;
 }
 
-NotificationModuleLoaded::NotificationModuleLoaded(const char *buffer_start,
-                                                   const char *buffer_end)
+NotificationModuleLoaded::NotificationModuleLoaded(const char* buffer_start,
+                                                   const char* buffer_end)
     : module(RDCPMapResponse(buffer_start, buffer_end)) {}
 
-std::ostream &NotificationModuleLoaded::WriteStream(std::ostream &os) const {
+std::ostream& NotificationModuleLoaded::WriteStream(std::ostream& os) const {
   os << "ModuleLoaded: " << module;
   return os;
 }
 
-NotificationSectionLoaded::NotificationSectionLoaded(const char *buffer_start,
-                                                     const char *buffer_end)
+NotificationSectionLoaded::NotificationSectionLoaded(const char* buffer_start,
+                                                     const char* buffer_end)
     : section(RDCPMapResponse(buffer_start, buffer_end)) {}
 
-std::ostream &NotificationSectionLoaded::WriteStream(std::ostream &os) const {
+std::ostream& NotificationSectionLoaded::WriteStream(std::ostream& os) const {
   os << "SectionLoaded: " << section;
   return os;
 }
 
 NotificationSectionUnloaded::NotificationSectionUnloaded(
-    const char *buffer_start, const char *buffer_end)
+    const char* buffer_start, const char* buffer_end)
     : section(RDCPMapResponse(buffer_start, buffer_end)) {}
 
-std::ostream &NotificationSectionUnloaded::WriteStream(std::ostream &os) const {
+std::ostream& NotificationSectionUnloaded::WriteStream(std::ostream& os) const {
   return os << "SectionUnloaded: " << section;
 }
 
-NotificationThreadCreated::NotificationThreadCreated(const char *buffer_start,
-                                                     const char *buffer_end) {
+NotificationThreadCreated::NotificationThreadCreated(const char* buffer_start,
+                                                     const char* buffer_end) {
   RDCPMapResponse parsed(buffer_start, buffer_end);
   thread_id = parsed.GetDWORD("thread");
   start_address = parsed.GetDWORD("start");
 }
 
-std::ostream &NotificationThreadCreated::WriteStream(std::ostream &os) const {
+std::ostream& NotificationThreadCreated::WriteStream(std::ostream& os) const {
   os << "Thread created: " << thread_id << " start address: 0x" << std::hex
      << start_address;
   return os;
 }
 
 NotificationThreadTerminated::NotificationThreadTerminated(
-    const char *buffer_start, const char *buffer_end) {
+    const char* buffer_start, const char* buffer_end) {
   RDCPMapResponse parsed(buffer_start, buffer_end);
   thread_id = parsed.GetDWORD("thread");
 }
 
-std::ostream &NotificationThreadTerminated::WriteStream(
-    std::ostream &os) const {
+std::ostream& NotificationThreadTerminated::WriteStream(
+    std::ostream& os) const {
   os << "Thread terminated: " << thread_id;
   return os;
 }
 
 NotificationExecutionStateChanged::NotificationExecutionStateChanged(
-    const char *buffer_start, const char *buffer_end) {
+    const char* buffer_start, const char* buffer_end) {
   RDCPMapResponse parsed(buffer_start, buffer_end);
   if (parsed.HasKey("stopped")) {
     state = S_STOPPED;
@@ -215,8 +215,8 @@ NotificationExecutionStateChanged::NotificationExecutionStateChanged(
   }
 }
 
-std::ostream &NotificationExecutionStateChanged::WriteStream(
-    std::ostream &os) const {
+std::ostream& NotificationExecutionStateChanged::WriteStream(
+    std::ostream& os) const {
   os << "Execution state changed: ";
   switch (state) {
     case ExecutionState::S_STOPPED:
@@ -239,28 +239,28 @@ std::ostream &NotificationExecutionStateChanged::WriteStream(
   return os;
 }
 
-NotificationBreakpoint::NotificationBreakpoint(const char *buffer_start,
-                                               const char *buffer_end) {
+NotificationBreakpoint::NotificationBreakpoint(const char* buffer_start,
+                                               const char* buffer_end) {
   RDCPMapResponse parsed(buffer_start, buffer_end);
   thread_id = parsed.GetDWORD("thread");
   address = parsed.GetUInt32("addr");
   flags = parsed.valueless_keys;
 }
 
-std::ostream &NotificationBreakpoint::WriteStream(std::ostream &os) const {
+std::ostream& NotificationBreakpoint::WriteStream(std::ostream& os) const {
   os << "Break thread_id: " << thread_id << " address: 0x" << std::setw(8)
      << std::setfill('0') << std::hex << address;
   if (!flags.empty()) {
     os << " flags:";
-    for (auto &f : flags) {
+    for (auto& f : flags) {
       os << " " << f;
     }
   }
   return os;
 }
 
-NotificationWatchpoint::NotificationWatchpoint(const char *buffer_start,
-                                               const char *buffer_end) {
+NotificationWatchpoint::NotificationWatchpoint(const char* buffer_start,
+                                               const char* buffer_end) {
   RDCPMapResponse parsed(buffer_start, buffer_end);
   thread_id = parsed.GetDWORD("thread");
   address = parsed.GetUInt32("addr");
@@ -285,35 +285,35 @@ NotificationWatchpoint::NotificationWatchpoint(const char *buffer_start,
   }
 }
 
-std::ostream &NotificationWatchpoint::WriteStream(std::ostream &os) const {
+std::ostream& NotificationWatchpoint::WriteStream(std::ostream& os) const {
   os << "Watchpoint type: " << type << " thread_id: " << thread_id
      << " address: 0x" << std::setw(8) << std::setfill('0') << std::hex
      << address << " watched_address: 0x" << watched_address;
 
   if (!flags.empty()) {
     os << " flags:";
-    for (auto &f : flags) {
+    for (auto& f : flags) {
       os << " " << f;
     }
   }
   return os;
 }
 
-NotificationSingleStep::NotificationSingleStep(const char *buffer_start,
-                                               const char *buffer_end) {
+NotificationSingleStep::NotificationSingleStep(const char* buffer_start,
+                                               const char* buffer_end) {
   RDCPMapResponse parsed(buffer_start, buffer_end);
   thread_id = parsed.GetDWORD("thread");
   address = parsed.GetUInt32("addr");
 }
 
-std::ostream &NotificationSingleStep::WriteStream(std::ostream &os) const {
+std::ostream& NotificationSingleStep::WriteStream(std::ostream& os) const {
   os << "SingleStep thread_id: " << thread_id << " address: 0x" << std::hex
      << std::setw(8) << std::setfill('0') << address;
   return os;
 }
 
-NotificationException::NotificationException(const char *buffer_start,
-                                             const char *buffer_end) {
+NotificationException::NotificationException(const char* buffer_start,
+                                             const char* buffer_end) {
   RDCPMapResponse parsed(buffer_start, buffer_end);
   code = parsed.GetDWORD("code");
   thread_id = parsed.GetDWORD("thread");
@@ -322,14 +322,14 @@ NotificationException::NotificationException(const char *buffer_start,
   flags = parsed.valueless_keys;
 }
 
-std::ostream &NotificationException::WriteStream(std::ostream &os) const {
+std::ostream& NotificationException::WriteStream(std::ostream& os) const {
   os << "Exception: code: 0x" << std::setw(8) << std::setfill('0') << std::hex
      << code << " thread_id: " << std::dec << thread_id << " address: 0x"
      << std::hex << address << " read: 0x" << read;
 
   if (!flags.empty()) {
     os << " flags:";
-    for (auto &f : flags) {
+    for (auto& f : flags) {
       os << " " << f;
     }
   }

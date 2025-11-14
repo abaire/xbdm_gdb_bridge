@@ -5,15 +5,15 @@
 
 namespace NTRCTracer {
 
-NotificationNTRC::NotificationNTRC(const char *buffer_start,
-                                   const char *buffer_end)
+NotificationNTRC::NotificationNTRC(const char* buffer_start,
+                                   const char* buffer_end)
     : content(buffer_start, buffer_end) {}
 
 std::string NotificationNTRC::NotificationPrefix() const {
   return NTRC_HANDLER_NAME;
 }
 
-std::ostream &NotificationNTRC::WriteStream(std::ostream &os) const {
+std::ostream& NotificationNTRC::WriteStream(std::ostream& os) const {
   os << "NTRC: " << content;
   return os;
 }

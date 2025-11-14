@@ -32,11 +32,11 @@ struct NAPPacket {
     return ret;
   }
 
-  uint32_t Deserialize(const std::vector<uint8_t> &buffer) {
+  uint32_t Deserialize(const std::vector<uint8_t>& buffer) {
     return Deserialize(buffer.data(), buffer.size());
   }
 
-  uint32_t Deserialize(const uint8_t *buffer, size_t buffer_len) {
+  uint32_t Deserialize(const uint8_t* buffer, size_t buffer_len) {
     type = Type::INVALID;
     if (buffer_len < 2) {
       return 0;
@@ -48,7 +48,7 @@ struct NAPPacket {
       return 0;
     }
 
-    name.assign(reinterpret_cast<char const *>(buffer) + 2, name_len);
+    name.assign(reinterpret_cast<char const*>(buffer) + 2, name_len);
 
     return 2 + name_len;
   }
@@ -112,14 +112,14 @@ bool Discoverer::BindSocket() {
   }
 
   int enabled = 1;
-  const struct sockaddr_in &addr = bind_address_.Address();
+  const struct sockaddr_in& addr = bind_address_.Address();
 
   if (setsockopt(socket_, SOL_SOCKET, SO_BROADCAST, &enabled,
                  sizeof(enabled))) {
     goto close_and_fail;
   }
 
-  if (bind(socket_, reinterpret_cast<struct sockaddr const *>(&addr),
+  if (bind(socket_, reinterpret_cast<struct sockaddr const*>(&addr),
            sizeof(addr))) {
     goto close_and_fail;
   }
@@ -144,11 +144,11 @@ bool Discoverer::SendDiscoveryPacket() const {
 
   ssize_t bytes_sent =
       sendto(socket_, buffer.data(), buffer.size(), 0,
-             reinterpret_cast<struct sockaddr const *>(&addr), sizeof(addr));
+             reinterpret_cast<struct sockaddr const*>(&addr), sizeof(addr));
   return bytes_sent == buffer.size();
 }
 
-bool Discoverer::ReceiveResponse(XBDMServer &result) const {
+bool Discoverer::ReceiveResponse(XBDMServer& result) const {
   NAPPacket packet;
   uint8_t buffer[257] = {0};
   struct sockaddr_in recv_addr{};
@@ -156,7 +156,7 @@ bool Discoverer::ReceiveResponse(XBDMServer &result) const {
 
   ssize_t received =
       recvfrom(socket_, buffer, sizeof(buffer), 0,
-               reinterpret_cast<struct sockaddr *>(&recv_addr), &recv_addr_len);
+               reinterpret_cast<struct sockaddr*>(&recv_addr), &recv_addr_len);
   if (received < 0) {
     BOOST_LOG_TRIVIAL(trace) << "recvfrom failed " << errno;
     return false;
@@ -182,6 +182,6 @@ bool Discoverer::ReceiveResponse(XBDMServer &result) const {
 }
 
 bool Discoverer::XBDMServer::operator<(
-    const Discoverer::XBDMServer &other) const {
+    const Discoverer::XBDMServer& other) const {
   return address < other.address;
 }

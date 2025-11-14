@@ -17,7 +17,7 @@ class RDCPResponse {
   // uint32_t buffer_size [IN]
   // long &binary_size [OUT]
   // uint32_t bytes_consumed [OUT]
-  typedef std::function<bool(uint8_t const *, uint32_t, long &, uint32_t &)>
+  typedef std::function<bool(uint8_t const*, uint32_t, long&, uint32_t&)>
       ReadBinarySizeFunc;
 
  public:
@@ -38,15 +38,15 @@ class RDCPResponse {
         data_(std::move(data)) {}
 
   [[nodiscard]] StatusCode Status() const { return status_; }
-  [[nodiscard]] const std::string &Message() const { return response_message_; }
-  [[nodiscard]] const std::vector<char> &Data() const { return data_; }
+  [[nodiscard]] const std::string& Message() const { return response_message_; }
+  [[nodiscard]] const std::vector<char>& Data() const { return data_; }
 
-  static long Parse(std::shared_ptr<RDCPResponse> &response, const char *buffer,
+  static long Parse(std::shared_ptr<RDCPResponse>& response, const char* buffer,
                     size_t buffer_length,
-                    const ReadBinarySizeFunc &size_parser);
+                    const ReadBinarySizeFunc& size_parser);
 
  private:
-  friend std::ostream &operator<<(std::ostream &, RDCPResponse const &);
+  friend std::ostream& operator<<(std::ostream&, RDCPResponse const&);
 
  private:
   StatusCode status_;

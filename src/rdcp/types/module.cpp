@@ -14,7 +14,7 @@ Module::Module(std::string name, uint32_t baseAddress, uint32_t size,
       is_tls(isTls),
       is_xbe(isXbe) {}
 
-Module::Module(const RDCPMapResponse &parsed) {
+Module::Module(const RDCPMapResponse& parsed) {
   name = parsed.GetString("name");
   base_address = parsed.GetUInt32("base");
   size = parsed.GetUInt32("size");
@@ -24,7 +24,7 @@ Module::Module(const RDCPMapResponse &parsed) {
   is_xbe = parsed.HasKey("xbe");
 }
 
-std::ostream &operator<<(std::ostream &os, const Module &m) {
+std::ostream& operator<<(std::ostream& os, const Module& m) {
   return os << "Module " << m.name << " base_address: 0x" << std::hex
             << std::setfill('0') << std::setw(8) << m.base_address
             << " size: " << std::dec << m.size << " checksum: 0x" << std::hex

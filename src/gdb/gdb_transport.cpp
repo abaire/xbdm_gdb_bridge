@@ -14,7 +14,7 @@ GDBTransport::GDBTransport(std::string name, int sock, IPAddress address,
     : TCPConnection(std::move(name), sock, std::move(address)),
       packet_received_handler_(std::move(handler)) {}
 
-void GDBTransport::Send(const GDBPacket &packet) {
+void GDBTransport::Send(const GDBPacket& packet) {
   {
     const std::lock_guard<std::recursive_mutex> lock(ack_buffer_lock_);
     ack_buffer_.push_back(packet.Serialize());
@@ -128,7 +128,7 @@ void GDBTransport::ProcessUnescapedReadBuffer() {
     unescaped_read_buffer_.erase(unescaped_read_buffer_.begin(), it);
   }
 
-  for (auto &packet : packets) {
+  for (auto& packet : packets) {
     packet_received_handler_(packet);
   }
 }

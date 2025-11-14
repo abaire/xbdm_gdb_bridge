@@ -5,7 +5,7 @@
 
 #include <ostream>
 
-IPAddress::IPAddress(const std::string &addr) {
+IPAddress::IPAddress(const std::string& addr) {
   auto split = addr.find(':');
 
   addr_.sin_family = AF_INET;
@@ -38,23 +38,23 @@ IPAddress::IPAddress(uint16_t port) {
   addr_.sin_addr.s_addr = INADDR_ANY;
 }
 
-IPAddress::IPAddress(const std::string &addr, uint16_t default_port)
+IPAddress::IPAddress(const std::string& addr, uint16_t default_port)
     : IPAddress(addr) {
   if (!addr_.sin_port) {
     addr_.sin_port = htons(default_port);
   }
 }
 
-IPAddress::IPAddress(const sockaddr_in &addr) : hostname_(), addr_(addr) {}
+IPAddress::IPAddress(const sockaddr_in& addr) : hostname_(), addr_(addr) {}
 
-std::ostream &operator<<(std::ostream &os, IPAddress const &addr) {
+std::ostream& operator<<(std::ostream& os, IPAddress const& addr) {
   char buf[64] = {0};
   inet_ntop(addr.addr_.sin_family, &addr.addr_.sin_addr, buf, 64);
   return os << buf << ":" << ntohs(addr.addr_.sin_port);
 }
 
-bool IPAddress::operator<(const IPAddress &other) const {
-  const struct sockaddr_in &oaddr = other.addr_;
+bool IPAddress::operator<(const IPAddress& other) const {
+  const struct sockaddr_in& oaddr = other.addr_;
   if (addr_.sin_addr.s_addr < oaddr.sin_addr.s_addr) {
     return true;
   }

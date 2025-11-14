@@ -88,11 +88,11 @@ struct DDS_FILE {
 };
 #pragma pack(pop)
 
-std::shared_ptr<uint8_t[]> RGB565ToRGB88(const void *src, uint32_t src_size) {
+std::shared_ptr<uint8_t[]> RGB565ToRGB88(const void* src, uint32_t src_size) {
   auto ret = std::shared_ptr<uint8_t[]>(new uint8_t[src_size << 1]);
 
-  const auto *src_ptr = reinterpret_cast<const uint16_t *>(src);
-  auto *dest_ptr = ret.get();
+  const auto* src_ptr = reinterpret_cast<const uint16_t*>(src);
+  auto* dest_ptr = ret.get();
   for (auto i = 0; i < src_size >> 1; ++i) {
     uint16_t pixel = *src_ptr++;
 
@@ -108,12 +108,12 @@ std::shared_ptr<uint8_t[]> RGB565ToRGB88(const void *src, uint32_t src_size) {
   return ret;
 }
 
-std::shared_ptr<uint8_t[]> AXR5G5B5ToRGB888(const void *src,
+std::shared_ptr<uint8_t[]> AXR5G5B5ToRGB888(const void* src,
                                             uint32_t src_size) {
   auto ret = std::shared_ptr<uint8_t[]>(new uint8_t[src_size << 1]);
 
-  const auto *src_ptr = reinterpret_cast<const uint16_t *>(src);
-  auto *dest_ptr = ret.get();
+  const auto* src_ptr = reinterpret_cast<const uint16_t*>(src);
+  auto* dest_ptr = ret.get();
   for (auto i = 0; i < src_size >> 1; ++i) {
     uint16_t pixel = *src_ptr++;
 
@@ -129,12 +129,12 @@ std::shared_ptr<uint8_t[]> AXR5G5B5ToRGB888(const void *src,
   return ret;
 }
 
-std::shared_ptr<uint8_t[]> A1R5G5B5ToRGBA888(const void *src,
+std::shared_ptr<uint8_t[]> A1R5G5B5ToRGBA888(const void* src,
                                              uint32_t src_size) {
   auto ret = std::shared_ptr<uint8_t[]>(new uint8_t[src_size << 1]);
 
-  const auto *src_ptr = reinterpret_cast<const uint16_t *>(src);
-  auto *dest_ptr = ret.get();
+  const auto* src_ptr = reinterpret_cast<const uint16_t*>(src);
+  auto* dest_ptr = ret.get();
   for (auto i = 0; i < src_size >> 1; ++i) {
     uint16_t pixel = *src_ptr++;
 
@@ -152,12 +152,12 @@ std::shared_ptr<uint8_t[]> A1R5G5B5ToRGBA888(const void *src,
   return ret;
 }
 
-std::shared_ptr<uint8_t[]> A4R4G4B4ToRGBA888(const void *src,
+std::shared_ptr<uint8_t[]> A4R4G4B4ToRGBA888(const void* src,
                                              uint32_t src_size) {
   auto ret = std::shared_ptr<uint8_t[]>(new uint8_t[src_size << 1]);
 
-  const auto *src_ptr = reinterpret_cast<const uint16_t *>(src);
-  auto *dest_ptr = ret.get();
+  const auto* src_ptr = reinterpret_cast<const uint16_t*>(src);
+  auto* dest_ptr = ret.get();
   for (auto i = 0; i < src_size >> 1; ++i) {
     uint16_t pixel = *src_ptr++;
 
@@ -175,10 +175,10 @@ std::shared_ptr<uint8_t[]> A4R4G4B4ToRGBA888(const void *src,
   return ret;
 }
 
-std::shared_ptr<uint8_t[]> BGRAToRGBA(const void *src, uint32_t src_size) {
+std::shared_ptr<uint8_t[]> BGRAToRGBA(const void* src, uint32_t src_size) {
   auto ret = std::shared_ptr<uint8_t[]>(new uint8_t[src_size]);
 
-  auto pixel_in = static_cast<const uint8_t *>(src);
+  auto pixel_in = static_cast<const uint8_t*>(src);
   auto pixel_out = ret.get();
 
   for (uint32_t i = 0; i < src_size / 4; ++i) {
@@ -192,10 +192,10 @@ std::shared_ptr<uint8_t[]> BGRAToRGBA(const void *src, uint32_t src_size) {
   return ret;
 }
 
-std::shared_ptr<uint8_t[]> ABGRToRGBA(const void *src, uint32_t src_size) {
+std::shared_ptr<uint8_t[]> ABGRToRGBA(const void* src, uint32_t src_size) {
   auto ret = std::shared_ptr<uint8_t[]>(new uint8_t[src_size]);
 
-  auto pixel_in = static_cast<const uint8_t *>(src);
+  auto pixel_in = static_cast<const uint8_t*>(src);
   auto pixel_out = ret.get();
 
   for (uint32_t i = 0; i < src_size / 4; ++i) {
@@ -209,10 +209,10 @@ std::shared_ptr<uint8_t[]> ABGRToRGBA(const void *src, uint32_t src_size) {
   return ret;
 }
 
-std::shared_ptr<uint8_t[]> ARGBToRGBA(const void *src, uint32_t src_size) {
+std::shared_ptr<uint8_t[]> ARGBToRGBA(const void* src, uint32_t src_size) {
   auto ret = std::shared_ptr<uint8_t[]>(new uint8_t[src_size]);
 
-  auto pixel_in = static_cast<const uint8_t *>(src);
+  auto pixel_in = static_cast<const uint8_t*>(src);
   auto pixel_out = ret.get();
 
   for (uint32_t i = 0; i < src_size / 4; ++i) {
@@ -226,7 +226,7 @@ std::shared_ptr<uint8_t[]> ARGBToRGBA(const void *src, uint32_t src_size) {
   return ret;
 }
 
-uint32_t EncodeDDS(std::vector<uint8_t> &encoded_data, const void *input,
+uint32_t EncodeDDS(std::vector<uint8_t>& encoded_data, const void* input,
                    uint32_t input_len, uint32_t width, uint32_t height,
                    DXTCompression compression) {
   uint32_t fourcc;

@@ -5,9 +5,9 @@
 #include "configure.h"
 #include "rdcp/types/thread_context.h"
 
-static void AppendRegister(std::string &output,
-                           const std::string &register_name,
-                           const std::optional<int32_t> &value) {
+static void AppendRegister(std::string& output,
+                           const std::string& register_name,
+                           const std::optional<int32_t>& value) {
   char buffer[32] = {0};
   if (!value.has_value()) {
     output += "xxxxxxxx";
@@ -18,9 +18,9 @@ static void AppendRegister(std::string &output,
   output += buffer;
 }
 
-static void Append10ByteRegister(std::string &output,
-                                 const std::string &register_name,
-                                 const std::optional<uint64_t> &value) {
+static void Append10ByteRegister(std::string& output,
+                                 const std::string& register_name,
+                                 const std::optional<uint64_t>& value) {
   char buffer[64] = {0};
   if (!value.has_value()) {
     output += "xxxxxxxxxxxxxxxxxxxx";
@@ -40,8 +40,8 @@ static void Append10ByteRegister(std::string &output,
 }
 
 std::optional<uint64_t> GetRegister(
-    uint32_t gdb_index, const std::optional<ThreadContext> &context,
-    const std::optional<ThreadFloatContext> &float_context) {
+    uint32_t gdb_index, const std::optional<ThreadContext>& context,
+    const std::optional<ThreadFloatContext>& float_context) {
   if (!context) {
     return {};
   }
@@ -93,7 +93,7 @@ std::optional<uint64_t> GetRegister(
 }
 
 bool SetRegister(uint32_t gdb_index, uint32_t value,
-                 std::optional<ThreadContext> &context) {
+                 std::optional<ThreadContext>& context) {
   if (!context) {
     return false;
   }
@@ -137,7 +137,7 @@ bool SetRegister(uint32_t gdb_index, uint32_t value,
 }
 
 bool SetRegister(uint32_t gdb_index, uint64_t value,
-                 std::optional<ThreadFloatContext> &float_context) {
+                 std::optional<ThreadFloatContext>& float_context) {
   if (!float_context) {
     return false;
   }
@@ -175,8 +175,8 @@ bool SetRegister(uint32_t gdb_index, uint64_t value,
 }
 
 std::string SerializeRegisters(
-    const std::optional<ThreadContext> &context,
-    const std::optional<ThreadFloatContext> &float_context) {
+    const std::optional<ThreadContext>& context,
+    const std::optional<ThreadFloatContext>& float_context) {
   std::string ret;
 
   std::optional<int32_t> unsupported;

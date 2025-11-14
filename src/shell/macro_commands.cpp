@@ -6,7 +6,7 @@
 #include "util/parsing.h"
 
 Command::Result MacroCommandSyncFile::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   ArgParser parser(args);
   std::string local_path;
   if (!parser.Parse(0, local_path)) {
@@ -58,7 +58,7 @@ Command::Result MacroCommandSyncFile::operator()(
 }
 
 Command::Result MacroCommandSyncDirectory::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   ArgParser parser(args);
   std::string local_path;
   if (!parser.Parse(0, local_path)) {

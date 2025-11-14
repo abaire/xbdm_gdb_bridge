@@ -11,7 +11,7 @@ class GDBPacket {
  public:
   GDBPacket() = default;
 
-  explicit GDBPacket(const std::string &data) {
+  explicit GDBPacket(const std::string& data) {
     data_.assign(data.begin(), data.end());
     CalculateChecksum();
   }
@@ -20,7 +20,7 @@ class GDBPacket {
     CalculateChecksum();
   }
 
-  GDBPacket(const uint8_t *data, size_t data_len) {
+  GDBPacket(const uint8_t* data, size_t data_len) {
     data_.assign(data, data + data_len);
     CalculateChecksum();
   }
@@ -29,7 +29,7 @@ class GDBPacket {
     assert(!data_.empty());
     return static_cast<char>(data_[0]);
   }
-  [[nodiscard]] bool GetFirstDataChar(char &ret) const {
+  [[nodiscard]] bool GetFirstDataChar(char& ret) const {
     if (data_.size() < 2) {
       return false;
     }
@@ -37,7 +37,7 @@ class GDBPacket {
     return true;
   }
 
-  [[nodiscard]] const std::vector<uint8_t> &Data() const { return data_; }
+  [[nodiscard]] const std::vector<uint8_t>& Data() const { return data_; }
   [[nodiscard]] std::string DataString() const {
     std::string ret(data_.begin(), data_.end());
     return std::move(ret);
@@ -48,11 +48,11 @@ class GDBPacket {
   [[nodiscard]] uint8_t Checksum() const { return checksum_; }
   [[nodiscard]] bool ChecksumOK() const { return checksum_ok_; }
 
-  long Parse(const uint8_t *buffer, size_t buffer_length);
+  long Parse(const uint8_t* buffer, size_t buffer_length);
   [[nodiscard]] std::vector<uint8_t> Serialize() const;
 
-  static long UnescapeBuffer(const std::vector<uint8_t> &buffer,
-                             std::vector<uint8_t> &out_buffer);
+  static long UnescapeBuffer(const std::vector<uint8_t>& buffer,
+                             std::vector<uint8_t>& out_buffer);
 
  protected:
   void CalculateChecksum();

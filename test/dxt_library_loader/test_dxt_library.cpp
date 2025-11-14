@@ -26,8 +26,8 @@ BOOST_AUTO_TEST_CASE(relocate_with_resolved_imports_succeeds) {
   DXTLibrary lib(DYNDXT_LIB_DIR "/libdynamic_dxt_loader.dll");
   lib.Parse();
 
-  for (auto &dll : lib.GetImports()) {
-    for (auto &import : dll.second) {
+  for (auto& dll : lib.GetImports()) {
+    for (auto& import : dll.second) {
       import.real_address = 0x0BADF00D;
     }
   }
@@ -38,8 +38,8 @@ BOOST_AUTO_TEST_CASE(relocating_lower_moves_entrypoint) {
   DXTLibrary lib(DYNDXT_LIB_DIR "/libdynamic_dxt_loader.dll");
   lib.Parse();
   auto file_entrypoint = lib.GetEntrypoint();
-  for (auto &dll : lib.GetImports()) {
-    for (auto &import : dll.second) {
+  for (auto& dll : lib.GetImports()) {
+    for (auto& import : dll.second) {
       import.real_address = 0x0BADF00D;
     }
   }
@@ -57,8 +57,8 @@ BOOST_AUTO_TEST_CASE(relocating_higher_moves_entrypoint) {
   DXTLibrary lib(DYNDXT_LIB_DIR "/libdynamic_dxt_loader.dll");
   lib.Parse();
   auto file_entrypoint = lib.GetEntrypoint();
-  for (auto &dll : lib.GetImports()) {
-    for (auto &import : dll.second) {
+  for (auto& dll : lib.GetImports()) {
+    for (auto& import : dll.second) {
       import.real_address = 0x0BADF00D;
     }
   }
@@ -76,8 +76,8 @@ BOOST_AUTO_TEST_CASE(relocating_to_same_address_retains_entrypoint) {
   DXTLibrary lib(DYNDXT_LIB_DIR "/libdynamic_dxt_loader.dll");
   lib.Parse();
   auto file_entrypoint = lib.GetEntrypoint();
-  for (auto &dll : lib.GetImports()) {
-    for (auto &import : dll.second) {
+  for (auto& dll : lib.GetImports()) {
+    for (auto& import : dll.second) {
       import.real_address = 0x0BADF00D;
     }
   }

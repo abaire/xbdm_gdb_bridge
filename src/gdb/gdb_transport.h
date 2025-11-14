@@ -11,14 +11,14 @@
 
 class GDBTransport : public TCPConnection {
  public:
-  typedef std::function<void(const std::shared_ptr<GDBPacket> &)>
+  typedef std::function<void(const std::shared_ptr<GDBPacket>&)>
       PacketReceivedHandler;
 
  public:
   GDBTransport(std::string name, int sock, IPAddress address,
                PacketReceivedHandler handler);
 
-  void Send(const GDBPacket &packet);
+  void Send(const GDBPacket& packet);
 
   void SetNoAckMode(bool value) { no_ack_mode_ = value; }
   [[nodiscard]] bool NoAckMode() const { return no_ack_mode_; }

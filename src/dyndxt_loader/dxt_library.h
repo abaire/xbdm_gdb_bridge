@@ -20,7 +20,7 @@ struct DXTLibraryImport {
   uint32_t real_address{0};
 };
 
-extern std::ostream &operator<<(std::ostream &os, DXTLibraryImport const &i);
+extern std::ostream& operator<<(std::ostream& os, DXTLibraryImport const& i);
 
 class DXTLibrary {
  public:
@@ -30,9 +30,9 @@ class DXTLibrary {
   bool Parse();
 
   uint32_t GetImageSize() const { return image_.size(); }
-  const std::vector<uint8_t> &GetImage() const { return image_; }
+  const std::vector<uint8_t>& GetImage() const { return image_; }
 
-  std::map<std::string, std::vector<DXTLibraryImport>> &GetImports() {
+  std::map<std::string, std::vector<DXTLibraryImport>>& GetImports() {
     return imports_;
   }
 
@@ -54,7 +54,7 @@ class DXTLibrary {
  private:
   bool ParseDLLHeader();
   bool ExtractImportTable();
-  bool ProcessSection(const IMAGE_SECTION_HEADER &header);
+  bool ProcessSection(const IMAGE_SECTION_HEADER& header);
 
   bool PatchImports();
 

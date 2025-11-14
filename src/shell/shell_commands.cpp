@@ -6,7 +6,7 @@
 #include "tracer_commands.h"
 
 Command::Result ShellCommandReconnect::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface& interface, const std::vector<std::string>&) {
   if (interface.ReconnectXBDM()) {
     std::cout << "Connected." << std::endl;
   } else {
@@ -16,7 +16,7 @@ Command::Result ShellCommandReconnect::operator()(
 }
 
 Command::Result ShellCommandGDB::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   std::vector<std::string> components;
   IPAddress address;
 
@@ -47,7 +47,7 @@ Command::Result ShellCommandGDB::operator()(
 }
 
 Command::Result ShellCommandTrace::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   std::vector<std::string> attach_args;
   std::vector<std::string> trace_args;
 

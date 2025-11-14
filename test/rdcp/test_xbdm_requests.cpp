@@ -4,24 +4,24 @@
 #include "rdcp/xbdm_requests.h"
 #include "test_util/vector.h"
 
-static void CompleteRequest(RDCPProcessedRequest &request, StatusCode status) {
+static void CompleteRequest(RDCPProcessedRequest& request, StatusCode status) {
   request.Complete(std::make_shared<RDCPResponse>(status, "<NO MESSAGE>"));
 }
 
-static void CompleteRequest(RDCPProcessedRequest &request, StatusCode status,
-                            const std::string &message) {
+static void CompleteRequest(RDCPProcessedRequest& request, StatusCode status,
+                            const std::string& message) {
   request.Complete(std::make_shared<RDCPResponse>(status, message));
 }
 
-static void CompleteRequest(RDCPProcessedRequest &request, StatusCode status,
+static void CompleteRequest(RDCPProcessedRequest& request, StatusCode status,
                             std::string message, std::vector<char> data) {
   request.Complete(std::make_shared<RDCPResponse>(status, std::move(message),
                                                   std::move(data)));
 }
 
-static void CompleteRequest(RDCPProcessedRequest &request, StatusCode status,
+static void CompleteRequest(RDCPProcessedRequest& request, StatusCode status,
                             std::string message,
-                            const std::map<std::string, std::string> &data) {
+                            const std::map<std::string, std::string>& data) {
   std::vector<char> buffer = Serialize(data);
   request.Complete(std::make_shared<RDCPResponse>(status, std::move(message),
                                                   std::move(buffer)));

@@ -95,15 +95,15 @@ constexpr std::string_view kTargetXML =
     "</target>";
 
 std::string SerializeRegisters(
-    const std::optional<ThreadContext> &context,
-    const std::optional<ThreadFloatContext> &float_context);
+    const std::optional<ThreadContext>& context,
+    const std::optional<ThreadFloatContext>& float_context);
 
 std::optional<uint64_t> GetRegister(
-    uint32_t gdb_index, const std::optional<ThreadContext> &context,
-    const std::optional<ThreadFloatContext> &float_context);
+    uint32_t gdb_index, const std::optional<ThreadContext>& context,
+    const std::optional<ThreadFloatContext>& float_context);
 bool SetRegister(uint32_t gdb_index, uint32_t value,
-                 std::optional<ThreadContext> &context);
+                 std::optional<ThreadContext>& context);
 bool SetRegister(uint32_t gdb_index, uint64_t value,
-                 std::optional<ThreadFloatContext> &context);
+                 std::optional<ThreadFloatContext>& context);
 
 #endif  // XBDM_GDB_BRIDGE_GDB_REGISTERS_H
