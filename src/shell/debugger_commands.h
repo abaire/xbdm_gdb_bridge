@@ -112,6 +112,17 @@ struct DebuggerCommandGetThreadInfo : Command {
                     const std::vector<std::string>&) override;
 };
 
+struct DebuggerCommandGetThreadInfoAndContext : Command {
+  DebuggerCommandGetThreadInfoAndContext()
+      : Command(
+            "Print detailed information about the active thread including "
+            "current register values.\n"
+            "\n"
+            "See help getcontext for arguments.") {}
+  Result operator()(XBOXInterface& interface,
+                    const std::vector<std::string>&) override;
+};
+
 struct DebuggerCommandHaltAll : Command {
   DebuggerCommandHaltAll() : Command("Halt all threads.") {}
   Result operator()(XBOXInterface& interface,
