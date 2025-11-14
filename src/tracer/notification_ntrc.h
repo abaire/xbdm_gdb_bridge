@@ -10,12 +10,12 @@ namespace NTRCTracer {
 
 //! Encapsulates information about an NTRC tracer push notification.
 struct NotificationNTRC : XBDMNotification {
-  NotificationNTRC(const char *buffer_start, const char *buffer_end);
+  NotificationNTRC(const char* buffer_start, const char* buffer_end);
 
   [[nodiscard]] NotificationType Type() const override { return NT_CUSTOM; }
   [[nodiscard]] std::string NotificationPrefix() const override;
 
-  std::ostream &WriteStream(std::ostream &os) const override;
+  std::ostream& WriteStream(std::ostream& os) const override;
 
   //! The parsed content of the message.
   RDCPMapResponse content;

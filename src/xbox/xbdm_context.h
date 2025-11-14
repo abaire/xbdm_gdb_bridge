@@ -21,8 +21,8 @@ class XBDMTransport;
 
 class XBDMContext {
  public:
-  typedef std::function<void(const std::shared_ptr<XBDMNotification> &,
-                             XBDMContext &)>
+  typedef std::function<void(const std::shared_ptr<XBDMNotification>&,
+                             XBDMContext&)>
       NotificationHandler;
 
  public:
@@ -42,46 +42,46 @@ class XBDMContext {
   //! Drops the XBDM transport socket and immediately reconnects.
   bool Reconnect();
 
-  bool StartNotificationListener(const IPAddress &address);
-  bool GetNotificationServerAddress(IPAddress &address) const;
+  bool StartNotificationListener(const IPAddress& address);
+  bool GetNotificationServerAddress(IPAddress& address) const;
 
   int RegisterNotificationHandler(NotificationHandler);
   void UnregisterNotificationHandler(int);
 
   std::future<std::shared_ptr<RDCPProcessedRequest>> SendCommand(
-      const std::shared_ptr<RDCPProcessedRequest> &command);
+      const std::shared_ptr<RDCPProcessedRequest>& command);
   std::shared_ptr<RDCPProcessedRequest> SendCommandSync(
-      const std::shared_ptr<RDCPProcessedRequest> &command);
+      const std::shared_ptr<RDCPProcessedRequest>& command);
   std::future<std::shared_ptr<RDCPProcessedRequest>> SendCommand(
-      const std::shared_ptr<RDCPProcessedRequest> &command,
-      const std::string &dedicated_handler);
+      const std::shared_ptr<RDCPProcessedRequest>& command,
+      const std::string& dedicated_handler);
   std::shared_ptr<RDCPProcessedRequest> SendCommandSync(
-      const std::shared_ptr<RDCPProcessedRequest> &command,
-      const std::string &dedicated_handler);
+      const std::shared_ptr<RDCPProcessedRequest>& command,
+      const std::string& dedicated_handler);
 
-  bool CreateDedicatedChannel(const std::string &command_handler);
-  void DestroyDedicatedChannel(const std::string &command_handler);
+  bool CreateDedicatedChannel(const std::string& command_handler);
+  void DestroyDedicatedChannel(const std::string& command_handler);
 
  private:
   std::future<std::shared_ptr<RDCPProcessedRequest>> SendCommand(
-      const std::shared_ptr<RDCPProcessedRequest> &command,
-      const std::shared_ptr<XBDMTransport> &transport);
+      const std::shared_ptr<RDCPProcessedRequest>& command,
+      const std::shared_ptr<XBDMTransport>& transport);
   std::shared_ptr<RDCPProcessedRequest> SendCommandSync(
       std::shared_ptr<RDCPProcessedRequest> command,
-      const std::shared_ptr<XBDMTransport> &transport);
+      const std::shared_ptr<XBDMTransport>& transport);
 
-  void OnNotificationChannelConnected(int sock, IPAddress &address);
+  void OnNotificationChannelConnected(int sock, IPAddress& address);
   void OnNotificationReceived(std::shared_ptr<XBDMNotification> notification);
 
   void ExecuteXBDMPromise(
-      std::promise<std::shared_ptr<RDCPProcessedRequest>> &promise,
-      const std::shared_ptr<RDCPProcessedRequest> &request,
-      const std::shared_ptr<XBDMTransport> &transport);
-  bool XBDMConnect(const std::shared_ptr<XBDMTransport> &transport,
+      std::promise<std::shared_ptr<RDCPProcessedRequest>>& promise,
+      const std::shared_ptr<RDCPProcessedRequest>& request,
+      const std::shared_ptr<XBDMTransport>& transport);
+  bool XBDMConnect(const std::shared_ptr<XBDMTransport>& transport,
                    int max_wait_millis = 5000);
 
   void DispatchNotification(
-      const std::shared_ptr<XBDMNotification> &notification);
+      const std::shared_ptr<XBDMNotification>& notification);
 
  private:
   std::string name_;

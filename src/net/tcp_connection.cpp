@@ -39,7 +39,7 @@ void TCPConnection::DropSendBuffer() {
   write_buffer_.clear();
 }
 
-void TCPConnection::Send(const uint8_t *buffer, size_t len) {
+void TCPConnection::Send(const uint8_t* buffer, size_t len) {
   const std::lock_guard<std::recursive_mutex> lock(write_lock_);
   write_buffer_.insert(write_buffer_.end(), buffer, buffer + len);
 }
@@ -51,8 +51,8 @@ bool TCPConnection::HasBufferedData() {
   return !read_buffer_.empty() || !write_buffer_.empty();
 }
 
-int TCPConnection::Select(fd_set &read_fds, fd_set &write_fds,
-                          fd_set &except_fds) {
+int TCPConnection::Select(fd_set& read_fds, fd_set& write_fds,
+                          fd_set& except_fds) {
   const std::lock_guard<std::recursive_mutex> lock(socket_lock_);
   if (socket_ < 0) {
     return socket_;
@@ -69,8 +69,8 @@ int TCPConnection::Select(fd_set &read_fds, fd_set &write_fds,
   return socket_;
 }
 
-bool TCPConnection::Process(const fd_set &read_fds, const fd_set &write_fds,
-                            const fd_set &except_fds) {
+bool TCPConnection::Process(const fd_set& read_fds, const fd_set& write_fds,
+                            const fd_set& except_fds) {
   const std::lock_guard<std::recursive_mutex> lock(socket_lock_);
   if (socket_ < 0) {
     // If the socket was previously connected and is now shutdown, request
@@ -170,7 +170,7 @@ std::vector<uint8_t>::iterator TCPConnection::FirstIndexOf(uint8_t element) {
 }
 
 std::vector<uint8_t>::iterator TCPConnection::FirstIndexOf(
-    const std::vector<uint8_t> &pattern) {
+    const std::vector<uint8_t>& pattern) {
   const std::lock_guard<std::recursive_mutex> lock(read_lock_);
 
   return std::search(read_buffer_.begin(), read_buffer_.end(), pattern.begin(),

@@ -16,22 +16,22 @@ struct Thread {
 
   explicit Thread(int thread_id) : thread_id(thread_id) {}
 
-  bool FetchInfoSync(XBDMContext &ctx);
-  bool FetchContextSync(XBDMContext &ctx);
-  bool PushContextSync(XBDMContext &ctx);
-  bool FetchFloatContextSync(XBDMContext &ctx);
-  bool PushFloatContextSync(XBDMContext &ctx);
-  bool FetchStopReasonSync(XBDMContext &ctx);
+  bool FetchInfoSync(XBDMContext& ctx);
+  bool FetchContextSync(XBDMContext& ctx);
+  bool PushContextSync(XBDMContext& ctx);
+  bool FetchFloatContextSync(XBDMContext& ctx);
+  bool PushFloatContextSync(XBDMContext& ctx);
+  bool FetchStopReasonSync(XBDMContext& ctx);
 
-  bool Halt(XBDMContext &ctx);
-  bool Continue(XBDMContext &ctx, bool break_on_exceptions = true);
-  bool Suspend(XBDMContext &ctx);
-  bool Resume(XBDMContext &ctx);
+  bool Halt(XBDMContext& ctx);
+  bool Continue(XBDMContext& ctx, bool break_on_exceptions = true);
+  bool Suspend(XBDMContext& ctx);
+  bool Resume(XBDMContext& ctx);
 
-  bool StepInstruction(XBDMContext &ctx);
+  bool StepInstruction(XBDMContext& ctx);
 
  private:
-  void Parse(const RDCPMapResponse &parsed) {
+  void Parse(const RDCPMapResponse& parsed) {
     suspend_count = parsed.GetDWORD("suspend");
     priority = parsed.GetDWORD("priority");
     tls_base = parsed.GetDWORD("tlsbase");
@@ -41,7 +41,7 @@ struct Thread {
     create_timestamp = parsed.GetQWORD("createlo", "createhi");
   }
 
-  friend std::ostream &operator<<(std::ostream &os, const Thread &t);
+  friend std::ostream& operator<<(std::ostream& os, const Thread& t);
 
  public:
   int thread_id;

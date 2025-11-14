@@ -14,24 +14,24 @@ namespace po = boost::program_options;
 
 static const std::string kCommandDelimiter{"&&"};
 
-void validate(boost::any &v, const std::vector<std::string> &values,
-              IPAddress *, int) {
+void validate(boost::any& v, const std::vector<std::string>& values, IPAddress*,
+              int) {
   po::validators::check_first_occurrence(v);
-  const std::string &value = po::validators::get_single_string(values);
+  const std::string& value = po::validators::get_single_string(values);
 
   IPAddress addr(value, DEFAULT_PORT);
   v = boost::any(addr);
 }
 
-static int main_(const IPAddress &xbox_addr,
-                 const std::vector<std::vector<std::string>> &commands,
+static int main_(const IPAddress& xbox_addr,
+                 const std::vector<std::vector<std::string>>& commands,
                  bool run_shell) {
   LOG(trace) << "Startup - XBDM @ " << xbox_addr;
   auto interface = std::make_shared<XBOXInterface>("XBOX", xbox_addr);
   interface->Start();
 
   auto shell = Shell(interface);
-  for (auto &command : commands) {
+  for (auto& command : commands) {
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
     LOG(trace) << "Processing startup command '" << command.front() << "'";
 #endif
@@ -52,7 +52,7 @@ static int main_(const IPAddress &xbox_addr,
 // Splits the given vector of strings into sub-vectors delimited by
 // kCommandDelimiter
 static std::vector<std::vector<std::string>> split_commands(
-    const std::vector<std::string> &additional_commands) {
+    const std::vector<std::string>& additional_commands) {
   std::vector<std::vector<std::string>> ret;
 
   if (additional_commands.empty()) {
@@ -60,7 +60,7 @@ static std::vector<std::vector<std::string>> split_commands(
   }
 
   std::vector<std::string> cmd;
-  for (auto &elem : additional_commands) {
+  for (auto& elem : additional_commands) {
     if (elem == "&&") {
       ret.push_back(cmd);
       cmd.clear();
@@ -74,7 +74,7 @@ static std::vector<std::vector<std::string>> split_commands(
   return std::move(ret);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   bool run_shell{false};
   bool disable_xbdm_logging{false};
   bool disable_gdb_logging{false};
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
     }
 
     po::notify(vm);
-  } catch (boost::program_options::error &e) {
+  } catch (boost::program_options::error& e) {
     std::cout << "ERROR: " << e.what() << std::endl;
     std::cout << opts << std::endl;
     return 1;

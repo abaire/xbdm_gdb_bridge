@@ -13,22 +13,22 @@ class TCPSocketBase {
   TCPSocketBase(std::string name, int sock, IPAddress address)
       : name_(std::move(name)), socket_(sock), address_(std::move(address)) {}
 
-  virtual void SetConnection(int sock, const IPAddress &address);
-  [[nodiscard]] const std::string &Name() const { return name_; }
+  virtual void SetConnection(int sock, const IPAddress& address);
+  [[nodiscard]] const std::string& Name() const { return name_; }
   [[nodiscard]] bool IsConnected() const { return socket_ >= 0; }
-  [[nodiscard]] const IPAddress &Address() const { return address_; }
+  [[nodiscard]] const IPAddress& Address() const { return address_; }
 
   virtual void Close();
 
   //! Sets one or more file descriptors in the given `fd_set`s and returns the
   //! maximum file descriptor that was set.
-  virtual int Select(fd_set &read_fds, fd_set &write_fds,
-                     fd_set &except_fds) = 0;
+  virtual int Select(fd_set& read_fds, fd_set& write_fds,
+                     fd_set& except_fds) = 0;
 
   //! Processes pending data as indicated in the given `fd_sets`. Returns true
   //! if this socket remains valid.
-  virtual bool Process(const fd_set &read_fds, const fd_set &write_fds,
-                       const fd_set &except_fds) = 0;
+  virtual bool Process(const fd_set& read_fds, const fd_set& write_fds,
+                       const fd_set& except_fds) = 0;
 
  protected:
   std::string name_;

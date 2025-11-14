@@ -38,9 +38,9 @@ class XBOXInterface {
     return xbdm_context_;
   }
 
-  bool StartGDBServer(const IPAddress &address);
+  bool StartGDBServer(const IPAddress& address);
   void StopGDBServer();
-  bool GetGDBListenAddress(IPAddress &ret) const;
+  bool GetGDBListenAddress(IPAddress& ret) const;
 
   //! Sets the XBOX path of a target to be launched the first time a GDB
   //! debugger connects to the GDB server.
@@ -48,34 +48,34 @@ class XBOXInterface {
   //! This prevents timing issues where a launch may be attempting to reboot the
   //! XBOX at the same time as the debugger is attempting to halt and retrieve
   //! thread information.
-  inline void SetGDBLaunchTarget(const std::string &path) {
+  inline void SetGDBLaunchTarget(const std::string& path) {
     gdb_launch_target_ = path;
   }
 
   //! Clears a previously set post-connect launch target.
   inline void ClearGDBLaunchTarget() { gdb_launch_target_.clear(); }
 
-  bool StartNotificationListener(const IPAddress &address);
+  bool StartNotificationListener(const IPAddress& address);
   void AttachDebugNotificationHandler();
   void DetachDebugNotificationHandler();
 
   std::shared_ptr<RDCPProcessedRequest> SendCommandSync(
       std::shared_ptr<RDCPProcessedRequest> command);
   std::future<std::shared_ptr<RDCPProcessedRequest>> SendCommand(
-      const std::shared_ptr<RDCPProcessedRequest> &command);
+      const std::shared_ptr<RDCPProcessedRequest>& command);
 
   std::shared_ptr<RDCPProcessedRequest> SendCommandSync(
-      const std::shared_ptr<RDCPProcessedRequest> &command,
-      const std::string &dedicated_handler);
+      const std::shared_ptr<RDCPProcessedRequest>& command,
+      const std::string& dedicated_handler);
   std::future<std::shared_ptr<RDCPProcessedRequest>> SendCommand(
-      const std::shared_ptr<RDCPProcessedRequest> &command,
-      const std::string &dedicated_handler);
+      const std::shared_ptr<RDCPProcessedRequest>& command,
+      const std::string& dedicated_handler);
 
  private:
-  void OnGDBClientConnected(int sock, IPAddress &address);
-  void OnGDBPacketReceived(const std::shared_ptr<GDBPacket> &packet);
+  void OnGDBClientConnected(int sock, IPAddress& address);
+  void OnGDBPacketReceived(const std::shared_ptr<GDBPacket>& packet);
 
-  void DispatchGDBPacket(const std::shared_ptr<GDBPacket> &packet);
+  void DispatchGDBPacket(const std::shared_ptr<GDBPacket>& packet);
 
  private:
   std::string name_;

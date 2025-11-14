@@ -2,9 +2,9 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 
-static constexpr const char *kDefaultXBE = "default.xbe";
+static constexpr const char* kDefaultXBE = "default.xbe";
 
-bool SplitXBEPath(const std::string &path, std::string &dir, std::string &xbe) {
+bool SplitXBEPath(const std::string& path, std::string& dir, std::string& xbe) {
   if (path.empty()) {
     return false;
   }

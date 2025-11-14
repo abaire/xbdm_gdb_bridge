@@ -20,22 +20,22 @@ constexpr const char kLoggingTagTracer[] = "TRC";
 
 namespace NTRCTracer {
 
-Tracer *Tracer::singleton_ = nullptr;
+Tracer* Tracer::singleton_ = nullptr;
 
-static bool InstallDynDXT(XBOXInterface &interface);
+static bool InstallDynDXT(XBOXInterface& interface);
 
-bool Tracer::Initialize(XBOXInterface &interface) {
+bool Tracer::Initialize(XBOXInterface& interface) {
   if (!singleton_) {
     singleton_ = new Tracer();
   }
   return singleton_->Install(interface);
 }
 
-bool Tracer::Install(XBOXInterface &interface) {
+bool Tracer::Install(XBOXInterface& interface) {
   if (!notification_handler_id_) {
     notification_handler_id_ = interface.Context()->RegisterNotificationHandler(
-        [this](const std::shared_ptr<XBDMNotification> &notification,
-               XBDMContext &context) {
+        [this](const std::shared_ptr<XBDMNotification>& notification,
+               XBDMContext& context) {
           if (notification->Type() != NT_CUSTOM ||
               notification->NotificationPrefix() != NTRC_HANDLER_NAME) {
             return;
@@ -69,7 +69,7 @@ bool Tracer::Install(XBOXInterface &interface) {
   return true;
 }
 
-static bool InstallDynDXT(XBOXInterface &interface) {
+static bool InstallDynDXT(XBOXInterface& interface) {
   auto ntrcDynDXT = std::vector<uint8_t>(
       kNTRCDynDXT, kNTRCDynDXT + sizeof(kNTRCDynDXT) / sizeof(kNTRCDynDXT[0]));
 
@@ -81,7 +81,7 @@ static bool InstallDynDXT(XBOXInterface &interface) {
   return true;
 }
 
-bool Tracer::Attach(XBOXInterface &interface, bool tcap, bool dcap, bool ccap,
+bool Tracer::Attach(XBOXInterface& interface, bool tcap, bool dcap, bool ccap,
                     bool rdicap, bool rawpgraph, bool rawpfb) {
   char command[256];
   snprintf(command, sizeof(command),
@@ -98,7 +98,7 @@ bool Tracer::Attach(XBOXInterface &interface, bool tcap, bool dcap, bool ccap,
   return true;
 }
 
-bool Tracer::Detach(XBOXInterface &interface) {
+bool Tracer::Detach(XBOXInterface& interface) {
   auto request =
       std::make_shared<DynDXTLoader::InvokeSimple>(NTRC_HANDLER_NAME "!detach");
   interface.SendCommandSync(request, NTRC_HANDLER_NAME);
@@ -111,9 +111,9 @@ bool Tracer::Detach(XBOXInterface &interface) {
 }
 
 void Tracer::OnNotification(
-    const std::shared_ptr<NotificationNTRC> &notification,
-    XBDMContext &context) {
-  const auto &content = notification->content;
+    const std::shared_ptr<NotificationNTRC>& notification,
+    XBDMContext& context) {
+  const auto& content = notification->content;
 
   if (content.HasKey("new_state")) {
     OnNewState(content.GetDWORD("new_state"), context);
@@ -129,7 +129,7 @@ void Tracer::OnNotification(
   }
 }
 
-void Tracer::OnNewState(int new_state, XBDMContext &context) {
+void Tracer::OnNewState(int new_state, XBDMContext& context) {
 #define PRINT_FATAL_STATE(lvl, val) \
   case val:                         \
     LOG_TRACER(lvl) << #val;        \
@@ -192,14 +192,14 @@ void Tracer::OnNewState(int new_state, XBDMContext &context) {
   }
 }
 
-void Tracer::OnShutdown(XBDMContext &context) {
+void Tracer::OnShutdown(XBDMContext& context) {
   context.UnregisterNotificationHandler(notification_handler_id_);
   notification_handler_id_ = 0;
   UnregisterXBDMNotificationConstructor(NTRC_HANDLER_NAME);
 }  // namespace NTRCTracer
 
-bool Tracer::BreakOnFrameStart(XBOXInterface &interface, bool require_flip) {
-  Tracer *instance = singleton_;
+bool Tracer::BreakOnFrameStart(XBOXInterface& interface, bool require_flip) {
+  Tracer* instance = singleton_;
   if (!instance) {
     LOG_TRACER(error) << "Tracer not initialized.";
     return false;
@@ -208,7 +208,7 @@ bool Tracer::BreakOnFrameStart(XBOXInterface &interface, bool require_flip) {
   return instance->BreakOnFrameStart_(interface, require_flip);
 }
 
-bool Tracer::BreakOnFrameStart_(XBOXInterface &interface, bool require_flip) {
+bool Tracer::BreakOnFrameStart_(XBOXInterface& interface, bool require_flip) {
   {
     request_processed_ = false;
     auto request = std::make_shared<DynDXTLoader::InvokeSimple>(
@@ -243,10 +243,10 @@ bool Tracer::BreakOnFrameStart_(XBOXInterface &interface, bool require_flip) {
   return true;
 }
 
-bool Tracer::TraceFrames(XBOXInterface &interface,
-                         const std::string &artifact_path, uint32_t num_frames,
+bool Tracer::TraceFrames(XBOXInterface& interface,
+                         const std::string& artifact_path, uint32_t num_frames,
                          bool verbose) {
-  Tracer *instance = singleton_;
+  Tracer* instance = singleton_;
   if (!instance) {
     LOG_TRACER(error) << "Tracer not initialized.";
     return false;
@@ -265,8 +265,8 @@ bool Tracer::TraceFrames(XBOXInterface &interface,
   return true;
 }
 
-bool Tracer::TraceFrame(XBOXInterface &interface,
-                        const std::filesystem::path &artifact_path,
+bool Tracer::TraceFrame(XBOXInterface& interface,
+                        const std::filesystem::path& artifact_path,
                         bool verbose) {
   if (!exists(artifact_path)) {
     create_directories(artifact_path);

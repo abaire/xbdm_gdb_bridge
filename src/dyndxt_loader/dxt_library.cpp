@@ -50,10 +50,10 @@ bool DXTLibrary::Parse() {
     LOG(error) << "Failed to seek to start in '" << path_ << "'";
     return false;
   }
-  infile_->read(reinterpret_cast<char *>(image_.data()),
+  infile_->read(reinterpret_cast<char*>(image_.data()),
                 header_.OptionalHeader.SizeOfHeaders);
 
-  for (auto &section_header : section_headers_) {
+  for (auto& section_header : section_headers_) {
     if (!ProcessSection(section_header)) {
       image_.clear();
       return false;
@@ -81,7 +81,7 @@ bool DXTLibrary::Relocate(uint32_t image_base) {
                                             image_base);
   }
 
-  auto &directory =
+  auto& directory =
       header_.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
   if (!directory.Size) {
     LOG(error) << "No relocation data in '" << path_ << "'";
@@ -89,16 +89,15 @@ bool DXTLibrary::Relocate(uint32_t image_base) {
   }
 
   auto relocation_start = image_.data() + directory.VirtualAddress;
-  auto block =
-      reinterpret_cast<const IMAGE_BASE_RELOCATION *>(relocation_start);
+  auto block = reinterpret_cast<const IMAGE_BASE_RELOCATION*>(relocation_start);
 
   // TODO: Prevent reads beyond end of table.
   while (block->VirtualAddress > 0) {
     auto dest = image_.data() + block->VirtualAddress;
-    auto entry = reinterpret_cast<uint16_t *>(relocation_start +
-                                              sizeof(relocation_start));
+    auto entry = reinterpret_cast<uint16_t*>(relocation_start +
+                                             sizeof(relocation_start));
     auto relocation_end = relocation_start + block->SizeOfBlock;
-    while (reinterpret_cast<uint8_t *>(entry) < relocation_end) {
+    while (reinterpret_cast<uint8_t*>(entry) < relocation_end) {
       uint32_t type = *entry >> 12;
       uint32_t rva_offset = *entry & 0x0FFF;
       ++entry;
@@ -109,7 +108,7 @@ bool DXTLibrary::Relocate(uint32_t image_base) {
           continue;
 
         case IMAGE_REL_BASED_HIGHLOW: {
-          auto target = reinterpret_cast<uint32_t *>(dest + rva_offset);
+          auto target = reinterpret_cast<uint32_t*>(dest + rva_offset);
           *target += image_delta;
           break;
         }
@@ -123,7 +122,7 @@ bool DXTLibrary::Relocate(uint32_t image_base) {
     }
 
     relocation_start = relocation_end;
-    block = reinterpret_cast<const IMAGE_BASE_RELOCATION *>(relocation_start);
+    block = reinterpret_cast<const IMAGE_BASE_RELOCATION*>(relocation_start);
   }
 
   header_.OptionalHeader.ImageBase = image_base;
@@ -141,16 +140,16 @@ uint32_t DXTLibrary::GetImageBase() const {
 
 std::vector<uint32_t> DXTLibrary::GetTLSInitializers() const {
   std::vector<uint32_t> ret;
-  auto &directory =
+  auto& directory =
       header_.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS];
   if (!directory.Size) {
     return ret;
   }
 
   // TODO: Verify this behavior and rebase.
-  auto init = reinterpret_cast<const IMAGE_TLS_DIRECTORY_32 *>(
+  auto init = reinterpret_cast<const IMAGE_TLS_DIRECTORY_32*>(
       image_.data() + directory.VirtualAddress);
-  auto callback = reinterpret_cast<uint32_t *>(init->AddressOfCallBacks);
+  auto callback = reinterpret_cast<uint32_t*>(init->AddressOfCallBacks);
   while (callback && *callback) {
     ret.push_back(*callback++);
   }
@@ -161,8 +160,8 @@ std::vector<uint32_t> DXTLibrary::GetTLSInitializers() const {
 }
 
 bool DXTLibrary::PatchImports() {
-  for (auto &dll_imports : imports_) {
-    for (auto &import : dll_imports.second) {
+  for (auto& dll_imports : imports_) {
+    for (auto& import : dll_imports.second) {
       if (!import.real_address) {
         LOG(error) << "Unresolved import " << dll_imports.first
                    << "::" << import;
@@ -170,7 +169,7 @@ bool DXTLibrary::PatchImports() {
       }
 
       auto function =
-          reinterpret_cast<uint32_t *>(image_.data() + import.function_address);
+          reinterpret_cast<uint32_t*>(image_.data() + import.function_address);
       *function = import.real_address;
     }
   }
@@ -180,7 +179,7 @@ bool DXTLibrary::PatchImports() {
 
 bool DXTLibrary::ParseDLLHeader() {
   IMAGE_DOS_HEADER dos_header;
-  infile_->read(reinterpret_cast<char *>(&dos_header), sizeof(dos_header));
+  infile_->read(reinterpret_cast<char*>(&dos_header), sizeof(dos_header));
   if (!infile_->good()) {
     LOG(error) << "Failed to load DOS header from '" << path_ << "'";
     return false;
@@ -200,7 +199,7 @@ bool DXTLibrary::ParseDLLHeader() {
     }
   }
 
-  infile_->read(reinterpret_cast<char *>(&header_), sizeof(header_));
+  infile_->read(reinterpret_cast<char*>(&header_), sizeof(header_));
   if (!infile_->good()) {
     LOG(error) << "Failed to load NT header from '" << path_ << "'";
     return false;
@@ -242,7 +241,7 @@ bool DXTLibrary::ParseDLLHeader() {
 
   for (auto i = 0; i < header_.FileHeader.NumberOfSections; ++i) {
     IMAGE_SECTION_HEADER section_header;
-    infile_->read(reinterpret_cast<char *>(&section_header),
+    infile_->read(reinterpret_cast<char*>(&section_header),
                   sizeof(section_header));
     if (!infile_->good()) {
       LOG(error) << "Failed to read section table entry in '" << path_ << "'";
@@ -257,7 +256,7 @@ bool DXTLibrary::ParseDLLHeader() {
 
 bool DXTLibrary::ExtractImportTable() {
   imports_.clear();
-  auto &directory =
+  auto& directory =
       header_.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
   if (!directory.Size) {
     return true;
@@ -265,24 +264,24 @@ bool DXTLibrary::ExtractImportTable() {
 
   auto descriptor_start = image_.data() + directory.VirtualAddress;
   auto descriptor =
-      reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR *>(descriptor_start);
+      reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>(descriptor_start);
   // TODO: Prevent reads beyond end of table.
   for (; descriptor->Name; ++descriptor) {
-    const char *name =
-        reinterpret_cast<char *>(image_.data() + descriptor->Name);
+    const char* name =
+        reinterpret_cast<char*>(image_.data() + descriptor->Name);
 
     if (descriptor->ForwarderChain) {
       LOG(error) << "DLL forwarding is not supported at '" << path_ << "'";
       return false;
     }
 
-    uint32_t *thunk;
+    uint32_t* thunk;
     uint32_t function_address = descriptor->FirstThunk;
     if (descriptor->DUMMYUNIONNAME.OriginalFirstThunk) {
-      thunk = reinterpret_cast<uint32_t *>(
+      thunk = reinterpret_cast<uint32_t*>(
           image_.data() + descriptor->DUMMYUNIONNAME.OriginalFirstThunk);
     } else {
-      thunk = reinterpret_cast<uint32_t *>(image_.data() + function_address);
+      thunk = reinterpret_cast<uint32_t*>(image_.data() + function_address);
     }
 
     if (imports_.find(name) == imports_.end()) {
@@ -296,9 +295,9 @@ bool DXTLibrary::ExtractImportTable() {
         import.ordinal = *thunk & 0xFFFF;
       } else {
         import.ordinal = 0;
-        auto name_data = reinterpret_cast<const IMAGE_IMPORT_BY_NAME *>(
+        auto name_data = reinterpret_cast<const IMAGE_IMPORT_BY_NAME*>(
             image_.data() + *thunk);
-        import.import_name = reinterpret_cast<const char *>(name_data->Name);
+        import.import_name = reinterpret_cast<const char*>(name_data->Name);
       }
 
       import.function_address = function_address;
@@ -309,7 +308,7 @@ bool DXTLibrary::ExtractImportTable() {
   return true;
 }
 
-bool DXTLibrary::ProcessSection(const IMAGE_SECTION_HEADER &header) {
+bool DXTLibrary::ProcessSection(const IMAGE_SECTION_HEADER& header) {
   char name_buf[16] = {0};
   memcpy(name_buf, header.Name, sizeof(header.Name));
 
@@ -326,13 +325,13 @@ bool DXTLibrary::ProcessSection(const IMAGE_SECTION_HEADER &header) {
     return false;
   }
 
-  char *dest = reinterpret_cast<char *>(image_.data()) + header.VirtualAddress;
+  char* dest = reinterpret_cast<char*>(image_.data()) + header.VirtualAddress;
   infile_->read(dest, header.SizeOfRawData);
 
   return true;
 }
 
-std::ostream &operator<<(std::ostream &os, DXTLibraryImport const &i) {
+std::ostream& operator<<(std::ostream& os, DXTLibraryImport const& i) {
   if (i.import_name.empty()) {
     return os << "@" << i.ordinal;
   }

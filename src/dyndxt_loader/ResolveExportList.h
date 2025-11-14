@@ -11,23 +11,23 @@ namespace DynDXTLoader {
 
 struct ResolveExportList : public RDCPProcessedRequest {
   struct ResolveRequest {
-    ResolveRequest(uint32_t ordinal, DXTLibraryImport *out)
+    ResolveRequest(uint32_t ordinal, DXTLibraryImport* out)
         : ordinal(ordinal), out(out) {}
     uint32_t ordinal;
-    DXTLibraryImport *out;
+    DXTLibraryImport* out;
   };
 
   explicit ResolveExportList(
-      const std::map<uint32_t, std::vector<ResolveRequest>> &);
+      const std::map<uint32_t, std::vector<ResolveRequest>>&);
 
   [[nodiscard]] bool IsOK() const override {
     return status == StatusCode::OK_BINARY_RESPONSE;
   }
 
-  void ProcessResponse(const std::shared_ptr<RDCPResponse> &response) override;
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override;
 
  private:
-  std::vector<DXTLibraryImport *> out_vector_;
+  std::vector<DXTLibraryImport*> out_vector_;
 };
 
 }  // namespace DynDXTLoader

@@ -12,7 +12,7 @@ class Discoverer {
     std::string name;
     IPAddress address;
 
-    bool operator<(const XBDMServer &other) const;
+    bool operator<(const XBDMServer& other) const;
   };
 
  public:
@@ -24,7 +24,7 @@ class Discoverer {
  private:
   bool BindSocket();
   [[nodiscard]] bool SendDiscoveryPacket() const;
-  [[nodiscard]] bool ReceiveResponse(XBDMServer &result) const;
+  [[nodiscard]] bool ReceiveResponse(XBDMServer& result) const;
 
  private:
   IPAddress bind_address_;

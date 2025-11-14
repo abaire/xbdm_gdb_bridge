@@ -33,8 +33,8 @@ constexpr TextureFormatInfo kTextureFormats[] = {
 constexpr int kNumFormats =
     sizeof(kTextureFormats) / sizeof(kTextureFormats[0]);
 
-const TextureFormatInfo &GetTextureFormatInfo(uint32_t nv_texture_format) {
-  for (const auto &info : kTextureFormats) {
+const TextureFormatInfo& GetTextureFormatInfo(uint32_t nv_texture_format) {
+  for (const auto& info : kTextureFormats) {
     if (info.xbox_format == nv_texture_format) {
       return info;
     }
@@ -42,9 +42,9 @@ const TextureFormatInfo &GetTextureFormatInfo(uint32_t nv_texture_format) {
   return kInvalidTextureFormatInfo;
 }
 
-SDL_Surface *TextureFormatInfo::Convert(const std::vector<uint8_t> &pixels,
+SDL_Surface* TextureFormatInfo::Convert(const std::vector<uint8_t>& pixels,
                                         uint32_t width, uint32_t height) const {
-  SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormat(
+  SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(
       0, (int)width, (int)height, xbox_bpp, sdl_format);
   if (!surface) {
     std::cout << "Failed to create source surface" << std::endl;

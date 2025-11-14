@@ -30,8 +30,8 @@ struct StopReasonBase_ {
   explicit StopReasonBase_(StopReasonType type, int signal)
       : type(type), signal(signal) {}
 
-  friend std::ostream &operator<<(std::ostream &os,
-                                  const StopReasonBase_ &base) {
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const StopReasonBase_& base) {
     return base.WriteStream(os);
   }
 
@@ -39,7 +39,7 @@ struct StopReasonBase_ {
   int signal;
 
  protected:
-  virtual std::ostream &WriteStream(std::ostream &os) const = 0;
+  virtual std::ostream& WriteStream(std::ostream& os) const = 0;
 };
 
 struct StopReasonTrapBase_ : StopReasonBase_ {
@@ -49,19 +49,19 @@ struct StopReasonTrapBase_ : StopReasonBase_ {
 
 struct StopReasonUnknown : StopReasonTrapBase_ {
   StopReasonUnknown() : StopReasonTrapBase_(SRT_UNKNOWN) {}
-  std::ostream &WriteStream(std::ostream &os) const override {
+  std::ostream& WriteStream(std::ostream& os) const override {
     return os << "Unknown reason";
   }
 };
 
 struct StopReasonThreadContextBase_ : StopReasonTrapBase_ {
   explicit StopReasonThreadContextBase_(StopReasonType type, std::string name,
-                                        RDCPMapResponse &parsed)
+                                        RDCPMapResponse& parsed)
       : StopReasonTrapBase_(type), name(std::move(name)) {
     thread_id = parsed.GetDWORD("thread");
   }
 
-  std::ostream &WriteStream(std::ostream &os) const override {
+  std::ostream& WriteStream(std::ostream& os) const override {
     return os << name << " on thread " << thread_id;
   }
 
@@ -70,25 +70,25 @@ struct StopReasonThreadContextBase_ : StopReasonTrapBase_ {
 };
 
 struct StopReasonDebugstr : StopReasonThreadContextBase_ {
-  explicit StopReasonDebugstr(RDCPMapResponse &parsed)
+  explicit StopReasonDebugstr(RDCPMapResponse& parsed)
       : StopReasonThreadContextBase_(SRT_DEBUGSTR, "debugstr", parsed) {}
 };
 
 struct StopReasonAssertion : StopReasonThreadContextBase_ {
-  explicit StopReasonAssertion(RDCPMapResponse &parsed)
+  explicit StopReasonAssertion(RDCPMapResponse& parsed)
       : StopReasonThreadContextBase_(SRT_ASSERTION, "assert prompt", parsed) {}
 };
 
 struct StopReasonThreadAndAddressBase_ : StopReasonTrapBase_ {
   explicit StopReasonThreadAndAddressBase_(StopReasonType type,
                                            std::string name,
-                                           RDCPMapResponse &parsed)
+                                           RDCPMapResponse& parsed)
       : StopReasonTrapBase_(type), name(std::move(name)) {
     thread_id = parsed.GetDWORD("thread");
     address = parsed.GetUInt32("Address");
   }
 
-  std::ostream &WriteStream(std::ostream &os) const override {
+  std::ostream& WriteStream(std::ostream& os) const override {
     return os << name << " on thread " << thread_id << " at 0x" << std::hex
               << std::setfill('0') << std::setw(8) << address;
   }
@@ -99,12 +99,12 @@ struct StopReasonThreadAndAddressBase_ : StopReasonTrapBase_ {
 };
 
 struct StopReasonBreakpoint : StopReasonThreadAndAddressBase_ {
-  explicit StopReasonBreakpoint(RDCPMapResponse &parsed)
+  explicit StopReasonBreakpoint(RDCPMapResponse& parsed)
       : StopReasonThreadAndAddressBase_(SRT_BREAKPOINT, "breakpoint", parsed) {}
 };
 
 struct StopReasonSingleStep : StopReasonThreadAndAddressBase_ {
-  explicit StopReasonSingleStep(RDCPMapResponse &parsed)
+  explicit StopReasonSingleStep(RDCPMapResponse& parsed)
       : StopReasonThreadAndAddressBase_(SRT_SINGLE_STEP, "single step",
                                         parsed) {}
 };
@@ -116,7 +116,7 @@ struct StopReasonDataBreakpoint : StopReasonTrapBase_ {
     AT_WRITE,
     AT_EXECUTE,
   };
-  explicit StopReasonDataBreakpoint(RDCPMapResponse &parsed)
+  explicit StopReasonDataBreakpoint(RDCPMapResponse& parsed)
       : StopReasonTrapBase_(SRT_WATCHPOINT) {
     thread_id = parsed.GetDWORD("thread");
     address = parsed.GetUInt32("addr");
@@ -145,7 +145,7 @@ struct StopReasonDataBreakpoint : StopReasonTrapBase_ {
     access_address = 0;
   }
 
-  std::ostream &WriteStream(std::ostream &os) const override {
+  std::ostream& WriteStream(std::ostream& os) const override {
     std::string access;
     switch (access_type) {
       case AT_READ:
@@ -184,7 +184,7 @@ struct StopReasonExecutionStateChange : StopReasonTrapBase_ {
     REBOOTING,
     PENDING,
   };
-  explicit StopReasonExecutionStateChange(RDCPMapResponse &parsed)
+  explicit StopReasonExecutionStateChange(RDCPMapResponse& parsed)
       : StopReasonTrapBase_(SRT_EXECUTION_STATE_CHANGED) {
     if (parsed.HasKey("stopped")) {
       state = STOPPED;
@@ -204,7 +204,7 @@ struct StopReasonExecutionStateChange : StopReasonTrapBase_ {
     }
   }
 
-  std::ostream &WriteStream(std::ostream &os) const override {
+  std::ostream& WriteStream(std::ostream& os) const override {
     return os << "execution state changed to " << state_name;
   }
 
@@ -220,7 +220,7 @@ struct StopReasonException : StopReasonTrapBase_ {
     ACCESS_VIOLATION_WRITE,
   };
 
-  explicit StopReasonException(RDCPMapResponse &parsed)
+  explicit StopReasonException(RDCPMapResponse& parsed)
       : StopReasonTrapBase_(SRT_EXCEPTION) {
     exception = parsed.GetUInt32("code");
     thread_id = parsed.GetDWORD("thread");
@@ -241,7 +241,7 @@ struct StopReasonException : StopReasonTrapBase_ {
     }
   }
 
-  std::ostream &WriteStream(std::ostream &os) const override {
+  std::ostream& WriteStream(std::ostream& os) const override {
     os << "exception on thread " << thread_id << " at 0x" << std::hex
        << std::setfill('0') << std::setw(8) << address;
     switch (type) {
@@ -278,13 +278,13 @@ struct StopReasonException : StopReasonTrapBase_ {
 };
 
 struct StopReasonCreateThread : StopReasonTrapBase_ {
-  explicit StopReasonCreateThread(RDCPMapResponse &parsed)
+  explicit StopReasonCreateThread(RDCPMapResponse& parsed)
       : StopReasonTrapBase_(SRT_THREAD_CREATED) {
     thread_id = parsed.GetDWORD("thread");
     start_address = parsed.GetDWORD("start");
   }
 
-  std::ostream &WriteStream(std::ostream &os) const override {
+  std::ostream& WriteStream(std::ostream& os) const override {
     return os << "create thread " << thread_id << " start Address 0x"
               << std::hex << std::setfill('0') << std::setw(8) << start_address;
   }
@@ -294,13 +294,13 @@ struct StopReasonCreateThread : StopReasonTrapBase_ {
 };
 
 struct StopReasonTerminateThread : StopReasonThreadContextBase_ {
-  explicit StopReasonTerminateThread(RDCPMapResponse &parsed)
+  explicit StopReasonTerminateThread(RDCPMapResponse& parsed)
       : StopReasonThreadContextBase_(SRT_THREAD_TERMINATED, "terminate thread",
                                      parsed) {}
 };
 
 struct StopReasonModuleLoad : StopReasonTrapBase_ {
-  explicit StopReasonModuleLoad(RDCPMapResponse &parsed)
+  explicit StopReasonModuleLoad(RDCPMapResponse& parsed)
       : StopReasonTrapBase_(SRT_MODULE_LOADED) {
     name = parsed.GetString("name");
     base_address = parsed.GetUInt32("base");
@@ -311,7 +311,7 @@ struct StopReasonModuleLoad : StopReasonTrapBase_ {
     is_xbe = parsed.HasKey("xbe");
   }
 
-  std::ostream &WriteStream(std::ostream &os) const override {
+  std::ostream& WriteStream(std::ostream& os) const override {
     return os << "Module load: name: " << name << " base_address: 0x"
               << std::hex << std::setfill('0') << std::setw(8) << base_address
               << " size: " << std::dec << size << " checksum: 0x" << std::hex
@@ -330,7 +330,7 @@ struct StopReasonModuleLoad : StopReasonTrapBase_ {
 
 struct StopReasonSectionActionBase_ : StopReasonTrapBase_ {
   explicit StopReasonSectionActionBase_(StopReasonType type, std::string action,
-                                        RDCPMapResponse &parsed)
+                                        RDCPMapResponse& parsed)
       : StopReasonTrapBase_(type), action(std::move(action)) {
     name = parsed.GetString("name");
     base_address = parsed.GetUInt32("base");
@@ -339,7 +339,7 @@ struct StopReasonSectionActionBase_ : StopReasonTrapBase_ {
     flags = parsed.GetUInt32("flags");
   }
 
-  std::ostream &WriteStream(std::ostream &os) const override {
+  std::ostream& WriteStream(std::ostream& os) const override {
     return os << action << ": name: " << name << " base_address: 0x" << std::hex
               << std::setfill('0') << std::setw(8) << base_address
               << " size: " << std::dec << size << " index: " << index
@@ -355,26 +355,26 @@ struct StopReasonSectionActionBase_ : StopReasonTrapBase_ {
 };
 
 struct StopReasonSectionLoad : StopReasonSectionActionBase_ {
-  explicit StopReasonSectionLoad(RDCPMapResponse &parsed)
+  explicit StopReasonSectionLoad(RDCPMapResponse& parsed)
       : StopReasonSectionActionBase_(SRT_SECTION_LOADED, "section load",
                                      parsed) {}
 };
 
 struct StopReasonSectionUnload : StopReasonSectionActionBase_ {
-  explicit StopReasonSectionUnload(RDCPMapResponse &parsed)
+  explicit StopReasonSectionUnload(RDCPMapResponse& parsed)
       : StopReasonSectionActionBase_(SRT_SECTION_UNLOADED, "section unload",
                                      parsed) {}
 };
 
 struct StopReasonRIPBase_ : StopReasonBase_ {
   explicit StopReasonRIPBase_(StopReasonType type, std::string name,
-                              RDCPMapResponse &parsed)
+                              RDCPMapResponse& parsed)
       : StopReasonBase_(type, SIGABRT), name(std::move(name)) {
     thread_id = parsed.GetDWORD("thread");
     message = parsed.GetString("message");
   }
 
-  std::ostream &WriteStream(std::ostream &os) const override {
+  std::ostream& WriteStream(std::ostream& os) const override {
     os << name << " on thread " << thread_id;
     if (!message.empty()) {
       os << " \"" << message << "\"";
@@ -388,12 +388,12 @@ struct StopReasonRIPBase_ : StopReasonBase_ {
 };
 
 struct StopReasonRIP : StopReasonRIPBase_ {
-  explicit StopReasonRIP(RDCPMapResponse &parsed)
+  explicit StopReasonRIP(RDCPMapResponse& parsed)
       : StopReasonRIPBase_(SRT_RIP, "RIP", parsed) {}
 };
 
 struct StopReasonRIPStop : StopReasonRIPBase_ {
-  explicit StopReasonRIPStop(RDCPMapResponse &parsed)
+  explicit StopReasonRIPStop(RDCPMapResponse& parsed)
       : StopReasonRIPBase_(SRT_RIP_STOP, "RIPStop", parsed) {}
 };
 

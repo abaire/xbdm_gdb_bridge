@@ -1,7 +1,7 @@
 #include "xbdm_requests.h"
 
-static bool BinarySizeInt32Prefix(uint8_t const *buffer, uint32_t buffer_size,
-                                  long &binary_size, uint32_t &bytes_consumed);
+static bool BinarySizeInt32Prefix(uint8_t const* buffer, uint32_t buffer_size,
+                                  long& binary_size, uint32_t& bytes_consumed);
 
 GetChecksum::GetChecksum(uint32_t addr, uint32_t len, uint32_t blocksize)
     : RDCPProcessedRequest("getsum") {
@@ -19,9 +19,9 @@ GetChecksum::GetChecksum(uint32_t addr, uint32_t len, uint32_t blocksize)
   length = len / blocksize * 4;
 
   len = length;
-  binary_response_size_parser_ = [len](uint8_t const *buffer,
-                                       uint32_t buffer_size, long &binary_size,
-                                       uint32_t &bytes_consumed) {
+  binary_response_size_parser_ = [len](uint8_t const* buffer,
+                                       uint32_t buffer_size, long& binary_size,
+                                       uint32_t& bytes_consumed) {
     (void)buffer;
     (void)buffer_size;
     binary_size = len;
@@ -38,14 +38,14 @@ GetExtContext::GetExtContext(int thread_id)
   binary_response_size_parser_ = BinarySizeInt32Prefix;
 }
 
-GetFile::GetFile(const std::string &path) : RDCPProcessedRequest("getfile") {
+GetFile::GetFile(const std::string& path) : RDCPProcessedRequest("getfile") {
   SetData(" name=\"");
   AppendData(path);
   AppendData("\"");
   binary_response_size_parser_ = BinarySizeInt32Prefix;
 }
 
-GetFile::GetFile(const std::string &path, int32_t offset, int32_t size)
+GetFile::GetFile(const std::string& path, int32_t offset, int32_t size)
     : RDCPProcessedRequest("getfile") {
   SetData(" name=\"");
   AppendData(path);
@@ -57,9 +57,9 @@ GetFile::GetFile(const std::string &path, int32_t offset, int32_t size)
 }
 
 GetGamma::GetGamma() : RDCPProcessedRequest("getgamma") {
-  binary_response_size_parser_ = [](uint8_t const *buffer, uint32_t buffer_size,
-                                    long &binary_size,
-                                    uint32_t &bytes_consumed) {
+  binary_response_size_parser_ = [](uint8_t const* buffer, uint32_t buffer_size,
+                                    long& binary_size,
+                                    uint32_t& bytes_consumed) {
     (void)buffer;
     (void)buffer_size;
     binary_size = 768;
@@ -76,8 +76,8 @@ GetMemBinary::GetMemBinary(uint32_t addr, uint32_t length)
   AppendHexString(length);
 
   binary_response_size_parser_ =
-      [length](uint8_t const *buffer, uint32_t buffer_size, long &binary_size,
-               uint32_t &bytes_consumed) {
+      [length](uint8_t const* buffer, uint32_t buffer_size, long& binary_size,
+               uint32_t& bytes_consumed) {
         (void)buffer;
         (void)buffer_size;
         binary_size = length;
@@ -87,15 +87,15 @@ GetMemBinary::GetMemBinary(uint32_t addr, uint32_t length)
 }
 
 Screenshot::Screenshot() : RDCPProcessedRequest("screenshot") {
-  binary_response_size_parser_ = [this](uint8_t const *buffer,
-                                        uint32_t buffer_size, long &binary_size,
-                                        uint32_t &bytes_consumed) {
+  binary_response_size_parser_ = [this](uint8_t const* buffer,
+                                        uint32_t buffer_size, long& binary_size,
+                                        uint32_t& bytes_consumed) {
     return ParseSize(buffer, buffer_size, binary_size, bytes_consumed);
   };
 }
 
-bool Screenshot::ParseSize(const uint8_t *buffer, uint32_t buffer_size,
-                           long &binary_size, uint32_t &bytes_consumed) {
+bool Screenshot::ParseSize(const uint8_t* buffer, uint32_t buffer_size,
+                           long& binary_size, uint32_t& bytes_consumed) {
   if (buffer_size < 4) {
     return false;
   }
@@ -120,13 +120,13 @@ bool Screenshot::ParseSize(const uint8_t *buffer, uint32_t buffer_size,
   return true;
 }
 
-static bool BinarySizeInt32Prefix(uint8_t const *buffer, uint32_t buffer_size,
-                                  long &binary_size, uint32_t &bytes_consumed) {
+static bool BinarySizeInt32Prefix(uint8_t const* buffer, uint32_t buffer_size,
+                                  long& binary_size, uint32_t& bytes_consumed) {
   if (buffer_size < 4) {
     return false;
   }
 
-  binary_size = *reinterpret_cast<uint32_t const *>(buffer);
+  binary_size = *reinterpret_cast<uint32_t const*>(buffer);
   bytes_consumed = 4;
   return true;
 }

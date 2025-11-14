@@ -24,16 +24,16 @@ class TCPConnection : public TCPSocketBase {
   void DropReceiveBuffer();
   void DropSendBuffer();
 
-  void Send(const std::vector<uint8_t> &buffer) {
+  void Send(const std::vector<uint8_t>& buffer) {
     Send(buffer.data(), buffer.size());
   }
-  void Send(uint8_t const *buffer, size_t len);
+  void Send(uint8_t const* buffer, size_t len);
 
   [[nodiscard]] virtual bool HasBufferedData();
 
-  int Select(fd_set &read_fds, fd_set &write_fds, fd_set &except_fds) override;
-  bool Process(const fd_set &read_fds, const fd_set &write_fds,
-               const fd_set &except_fds) override;
+  int Select(fd_set& read_fds, fd_set& write_fds, fd_set& except_fds) override;
+  bool Process(const fd_set& read_fds, const fd_set& write_fds,
+               const fd_set& except_fds) override;
 
  protected:
   virtual void OnBytesRead() {}
@@ -43,7 +43,7 @@ class TCPConnection : public TCPSocketBase {
 
   std::vector<uint8_t>::iterator FirstIndexOf(uint8_t element);
   std::vector<uint8_t>::iterator FirstIndexOf(
-      const std::vector<uint8_t> &pattern);
+      const std::vector<uint8_t>& pattern);
 
  protected:
   std::recursive_mutex read_lock_;

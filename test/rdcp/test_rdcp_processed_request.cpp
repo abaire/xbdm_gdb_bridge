@@ -3,8 +3,8 @@
 #include "rdcp/rdcp_processed_request.h"
 #include "test_util/vector.h"
 
-static void AppendLines(std::vector<char> &data, const char **lines,
-                        const char **end) {
+static void AppendLines(std::vector<char>& data, const char** lines,
+                        const char** end) {
   while (lines != end) {
     data += *lines;
     if (++lines != end) {
@@ -29,7 +29,7 @@ BOOST_AUTO_TEST_CASE(single_line_data_returns_single_line) {
   RDCPMultilineResponse response(data);
   BOOST_TEST(response.lines.size() == 1);
 
-  auto const &first_line = response.lines.front();
+  auto const& first_line = response.lines.front();
   BOOST_TEST(std::equal(first_line.begin(), first_line.end(), test_data));
 }
 
@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(empty_terminated_line_returns_empty_lines) {
 }
 
 BOOST_AUTO_TEST_CASE(multiple_lines_returns_multiple_lines) {
-  const char *lines[] = {
+  const char* lines[] = {
       "First line",
       "Second line",
   };
@@ -155,7 +155,7 @@ BOOST_AUTO_TEST_CASE(single_valueless_key) {
 }
 
 BOOST_AUTO_TEST_CASE(multi_maps) {
-  const char *lines[] = {
+  const char* lines[] = {
       "test",
       "hex=0xABCD flag quoted=\"quoted string\"",
   };

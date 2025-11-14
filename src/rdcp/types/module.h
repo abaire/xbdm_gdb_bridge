@@ -11,9 +11,9 @@ struct Module {
   Module() = default;
   Module(std::string name, uint32_t baseAddress, uint32_t size,
          uint32_t checksum, uint32_t timestamp, bool isTls, bool isXbe);
-  explicit Module(const RDCPMapResponse &parsed);
+  explicit Module(const RDCPMapResponse& parsed);
 
-  friend std::ostream &operator<<(std::ostream &os, const Module &loaded);
+  friend std::ostream& operator<<(std::ostream& os, const Module& loaded);
 
   std::string name;
   uint32_t base_address{0};

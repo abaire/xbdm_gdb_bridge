@@ -7,11 +7,11 @@
 // x86 single step flag.
 static constexpr uint32_t TRAP_FLAG = 0x100;
 
-std::ostream &operator<<(std::ostream &os, const Thread &t) {
+std::ostream& operator<<(std::ostream& os, const Thread& t) {
   os << "Thread " << std::dec << t.thread_id << std::endl;
 
-  auto print_decimal = [&os](const char *prefix,
-                             const std::optional<int32_t> &val) {
+  auto print_decimal = [&os](const char* prefix,
+                             const std::optional<int32_t>& val) {
     os << prefix << " ";
     if (val.has_value()) {
       os << val.value();
@@ -24,8 +24,8 @@ std::ostream &operator<<(std::ostream &os, const Thread &t) {
   print_decimal("Priority", t.priority);
   print_decimal("Suspend count", t.suspend_count);
 
-  auto print_hex = [&os](const char *prefix,
-                         const std::optional<uint32_t> &val) {
+  auto print_hex = [&os](const char* prefix,
+                         const std::optional<uint32_t>& val) {
     os << prefix << " ";
     if (val.has_value()) {
       os << "0x" << std::hex << std::setw(8) << std::setfill('0') << *val;
@@ -44,7 +44,7 @@ std::ostream &operator<<(std::ostream &os, const Thread &t) {
   return os;
 }
 
-bool Thread::FetchInfoSync(XBDMContext &ctx) {
+bool Thread::FetchInfoSync(XBDMContext& ctx) {
   auto request = std::make_shared<ThreadInfo>(thread_id);
   ctx.SendCommandSync(request);
   if (!request->IsOK()) {
@@ -67,7 +67,7 @@ bool Thread::FetchInfoSync(XBDMContext &ctx) {
   return true;
 }
 
-bool Thread::FetchContextSync(XBDMContext &ctx) {
+bool Thread::FetchContextSync(XBDMContext& ctx) {
   auto request = std::make_shared<GetContext>(thread_id, true, true, true);
   ctx.SendCommandSync(request);
   if (!request->IsOK()) {
@@ -79,7 +79,7 @@ bool Thread::FetchContextSync(XBDMContext &ctx) {
   return true;
 }
 
-bool Thread::PushContextSync(XBDMContext &ctx) {
+bool Thread::PushContextSync(XBDMContext& ctx) {
   if (!context.has_value()) {
     return false;
   }
@@ -88,7 +88,7 @@ bool Thread::PushContextSync(XBDMContext &ctx) {
   return request->IsOK();
 }
 
-bool Thread::FetchFloatContextSync(XBDMContext &ctx) {
+bool Thread::FetchFloatContextSync(XBDMContext& ctx) {
   auto request = std::make_shared<GetExtContext>(thread_id);
   ctx.SendCommandSync(request);
   if (!request->IsOK()) {
@@ -99,7 +99,7 @@ bool Thread::FetchFloatContextSync(XBDMContext &ctx) {
   return true;
 }
 
-bool Thread::PushFloatContextSync(XBDMContext &ctx) {
+bool Thread::PushFloatContextSync(XBDMContext& ctx) {
   if (!float_context.has_value()) {
     return false;
   }
@@ -109,7 +109,7 @@ bool Thread::PushFloatContextSync(XBDMContext &ctx) {
   return request->IsOK();
 }
 
-bool Thread::FetchStopReasonSync(XBDMContext &ctx) {
+bool Thread::FetchStopReasonSync(XBDMContext& ctx) {
   auto request = std::make_shared<IsStopped>(thread_id);
   ctx.SendCommandSync(request);
   if (!request->IsOK()) {
@@ -122,31 +122,31 @@ bool Thread::FetchStopReasonSync(XBDMContext &ctx) {
   return true;
 }
 
-bool Thread::Halt(XBDMContext &ctx) {
+bool Thread::Halt(XBDMContext& ctx) {
   auto request = std::make_shared<::Halt>(thread_id);
   ctx.SendCommandSync(request);
   return request->IsOK();
 }
 
-bool Thread::Continue(XBDMContext &ctx, bool break_on_exceptions) {
+bool Thread::Continue(XBDMContext& ctx, bool break_on_exceptions) {
   auto request = std::make_shared<::Continue>(thread_id);
   ctx.SendCommandSync(request);
   return request->IsOK();
 }
 
-bool Thread::Suspend(XBDMContext &ctx) {
+bool Thread::Suspend(XBDMContext& ctx) {
   auto request = std::make_shared<::Suspend>(thread_id);
   ctx.SendCommandSync(request);
   return request->IsOK();
 }
 
-bool Thread::Resume(XBDMContext &ctx) {
+bool Thread::Resume(XBDMContext& ctx) {
   auto request = std::make_shared<::Resume>(thread_id);
   ctx.SendCommandSync(request);
   return request->IsOK();
 }
 
-bool Thread::StepInstruction(XBDMContext &ctx) {
+bool Thread::StepInstruction(XBDMContext& ctx) {
   if (!FetchContextSync(ctx)) {
     LOG_DEBUGGER(error) << "Failed to fetch context in StepInstruction.";
     return false;

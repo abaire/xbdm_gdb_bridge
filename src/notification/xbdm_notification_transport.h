@@ -14,14 +14,14 @@ class XBDMNotificationTransport : public TCPConnection {
 
  public:
   explicit XBDMNotificationTransport(std::string name, int sock,
-                                     const IPAddress &address,
+                                     const IPAddress& address,
                                      NotificationHandler handler);
 
   [[nodiscard]] bool IsHelloReceived() const { return hello_received_; }
 
  protected:
   void OnBytesRead() override;
-  void HandleNotification(const char *message, long message_len);
+  void HandleNotification(const char* message, long message_len);
 
  private:
   NotificationHandler notification_handler_;

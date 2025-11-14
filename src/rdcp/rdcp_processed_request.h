@@ -21,16 +21,16 @@ struct RDCPProcessedRequest : public RDCPRequest {
 
   [[nodiscard]] virtual bool IsOK() const { return status == StatusCode::OK; }
 
-  void Complete(const std::shared_ptr<RDCPResponse> &response) final;
+  void Complete(const std::shared_ptr<RDCPResponse>& response) final;
 
   void Abandon() final;
 
   void WaitUntilCompleted();
   bool WaitUntilCompleted(int max_wait_milliseconds);
 
-  virtual void ProcessResponse(const std::shared_ptr<RDCPResponse> &response) {}
+  virtual void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) {}
 
-  friend std::ostream &operator<<(std::ostream &, RDCPProcessedRequest const &);
+  friend std::ostream& operator<<(std::ostream&, RDCPProcessedRequest const&);
 
  public:
   StatusCode status{INVALID};

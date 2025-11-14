@@ -38,7 +38,7 @@ struct MemoryRegion {
   MemoryRegion() = default;
   MemoryRegion(uint32_t start, uint32_t size, uint32_t protect,
                std::set<std::string> flags);
-  explicit MemoryRegion(const RDCPMapResponse &parsed);
+  explicit MemoryRegion(const RDCPMapResponse& parsed);
 
   [[nodiscard]] bool Contains(uint32_t start, uint32_t size = 1) const;
   [[nodiscard]] bool IsWritable() const;

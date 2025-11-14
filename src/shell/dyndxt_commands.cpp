@@ -8,7 +8,7 @@
 #include "xbox/debugger/xbdm_debugger.h"
 
 Command::Result DynDXTCommandLoadBootstrap::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface& interface, const std::vector<std::string>&) {
   auto debugger = interface.Debugger();
   if (!debugger) {
     std::cout << "Debugger not attached." << std::endl;
@@ -38,7 +38,7 @@ cleanup:
 }
 
 Command::Result DynDXTCommandHello::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &) {
+    XBOXInterface& interface, const std::vector<std::string>&) {
   if (!DynDXTLoader::Loader::Bootstrap(interface)) {
     std::cout << "Failed to install Dynamic DXT loader.";
     return HANDLED;
@@ -56,7 +56,7 @@ Command::Result DynDXTCommandHello::operator()(
 }
 
 Command::Result DynDXTCommandInvokeSimple::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   ArgParser parser(args);
   std::string command;
   if (!parser.Parse(0, command)) {
@@ -80,7 +80,7 @@ Command::Result DynDXTCommandInvokeSimple::operator()(
 }
 
 Command::Result DynDXTCommandInvokeMultiline::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   ArgParser parser(args);
   std::string command;
   if (!parser.Parse(0, command)) {
@@ -104,7 +104,7 @@ Command::Result DynDXTCommandInvokeMultiline::operator()(
 }
 
 Command::Result DynDXTCommandInvokeSendBinary::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   ArgParser parser(args);
   std::string command;
   if (!parser.Parse(0, command)) {
@@ -119,7 +119,7 @@ Command::Result DynDXTCommandInvokeSendBinary::operator()(
   std::string command_line_args;
   parser.Parse(2, command_line_args);
 
-  FILE *fp = fopen(file_path.c_str(), "rb");
+  FILE* fp = fopen(file_path.c_str(), "rb");
   if (!fp) {
     std::cout << "Failed to open '" << file_path << "'" << std::endl;
     return HANDLED;
@@ -151,7 +151,7 @@ Command::Result DynDXTCommandInvokeSendBinary::operator()(
 }
 
 Command::Result DynDXTCommandInvokeReceiveSizePrefixedBinary::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   ArgParser parser(args);
   std::string command;
   if (!parser.Parse(0, command)) {
@@ -183,7 +183,7 @@ Command::Result DynDXTCommandInvokeReceiveSizePrefixedBinary::operator()(
 }
 
 Command::Result DynDXTCommandInvokeReceiveKnownSizedBinary::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   ArgParser parser(args);
   std::string command;
   if (!parser.Parse(0, command)) {
@@ -219,7 +219,7 @@ Command::Result DynDXTCommandInvokeReceiveKnownSizedBinary::operator()(
 }
 
 Command::Result DynDXTCommandLoad::operator()(
-    XBOXInterface &interface, const std::vector<std::string> &args) {
+    XBOXInterface& interface, const std::vector<std::string>& args) {
   ArgParser parser(args);
   std::string path;
   if (!parser.Parse(0, path)) {
