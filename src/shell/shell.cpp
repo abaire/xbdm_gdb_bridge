@@ -18,10 +18,17 @@
 #include "util/timer.h"
 #endif
 
-Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
+Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
     : interface_(interface), prompt_("> ") {
-#define REGISTER(command, handler) \
-  commands_[command] = std::make_shared<handler>()
+#define REGISTER(command, handler)                    \
+  do {                                                \
+    commands_[command] = std::make_shared<handler>(); \
+  } while (0)
+
+#define ALIAS(command, alias)              \
+  do {                                     \
+    commands_[alias] = commands_[command]; \
+  } while (0)
 
   commands_["help"] = nullptr;
   commands_["?"] = nullptr;
@@ -29,9 +36,8 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   REGISTER("gdb", ShellCommandGDB);
   REGISTER("trace", ShellCommandTrace);
   REGISTER("reconnect", ShellCommandReconnect);
-  auto quit = std::make_shared<ShellCommandQuit>();
-  commands_["exit"] = quit;
-  commands_["quit"] = quit;
+  REGISTER("quit", ShellCommandQuit);
+  ALIAS("quit", "exit");
 
   REGISTER("/run", DebuggerCommandRun);
   REGISTER("/launch", DebuggerCommandLaunch);
@@ -47,14 +53,16 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   REGISTER("/haltall", DebuggerCommandHaltAll);
   REGISTER("/halt", DebuggerCommandHalt);
   REGISTER("/continueall", DebuggerCommandContinueAll);
+  REGISTER("/continueallgo", DebuggerCommandContinueAllAndGo);
+  ALIAS("/continueallgo", "/cag");
+
   REGISTER("/continue", DebuggerCommandContinue);
   REGISTER("/suspend", DebuggerCommandSuspend);
   REGISTER("/resume", DebuggerCommandResume);
   REGISTER("/modules", DebuggerCommandGetModules);
   REGISTER("/sections", DebuggerCommandGetSections);
-  auto step_function = std::make_shared<DebuggerCommandStepFunction>();
-  commands_["/stepf"] = step_function;
-  commands_["/stepfun"] = step_function;
+  REGISTER("/stepfun", DebuggerCommandStepFunction);
+  ALIAS("/stepfun", "/stepf");
 
   REGISTER("@bootstrap", DynDXTCommandLoadBootstrap);
   REGISTER("@hello", DynDXTCommandHello);
@@ -140,6 +148,7 @@ Shell::Shell(std::shared_ptr<XBOXInterface> &interface)
   REGISTER("%syncfile", MacroCommandSyncFile);
   REGISTER("%syncdir", MacroCommandSyncDirectory);
 
+#undef ALIAS
 #undef REGISTER
 }
 
@@ -170,7 +179,7 @@ void Shell::Run() {
         SpaceTokenizer;
     SpaceTokenizer keyvals(line, separator);
     for (auto it = keyvals.begin(); it != keyvals.end(); ++it) {
-      const std::string &token = *it;
+      const std::string& token = *it;
       if (token[0] == '\"') {
         // Insert the unescaped contents of the string.
         std::string value = token.substr(1, token.size() - 1);
@@ -193,7 +202,7 @@ void Shell::Run() {
 }
 
 Command::Result Shell::ProcessCommand(
-    const std::vector<std::string> &command_args) {
+    const std::vector<std::string>& command_args) {
   auto args = command_args;
   std::string command = args.front();
 
@@ -202,7 +211,7 @@ Command::Result Shell::ProcessCommand(
       std::cout << "No command to replay." << std::endl;
       return Command::HANDLED;
     }
-    for (auto &element : last_command_) {
+    for (auto& element : last_command_) {
       std::cout << element << " ";
     }
     std::cout << std::endl;
@@ -229,7 +238,7 @@ Command::Result Shell::ProcessCommand(
     timer.Start();
 #endif
 
-    Command &handler = *it->second;
+    Command& handler = *it->second;
     auto ret = handler(*interface_, args);
 
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
@@ -244,11 +253,11 @@ Command::Result Shell::ProcessCommand(
 
 static char kRerunCommandHelp[] = "Re-runs the last shell command.";
 
-void Shell::PrintHelp(std::vector<std::string> &args) const {
+void Shell::PrintHelp(std::vector<std::string>& args) const {
   if (args.empty()) {
     std::cout << "Commands:" << std::endl;
 
-    for (auto &it : commands_) {
+    for (auto& it : commands_) {
       std::cout << it.first << " - ";
       if (it.second) {
         std::cout << it.second->short_help;
@@ -283,7 +292,7 @@ void Shell::PrintHelp(std::vector<std::string> &args) const {
 
   auto it = commands_.find(target);
   if (it != commands_.end()) {
-    Command &handler = *it->second;
+    Command& handler = *it->second;
     handler.PrintUsage();
     return;
   }
