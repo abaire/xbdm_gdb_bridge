@@ -39,7 +39,7 @@ class XBDMDebugger {
   explicit XBDMDebugger(std::shared_ptr<XBDMContext> context);
 
   bool Attach();
-  inline bool IsAttached() const { return is_attached_; }
+  [[nodiscard]] inline bool IsAttached() const { return is_attached_; }
   void Shutdown();
 
   bool DebugXBE(const std::string& path, bool wait_forever = false,
@@ -51,7 +51,8 @@ class XBDMDebugger {
   [[nodiscard]] std::list<std::shared_ptr<Module>> Modules();
   [[nodiscard]] std::list<std::shared_ptr<Section>> Sections();
 
-  std::shared_ptr<Module> GetModule(const std::string& module_name) const;
+  [[nodiscard]] std::shared_ptr<Module> GetModule(
+      const std::string& module_name) const;
 
   std::vector<int32_t> GetThreadIDs();
 

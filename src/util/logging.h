@@ -9,15 +9,15 @@
 
 namespace logging {
 
-constexpr const char kLoggingTagAttribute[] = "Tag";
-constexpr const char kLoggingFileAttribute[] = "Filename";
-constexpr const char kLoggingLineAttribute[] = "LineNumber";
-constexpr const char kLoggingThreadAttribute[] = "Thread";
+extern const char kLoggingTagAttribute[];
+extern const char kLoggingFileAttribute[];
+extern const char kLoggingLineAttribute[];
+extern const char kLoggingThreadAttribute[];
 
-constexpr const char kLoggingTagGDB[] = "GDB";
-constexpr const char kLoggingTagXBDM[] = "XBDM";
-constexpr const char kLoggingTagXBDMNotification[] = "XBDM_N";
-constexpr const char kLoggingTagDebugger[] = "DEBUGGER";
+extern const char kLoggingTagGDB[];
+extern const char kLoggingTagXBDM[];
+extern const char kLoggingTagXBDMNotification[];
+extern const char kLoggingTagDebugger[];
 
 BOOST_LOG_ATTRIBUTE_KEYWORD(tag_attr, kLoggingTagAttribute, std::string)
 BOOST_LOG_ATTRIBUTE_KEYWORD(file_attr, kLoggingFileAttribute, std::string)

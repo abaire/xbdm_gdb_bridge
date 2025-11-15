@@ -27,6 +27,9 @@ class TCPConnection : public TCPSocketBase {
   void Send(const std::vector<uint8_t>& buffer) {
     Send(buffer.data(), buffer.size());
   }
+  void Send(const std::string& buffer) {
+    Send(reinterpret_cast<uint8_t const*>(buffer.data()), buffer.size());
+  }
   void Send(uint8_t const* buffer, size_t len);
 
   [[nodiscard]] virtual bool HasBufferedData();
@@ -35,15 +38,16 @@ class TCPConnection : public TCPSocketBase {
   bool Process(const fd_set& read_fds, const fd_set& write_fds,
                const fd_set& except_fds) override;
 
+  std::vector<uint8_t>::iterator FirstIndexOf(uint8_t element);
+  std::vector<uint8_t>::iterator FirstIndexOf(std::string& pattern);
+  std::vector<uint8_t>::iterator FirstIndexOf(
+      const std::vector<uint8_t>& pattern);
+
  protected:
   virtual void OnBytesRead() {}
 
   virtual bool DoReceive();
   virtual void DoSend();
-
-  std::vector<uint8_t>::iterator FirstIndexOf(uint8_t element);
-  std::vector<uint8_t>::iterator FirstIndexOf(
-      const std::vector<uint8_t>& pattern);
 
  protected:
   std::recursive_mutex read_lock_;

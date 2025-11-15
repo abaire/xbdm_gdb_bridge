@@ -19,6 +19,7 @@ struct RDCPMultilineResponse {
 
 struct RDCPMapResponse {
   explicit RDCPMapResponse(const std::vector<char>& data);
+  explicit RDCPMapResponse(const std::string& data);
 
   template <typename ConstIterator>
   RDCPMapResponse(ConstIterator start, ConstIterator end) {
@@ -39,8 +40,9 @@ struct RDCPMapResponse {
       // See if this is a key=value pair or just a key[=true].
       auto delimiter = token.find('=');
       if (delimiter == std::string::npos) {
-        map[token] = "";
-        valueless_keys.insert(token);
+        auto key = boost::algorithm::to_lower_copy(token);
+        map[key] = "";
+        valueless_keys.insert(key);
         continue;
       }
 
@@ -48,9 +50,11 @@ struct RDCPMapResponse {
         // Insert the unescaped contents of the string.
         std::string value = token.substr(delimiter + 2, token.size() - 1);
         boost::replace_all(value, "\\\"", "\"");
-        map[token.substr(0, delimiter)] = value;
+        auto key = boost::algorithm::to_lower_copy(token.substr(0, delimiter));
+        map[key] = value;
       } else {
-        map[token.substr(0, delimiter)] = token.substr(delimiter + 1);
+        auto key = boost::algorithm::to_lower_copy(token.substr(0, delimiter));
+        map[key] = token.substr(delimiter + 1);
       }
     }
   }
@@ -104,6 +108,7 @@ struct RDCPMapResponse {
                                  int64_t default_value) const;
 
   std::map<std::string, std::string> map;
+  std::map<std::string, std::string> lcase_map;
   std::set<std::string> valueless_keys;
 };
 

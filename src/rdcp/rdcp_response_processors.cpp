@@ -30,13 +30,19 @@ RDCPMultilineResponse::RDCPMultilineResponse(const std::vector<char>& data) {
 RDCPMapResponse::RDCPMapResponse(const std::vector<char>& data)
     : RDCPMapResponse(data.begin(), data.end()) {}
 
+RDCPMapResponse::RDCPMapResponse(const std::string& data)
+    : RDCPMapResponse(data.begin(), data.end()) {}
+
 bool RDCPMapResponse::HasKey(const std::string& key) const {
-  return map.find(key) != map.end();
+  auto insensitive_key = boost::algorithm::to_lower_copy(key);
+  auto it = map.find(insensitive_key);
+  return lcase_map.find(insensitive_key) != map.end();
 }
 
 std::string RDCPMapResponse::GetString(const std::string& key,
                                        const std::string& default_value) const {
-  auto it = map.find(key);
+  auto insensitive_key = boost::algorithm::to_lower_copy(key);
+  auto it = map.find(insensitive_key);
   if (it == map.end()) {
     return default_value;
   }
@@ -46,7 +52,8 @@ std::string RDCPMapResponse::GetString(const std::string& key,
 
 std::optional<int32_t> RDCPMapResponse::GetOptionalDWORD(
     const std::string& key) const {
-  auto it = map.find(key);
+  auto insensitive_key = boost::algorithm::to_lower_copy(key);
+  auto it = map.find(insensitive_key);
   if (it == map.end()) {
     return {};
   }
@@ -55,17 +62,19 @@ std::optional<int32_t> RDCPMapResponse::GetOptionalDWORD(
 
 int32_t RDCPMapResponse::GetDWORD(const std::string& key,
                                   int32_t default_value) const {
-  auto it = map.find(key);
+  auto insensitive_key = boost::algorithm::to_lower_copy(key);
+  auto it = map.find(insensitive_key);
   if (it == map.end()) {
     return default_value;
   }
 
-  return ParseUint32(it->second);
+  return static_cast<int32_t>(ParseUint32(it->second));
 }
 
 uint32_t RDCPMapResponse::GetUInt32(const std::string& key,
                                     uint32_t default_value) const {
-  auto it = map.find(key);
+  auto insensitive_key = boost::algorithm::to_lower_copy(key);
+  auto it = map.find(insensitive_key);
   if (it == map.end()) {
     return default_value;
   }
@@ -76,14 +85,16 @@ uint32_t RDCPMapResponse::GetUInt32(const std::string& key,
 int64_t RDCPMapResponse::GetQWORD(const std::string& low_key,
                                   const std::string& high_key,
                                   int64_t default_value) const {
-  auto it = map.find(low_key);
+  auto insensitive_key = boost::algorithm::to_lower_copy(low_key);
+  auto it = map.find(insensitive_key);
   if (it == map.end()) {
     return default_value;
   }
 
   auto low = ParseUint32(it->second);
 
-  it = map.find(high_key);
+  insensitive_key = boost::algorithm::to_lower_copy(high_key);
+  it = map.find(insensitive_key);
   if (it == map.end()) {
     LOG_XBDM(warning) << "Found QWORD low key " << low_key
                       << " but missing high key " << high_key;

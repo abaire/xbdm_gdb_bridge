@@ -16,6 +16,15 @@ namespace logging {
 
 static std::string base_path(__FILE__);
 
+const char kLoggingTagAttribute[] = "Tag";
+const char kLoggingFileAttribute[] = "Filename";
+const char kLoggingLineAttribute[] = "LineNumber";
+const char kLoggingThreadAttribute[] = "Thread";
+const char kLoggingTagGDB[] = "GDB";
+const char kLoggingTagXBDM[] = "XBDM";
+const char kLoggingTagXBDMNotification[] = "XBDM_N";
+const char kLoggingTagDebugger[] = "DEBUGGER";
+
 static uint32_t verbosity_level = boost::log::trivial::severity_level::warning;
 static bool enable_gdb_messages = true;
 static bool enable_xbdm_messages = true;
