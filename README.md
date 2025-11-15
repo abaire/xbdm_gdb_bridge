@@ -114,7 +114,6 @@ enable them.
 
 ### `cmake`
 
-* The `NXDK_DIR` environment variable must be set to the root of the [nxdk](https://github.com/XboxDev/nxdk)
 * `cmake -S . -B build && cmake --build build --verbose`
 
 Tests can be executed afterwards using
@@ -128,14 +127,8 @@ Tests can be executed afterwards using
 
 ### CLion
 
-The CMake target can be configured to set the `NXDK_DIR` env var via the properties page:
-
-* Environment
-
-  `NXDK_DIR=<absolute_path_to_nxdk>`
-
-On macOS you may also have to modify PATH such that a homebrew version of LLVM
-is preferred over Xcode's (to supply `dlltool`).
+On macOS you may have to modify PATH such that a homebrew version of LLVM is preferred over Xcode's (to supply
+`dlltool`). `llvm@18` should work.
 
 # Design
 

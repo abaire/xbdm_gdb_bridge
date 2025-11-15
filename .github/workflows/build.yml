@@ -60,13 +60,6 @@ jobs:
         with:
           submodules: recursive
           path: xbdm_gdb_bridge
-      - name: Clone nxdk
-        uses: actions/checkout@v5
-        with:
-          repository: XboxDev/nxdk
-          ref: 3b24b559124aba8fcb94fddff1d2dc9ef32de461
-          submodules: recursive
-          path: nxdk
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
@@ -98,21 +91,9 @@ jobs:
         if: runner.os == 'macOS'
         run: echo "PATH=$(brew --prefix llvm@18)/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Precompile nxdk
-        run: |
-          echo "Precompiling nxdk to allow CMake to run correctly."
-          cd nxdk
-          eval $(./bin/activate -s)
-          for dir in samples/*/ ; do
-            pushd "${dir}"
-            make -j$(if [ "$(uname)" == "Darwin" ]; then sysctl -n hw.ncpu; else nproc; fi)
-            popd
-          done
-
       - name: Compile
         run: |
           cd xbdm_gdb_bridge
-          export NXDK_DIR="${GITHUB_WORKSPACE}/nxdk"
           cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build -- -j$(if [ "$(uname)" == "Darwin" ]; then sysctl -n hw.ncpu; else nproc; fi)
 

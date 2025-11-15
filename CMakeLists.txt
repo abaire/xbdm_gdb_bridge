@@ -9,17 +9,50 @@ set(CMAKE_CXX_STANDARD 17)
 include(CMakePushCheckState)
 set(_CMAKE_PROCESSING_LANGUAGE "C")
 include(CheckSymbolExists)
-include (ExternalProject)
+include(ExternalProject)
 include(FindPkgConfig)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/modules")
+include(FetchNXDK)
+if (NOT DEFINED NXDK_DIR OR "${NXDK_DIR}" STREQUAL "")
+    message(FATAL_ERROR "NXDK_DIR was not set by FetchNXDK.cmake")
+endif ()
+set(ENV{NXDK_DIR} "${NXDK_DIR}")
+
+set(WRAPPER_SCRIPT "${CMAKE_BINARY_DIR}/nxdk_wrapper.sh")
+file(WRITE "${WRAPPER_SCRIPT}"
+        "#!/bin/sh
+# Print debug info to confirm it is running
+echo \"[Wrapper] Setting NXDK_DIR to $1\"
+export NXDK_DIR=\"$1\"
+shift
+# Execute the actual CMake command passed as arguments
+exec \"$@\"
+")
+
+# 2. Make the script executable
+execute_process(COMMAND chmod +x "${WRAPPER_SCRIPT}")
+
+message(STATUS "Created NXDK wrapper script at: ${WRAPPER_SCRIPT}")
 
 ExternalProject_Add(
         dyndxt_loader
         PREFIX ddxt
         GIT_REPOSITORY https://github.com/abaire/nxdk_dyndxt.git
         GIT_TAG origin/main
-        CMAKE_ARGS
-            -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
-            -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        DEPENDS nxdk
+
+        CONFIGURE_COMMAND
+        "${WRAPPER_SCRIPT}" "${NXDK_DIR}"
+        ${CMAKE_COMMAND}
+        <SOURCE_DIR>
+        -G "${CMAKE_GENERATOR}"
+        -DCMAKE_MAKE_PROGRAM=${MAKE_COMMAND}
+        -DCMAKE_TOOLCHAIN_FILE=${NXDK_DIR}/share/toolchain-nxdk.cmake
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+        -DCMAKE_VERBOSE_MAKEFILE=ON
+
         BUILD_BYPRODUCTS
         ddxt/lib/bootstrap_l1.asm.obj
         ddxt/lib/bootstrap_l2.asm.obj
@@ -37,9 +70,19 @@ ExternalProject_Add(
         PREFIX ntrc
         GIT_REPOSITORY https://github.com/abaire/nxdk_ntrc_dyndxt.git
         GIT_TAG origin/main
-        CMAKE_ARGS
-            -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
-            -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        DEPENDS nxdk
+
+        CONFIGURE_COMMAND
+        "${WRAPPER_SCRIPT}" "${NXDK_DIR}"
+        ${CMAKE_COMMAND}
+        <SOURCE_DIR>
+        -G "${CMAKE_GENERATOR}"
+        -DCMAKE_MAKE_PROGRAM=${MAKE_COMMAND}
+        -DCMAKE_TOOLCHAIN_FILE=${NXDK_DIR}/share/toolchain-nxdk.cmake
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+        -DCMAKE_VERBOSE_MAKEFILE=ON
+
         BUILD_BYPRODUCTS
         ntrc/lib/libntrc_dyndxt.dll
         ntrc/include/ntrc_dyndxt.h
@@ -65,7 +108,7 @@ set(GENERATED_FILES_DIR "${CMAKE_BINARY_DIR}/generated")
 
 include_directories(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS})
 
-option(ENABLE_HIGH_VERBOSITY_LOGGING  "Enable low level, highly verbose logging")
+option(ENABLE_HIGH_VERBOSITY_LOGGING "Enable low level, highly verbose logging")
 
 cmake_push_check_state(RESET)
 set(CMAKE_REQUIRED_LIBRARIES ${SOCKET_LIBRARIES})
@@ -138,12 +181,6 @@ add_library(
         lodepng
         third_party/lodepng/lodepng.cpp
         third_party/lodepng/lodepng.h
-)
-
-target_compile_definitions(
-        lodepng
-        PRIVATE
-        LODEPNG_COMPILE_ENCODER
 )
 
 target_include_directories(
