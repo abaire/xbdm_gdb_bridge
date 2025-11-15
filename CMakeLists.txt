@@ -5,7 +5,7 @@ project(xbdm_gdb_bridge)
 set(CMAKE_VERBOSE_MAKEFILE TRUE)
 
 enable_testing()
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 include(CMakePushCheckState)
 set(_CMAKE_PROCESSING_LANGUAGE "C")
 include(CheckSymbolExists)
@@ -262,6 +262,8 @@ add_executable(
         src/tracer/tracer.cpp
         src/tracer/tracer.h
         src/tracer/tracer_xbox_shared.h
+        src/xbox/debugger/debugger_expression_parser.cpp
+        src/xbox/debugger/debugger_expression_parser.h
         src/xbox/debugger/thread.cpp
         src/xbox/debugger/thread.h
         src/xbox/debugger/xbdm_debugger.cpp
@@ -392,3 +394,28 @@ target_link_libraries(
 )
 add_dependencies(dxt_library_loader_tests dyndxt_loader)
 add_test(NAME dxt_library_loader_tests COMMAND dxt_library_loader_tests)
+
+# xbox_debugger_tests
+add_executable(
+        xbox_debugger_tests
+        test/xbox/debugger/test_main.cpp
+        test/xbox/debugger/test_debugger_expression_parser.cpp
+        src/xbox/debugger/debugger_expression_parser.cpp
+        src/xbox/debugger/debugger_expression_parser.h
+        src/rdcp/types/thread_context.h
+)
+target_include_directories(
+        xbox_debugger_tests
+        PRIVATE src
+        PRIVATE test
+)
+target_link_libraries(
+        xbox_debugger_tests
+        LINK_PRIVATE
+        Boost::log
+        Boost::program_options
+        Boost::unit_test_framework
+        LINK_PRIVATE
+        test_util
+)
+add_test(NAME xbox_debugger_tests COMMAND xbox_debugger_tests)

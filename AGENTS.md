@@ -17,3 +17,7 @@ To build this project successfully you must follow the instructions in this sect
     * nasm
 
    You must check the `.github/workflows/build.yml` to make sure that nothing is missing from this list.
+# Editing
+
+* You must format any code changes with `clang-format`.
+* You must make sure that all automated tests pass before proposing changes.
