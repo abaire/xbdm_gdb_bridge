@@ -19,14 +19,31 @@ if (NOT DEFINED NXDK_DIR OR "${NXDK_DIR}" STREQUAL "")
 endif ()
 set(ENV{NXDK_DIR} "${NXDK_DIR}")
 
+set(WRAPPER_SCRIPT "${CMAKE_BINARY_DIR}/nxdk_wrapper.sh")
+file(WRITE "${WRAPPER_SCRIPT}"
+        "#!/bin/sh
+# Print debug info to confirm it is running
+echo \"[Wrapper] Setting NXDK_DIR to $1\"
+export NXDK_DIR=\"$1\"
+shift
+# Execute the actual CMake command passed as arguments
+exec \"$@\"
+")
+
+# 2. Make the script executable
+execute_process(COMMAND chmod +x "${WRAPPER_SCRIPT}")
+
+message(STATUS "Created NXDK wrapper script at: ${WRAPPER_SCRIPT}")
+
 ExternalProject_Add(
         dyndxt_loader
         PREFIX ddxt
         GIT_REPOSITORY https://github.com/abaire/nxdk_dyndxt.git
         GIT_TAG origin/main
         DEPENDS nxdk
+
         CONFIGURE_COMMAND
-        ${CMAKE_COMMAND} -E env NXDK_DIR=${NXDK_DIR}
+        "${WRAPPER_SCRIPT}" "${NXDK_DIR}"
         ${CMAKE_COMMAND}
         <SOURCE_DIR>
         -G "${CMAKE_GENERATOR}"
@@ -34,6 +51,8 @@ ExternalProject_Add(
         -DCMAKE_TOOLCHAIN_FILE=${NXDK_DIR}/share/toolchain-nxdk.cmake
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+        -DCMAKE_VERBOSE_MAKEFILE=ON
+
         BUILD_BYPRODUCTS
         ddxt/lib/bootstrap_l1.asm.obj
         ddxt/lib/bootstrap_l2.asm.obj
@@ -52,8 +71,9 @@ ExternalProject_Add(
         GIT_REPOSITORY https://github.com/abaire/nxdk_ntrc_dyndxt.git
         GIT_TAG origin/main
         DEPENDS nxdk
+
         CONFIGURE_COMMAND
-        ${CMAKE_COMMAND} -E env NXDK_DIR=${NXDK_DIR}
+        "${WRAPPER_SCRIPT}" "${NXDK_DIR}"
         ${CMAKE_COMMAND}
         <SOURCE_DIR>
         -G "${CMAKE_GENERATOR}"
@@ -61,6 +81,8 @@ ExternalProject_Add(
         -DCMAKE_TOOLCHAIN_FILE=${NXDK_DIR}/share/toolchain-nxdk.cmake
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+        -DCMAKE_VERBOSE_MAKEFILE=ON
+
         BUILD_BYPRODUCTS
         ntrc/lib/libntrc_dyndxt.dll
         ntrc/include/ntrc_dyndxt.h
