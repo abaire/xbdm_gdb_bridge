@@ -1,3 +1,6 @@
 [submodule "third_party/lodepng"]
 	path = third_party/lodepng
 	url = https://github.com/lvandeve/lodepng.git
+[submodule "third_party/replxx"]
+	path = third_party/replxx
+	url = https://github.com/AmokHuginnsson/replxx.git

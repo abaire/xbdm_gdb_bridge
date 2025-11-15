@@ -10,6 +10,7 @@
 #include "debugger_commands.h"
 #include "dyndxt_commands.h"
 #include "macro_commands.h"
+#include "replxx.hpp"
 #include "shell_commands.h"
 #include "tracer_commands.h"
 #include "util/logging.h"
@@ -152,26 +153,36 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
 
 #undef ALIAS
 #undef REGISTER
+
+  rx_.set_word_break_characters(" \t");
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+  using std::placeholders::_3;
+  using std::placeholders::_4;
+
+  for (auto const& [command, _] : commands_) {
+    rx_.add_completion(command);
+  }
 }
 
 void Shell::Run() {
   std::string line;
 
   while (true) {
-    std::cout << prompt_;
-    std::getline(std::cin, line);
+    char const* cinput{nullptr};
+
+    do {
+      cinput = rx_.input(prompt_);
+    } while ((cinput == nullptr) && (errno == EAGAIN));
+
+    if (cinput == nullptr) {
+      break;
+    }
+
+    line = cinput;
 
     boost::algorithm::trim(line);
     if (line.empty()) {
-      if (std::cin.eof()) {
-        LOG(error) << "stdin closed.";
-        break;
-      }
-      if (std::cin.fail()) {
-        LOG(error) << "Failure on std::cin.";
-        // TODO: Determine if this is recoverable or not.
-        break;
-      }
       continue;
     }
 
@@ -200,6 +211,7 @@ void Shell::Run() {
     if (result == Command::UNHANDLED) {
       std::cout << "Unknown command." << std::endl;
     }
+    rx_.history_add(line);
   }
 }
 

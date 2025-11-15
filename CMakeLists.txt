@@ -152,6 +152,9 @@ target_include_directories(
         third_party/lodepng
 )
 
+# replxx --------------------------------------------
+add_subdirectory(third_party/replxx)
+
 # xbdm executable ------------------------------------
 
 add_executable(
@@ -297,6 +300,7 @@ target_link_libraries(
         ${RC_DEPENDS}
         LINK_PRIVATE
         lodepng
+        replxx
 )
 
 add_dependencies(xbdm_gdb_bridge dyndxt_loader ntrc_dyndxt)
