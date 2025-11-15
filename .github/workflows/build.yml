@@ -103,11 +103,8 @@ jobs:
           echo "Precompiling nxdk to allow CMake to run correctly."
           cd nxdk
           eval $(./bin/activate -s)
-          for dir in samples/*/ ; do
-            pushd "${dir}"
-            make -j$(if [ "$(uname)" == "Darwin" ]; then sysctl -n hw.ncpu; else nproc; fi)
-            popd
-          done
+          make -j NXDK_ONLY=y
+          make tools -j
 
       - name: Compile
         run: |
