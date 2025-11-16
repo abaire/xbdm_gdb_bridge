@@ -108,7 +108,6 @@ struct RDCPMapResponse {
                                  int64_t default_value) const;
 
   std::map<std::string, std::string> map;
-  std::map<std::string, std::string> lcase_map;
   std::set<std::string> valueless_keys;
 };
 

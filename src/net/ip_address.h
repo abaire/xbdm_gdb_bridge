@@ -13,6 +13,8 @@ class IPAddress {
   IPAddress(const std::string& addr, uint16_t default_port);
   explicit IPAddress(const struct sockaddr_in& addr);
 
+  [[nodiscard]] IPAddress WithPort(uint16_t port) const;
+
   [[nodiscard]] const std::string& Hostname() const { return hostname_; }
   [[nodiscard]] const struct sockaddr_in& Address() const { return addr_; }
   [[nodiscard]] struct in_addr IP() const { return addr_.sin_addr; }

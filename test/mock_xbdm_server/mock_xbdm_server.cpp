@@ -279,9 +279,19 @@ bool MockXBDMServer::HandleNotifyAt(ClientTransport& client,
     return true;
   }
 
-  SendResponse(client, OK);
+  bool drop = params.HasKey("drop");
+  //  bool debug = params.HasKey("debug");
 
-  // TODO: Connect to the notification server.
+  if (drop) {
+    client.CloseNotificationConnection();
+  } else {
+    // TODO: Move this to a worker thread.
+    auto notification_address = client.Address().WithPort(port.value());
+    auto connection = client.CreateNotificationConnection(notification_address);
+    select_thread_->AddConnection(connection);
+  }
+
+  SendResponse(client, OK);
 
   return true;
 }

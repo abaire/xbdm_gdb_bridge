@@ -36,7 +36,7 @@ RDCPMapResponse::RDCPMapResponse(const std::string& data)
 bool RDCPMapResponse::HasKey(const std::string& key) const {
   auto insensitive_key = boost::algorithm::to_lower_copy(key);
   auto it = map.find(insensitive_key);
-  return lcase_map.find(insensitive_key) != map.end();
+  return map.find(insensitive_key) != map.end();
 }
 
 std::string RDCPMapResponse::GetString(const std::string& key,
