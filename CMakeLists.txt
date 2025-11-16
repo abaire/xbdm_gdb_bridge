@@ -6,10 +6,11 @@ set(CMAKE_VERBOSE_MAKEFILE TRUE)
 
 enable_testing()
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(CMakePushCheckState)
 set(_CMAKE_PROCESSING_LANGUAGE "C")
 include(CheckSymbolExists)
-include (ExternalProject)
+include(ExternalProject)
 include(FindPkgConfig)
 
 ExternalProject_Add(
@@ -18,8 +19,8 @@ ExternalProject_Add(
         GIT_REPOSITORY https://github.com/abaire/nxdk_dyndxt.git
         GIT_TAG origin/main
         CMAKE_ARGS
-            -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
-            -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         BUILD_BYPRODUCTS
         ddxt/lib/bootstrap_l1.asm.obj
         ddxt/lib/bootstrap_l2.asm.obj
@@ -38,8 +39,8 @@ ExternalProject_Add(
         GIT_REPOSITORY https://github.com/abaire/nxdk_ntrc_dyndxt.git
         GIT_TAG origin/main
         CMAKE_ARGS
-            -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
-            -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCMAKE_TOOLCHAIN_FILE=$ENV{NXDK_DIR}/share/toolchain-nxdk.cmake
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         BUILD_BYPRODUCTS
         ntrc/lib/libntrc_dyndxt.dll
         ntrc/include/ntrc_dyndxt.h
@@ -65,7 +66,7 @@ set(GENERATED_FILES_DIR "${CMAKE_BINARY_DIR}/generated")
 
 include_directories(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS})
 
-option(ENABLE_HIGH_VERBOSITY_LOGGING  "Enable low level, highly verbose logging")
+option(ENABLE_HIGH_VERBOSITY_LOGGING "Enable low level, highly verbose logging")
 
 cmake_push_check_state(RESET)
 set(CMAKE_REQUIRED_LIBRARIES ${SOCKET_LIBRARIES})
@@ -153,12 +154,9 @@ target_include_directories(
 )
 
 # xbdm executable ------------------------------------
-
-add_executable(
-        xbdm_gdb_bridge
-        src/main.cpp
-        src/discovery/discoverer.cpp
-        src/discovery/discoverer.h
+add_library(
+        xbdm_gdb_bridge_dyndxt_loader
+        STATIC
         src/dyndxt_loader/dll_linker.cpp
         src/dyndxt_loader/dll_linker.h
         src/dyndxt_loader/dxt_library.cpp
@@ -175,10 +173,50 @@ add_executable(
         src/dyndxt_loader/xboxkrnl_exports.cpp
         src/dyndxt_loader/xboxkrnl_exports.def.h
         src/dyndxt_loader/xboxkrnl_exports.h
+        ${GENERATED_FILES_DIR}/bootstrap_l1_xbox.h
+        ${GENERATED_FILES_DIR}/bootstrap_l2_xbox.h
+        ${GENERATED_FILES_DIR}/dynamic_dxt_loader_xbox.h
+)
+target_include_directories(
+        xbdm_gdb_bridge_dyndxt_loader
+        PRIVATE
+        src
+        third_party/nxdk
+        ${ntrc_dyndxt_include_dir}
+)
+target_link_libraries(
+        xbdm_gdb_bridge_dyndxt_loader
+        LINK_PUBLIC
+        Boost::log
+        ${RC_DEPENDS}
+        xbdm_gdb_bridge_xbox_xbdm_context
+)
+add_dependencies(xbdm_gdb_bridge_dyndxt_loader dyndxt_loader)
+
+
+add_library(
+        xbdm_gdb_bridge_gdb
+        STATIC
         src/gdb/gdb_packet.cpp
         src/gdb/gdb_packet.h
         src/gdb/gdb_transport.cpp
         src/gdb/gdb_transport.h
+)
+target_include_directories(
+        xbdm_gdb_bridge_gdb
+        PRIVATE
+        src
+)
+target_link_libraries(
+        xbdm_gdb_bridge_gdb
+        LINK_PUBLIC
+        Boost::log
+)
+
+
+add_library(
+        xbdm_gdb_bridge_net
+        STATIC
         src/net/ip_address.cpp
         src/net/ip_address.h
         src/net/delegating_server.cpp
@@ -191,10 +229,43 @@ add_executable(
         src/net/tcp_socket_base.h
         src/net/tcp_connection.cpp
         src/net/tcp_connection.h
+)
+target_include_directories(
+        xbdm_gdb_bridge_net
+        PRIVATE
+        src
+)
+target_link_libraries(
+        xbdm_gdb_bridge_net
+        LINK_PUBLIC
+        Boost::log
+)
+
+
+add_library(
+        xbdm_gdb_bridge_notification
+        STATIC
         src/notification/xbdm_notification.cpp
         src/notification/xbdm_notification.h
         src/notification/xbdm_notification_transport.cpp
         src/notification/xbdm_notification_transport.h
+)
+target_include_directories(
+        xbdm_gdb_bridge_notification
+        PRIVATE
+        src
+)
+target_link_libraries(
+        xbdm_gdb_bridge_notification
+        LINK_PUBLIC
+        Boost::log
+        xbdm_gdb_bridge_rdcp
+)
+
+
+add_library(
+        xbdm_gdb_bridge_rdcp
+        STATIC
         src/rdcp/rdcp_processed_request.cpp
         src/rdcp/rdcp_processed_request.h
         src/rdcp/rdcp_request.cpp
@@ -203,12 +274,153 @@ add_executable(
         src/rdcp/rdcp_response.h
         src/rdcp/rdcp_response_processors.cpp
         src/rdcp/rdcp_response_processors.h
+        src/rdcp/types/execution_state.h
+        src/rdcp/types/memory_region.cpp
+        src/rdcp/types/memory_region.h
+        src/rdcp/types/module.cpp
+        src/rdcp/types/module.h
+        src/rdcp/types/section.cpp
+        src/rdcp/types/section.h
+        src/rdcp/types/thread_context.h
         src/rdcp/xbdm_requests.cpp
         src/rdcp/xbdm_requests.h
         src/rdcp/xbdm_stop_reasons.h
-        src/rdcp/types/thread_context.h
         src/rdcp/xbdm_transport.cpp
         src/rdcp/xbdm_transport.h
+)
+target_include_directories(
+        xbdm_gdb_bridge_rdcp
+        PRIVATE
+        src
+)
+target_link_libraries(
+        xbdm_gdb_bridge_rdcp
+        LINK_PUBLIC
+        Boost::log
+        xbdm_gdb_bridge_util
+)
+
+
+add_library(
+        swizzle
+        STATIC
+        third_party/xemu/swizzle.c
+        third_party/xemu/swizzle.h
+)
+target_include_directories(
+        swizzle
+        PUBLIC
+        third_party/xemu
+)
+
+
+add_library(
+        xbdm_gdb_bridge_tracer
+        STATIC
+        src/tracer/frame_capture.cpp
+        src/tracer/frame_capture.h
+        src/tracer/image_util.cpp
+        src/tracer/image_util.h
+        src/tracer/notification_ntrc.cpp
+        src/tracer/notification_ntrc.h
+        src/tracer/tracer.cpp
+        src/tracer/tracer.h
+        src/tracer/tracer_xbox_shared.h
+        ${GENERATED_FILES_DIR}/ntrc_dyndxt_xbox.h
+        ${ntrc_dyndxt_include_dir}/ntrc_dyndxt.h
+)
+target_include_directories(
+        xbdm_gdb_bridge_tracer
+        PUBLIC
+        ${ntrc_dyndxt_include_dir}
+        PRIVATE
+        src
+)
+target_link_libraries(
+        xbdm_gdb_bridge_tracer
+        LINK_PUBLIC
+        ${RC_DEPENDS}
+        Boost::log
+        lodepng
+        swizzle
+        xbdm_gdb_bridge_notification
+)
+add_dependencies(xbdm_gdb_bridge_tracer ntrc_dyndxt)
+
+
+add_library(
+        xbdm_gdb_bridge_util
+        STATIC
+        src/util/logging.cpp
+        src/util/logging.h
+        src/util/optional.h
+        src/util/parsing.cpp
+        src/util/parsing.h
+        src/util/path.cpp
+        src/util/path.h
+        src/util/timer.cpp
+        src/util/timer.h
+)
+target_include_directories(
+        xbdm_gdb_bridge_util
+        PRIVATE
+        src
+)
+target_link_libraries(
+        xbdm_gdb_bridge_util
+        LINK_PUBLIC
+        Boost::log
+)
+
+
+add_library(
+        xbdm_gdb_bridge_xbox_xbdm_context
+        STATIC
+        src/xbox/xbdm_context.cpp
+        src/xbox/xbdm_context.h
+)
+target_include_directories(
+        xbdm_gdb_bridge_xbox_xbdm_context
+        PRIVATE
+        src
+)
+target_link_libraries(
+        xbdm_gdb_bridge_xbox_xbdm_context
+        LINK_PUBLIC
+        Boost::log
+        xbdm_gdb_bridge_notification
+)
+
+
+add_library(
+        xbdm_gdb_bridge_xbox_debugger
+        STATIC
+        src/xbox/debugger/debugger_expression_parser.cpp
+        src/xbox/debugger/debugger_expression_parser.h
+        src/xbox/debugger/thread.cpp
+        src/xbox/debugger/thread.h
+        src/xbox/debugger/xbdm_debugger.cpp
+        src/xbox/debugger/xbdm_debugger.h
+)
+target_include_directories(
+        xbdm_gdb_bridge_xbox_debugger
+        PRIVATE
+        src
+)
+target_link_libraries(
+        xbdm_gdb_bridge_xbox_debugger
+        LINK_PUBLIC
+        Boost::log
+        xbdm_gdb_bridge_rdcp
+        xbdm_gdb_bridge_xbox_xbdm_context
+)
+
+
+add_executable(
+        xbdm_gdb_bridge
+        src/main.cpp
+        src/discovery/discoverer.cpp
+        src/discovery/discoverer.h
         src/shell/command.cpp
         src/shell/command.h
         src/shell/commands.cpp
@@ -229,54 +441,14 @@ add_executable(
         src/shell/shell_commands.h
         src/shell/tracer_commands.cpp
         src/shell/tracer_commands.h
-        src/util/logging.cpp
-        src/util/logging.h
-        src/util/optional.h
-        src/util/parsing.cpp
-        src/util/parsing.h
-        src/util/path.cpp
-        src/util/path.h
-        src/util/timer.cpp
-        src/util/timer.h
-        src/xbox/xbdm_context.cpp
-        src/xbox/xbdm_context.h
         src/xbox/xbox_interface.cpp
         src/xbox/xbox_interface.h
         src/xbox/bridge/gdb_bridge.cpp
         src/xbox/bridge/gdb_bridge.h
         src/xbox/bridge/gdb_registers.cpp
         src/xbox/bridge/gdb_registers.h
-        src/rdcp/types/memory_region.cpp
-        src/rdcp/types/memory_region.h
-        src/rdcp/types/execution_state.h
-        src/rdcp/types/module.cpp
-        src/rdcp/types/module.h
-        src/rdcp/types/section.cpp
-        src/rdcp/types/section.h
-        src/tracer/frame_capture.cpp
-        src/tracer/frame_capture.h
-        src/tracer/image_util.cpp
-        src/tracer/image_util.h
-        src/tracer/notification_ntrc.cpp
-        src/tracer/notification_ntrc.h
-        src/tracer/tracer.cpp
-        src/tracer/tracer.h
-        src/tracer/tracer_xbox_shared.h
-        src/xbox/debugger/debugger_expression_parser.cpp
-        src/xbox/debugger/debugger_expression_parser.h
-        src/xbox/debugger/thread.cpp
-        src/xbox/debugger/thread.h
-        src/xbox/debugger/xbdm_debugger.cpp
-        src/xbox/debugger/xbdm_debugger.h
         third_party/nxdk/winapi/winnt.h
         third_party/nxdk/xboxkrnl/xboxdef.h
-        third_party/xemu/swizzle.c
-        third_party/xemu/swizzle.h
-        ${GENERATED_FILES_DIR}/bootstrap_l1_xbox.h
-        ${GENERATED_FILES_DIR}/bootstrap_l2_xbox.h
-        ${GENERATED_FILES_DIR}/dynamic_dxt_loader_xbox.h
-        ${GENERATED_FILES_DIR}/ntrc_dyndxt_xbox.h
-        ${ntrc_dyndxt_include_dir}/ntrc_dyndxt.h
 )
 
 target_include_directories(
@@ -286,7 +458,6 @@ target_include_directories(
         src
         third_party/nxdk
         third_party/xemu
-        ${ntrc_dyndxt_include_dir}
 )
 
 target_link_libraries(
@@ -298,10 +469,16 @@ target_link_libraries(
         ${SDL2IMAGE_LINK_LIBRARIES}
         ${RC_DEPENDS}
         LINK_PRIVATE
-        lodepng
+        xbdm_gdb_bridge_dyndxt_loader
+        xbdm_gdb_bridge_gdb
+        xbdm_gdb_bridge_net
+        xbdm_gdb_bridge_notification
+        xbdm_gdb_bridge_rdcp
+        xbdm_gdb_bridge_tracer
+        xbdm_gdb_bridge_util
+        xbdm_gdb_bridge_xbox_debugger
+        xbdm_gdb_bridge_xbox_xbdm_context
 )
-
-add_dependencies(xbdm_gdb_bridge dyndxt_loader ntrc_dyndxt)
 
 # Tests ----------------------------------------------
 
@@ -317,14 +494,6 @@ add_executable(
         test/rdcp/test_main.cpp
         test/rdcp/test_rdcp_processed_request.cpp
         test/rdcp/test_xbdm_requests.cpp
-        src/rdcp/rdcp_processed_request.cpp
-        src/rdcp/rdcp_processed_request.h
-        src/rdcp/rdcp_response_processors.cpp
-        src/rdcp/rdcp_response_processors.h
-        src/rdcp/xbdm_requests.h
-        src/util/optional.h
-        src/util/parsing.cpp
-        src/util/parsing.h
 )
 target_include_directories(
         rdcp_tests
@@ -338,6 +507,7 @@ target_link_libraries(
         Boost::program_options
         Boost::unit_test_framework
         LINK_PRIVATE
+        xbdm_gdb_bridge_rdcp
         test_util
 )
 add_test(NAME rdcp_tests COMMAND rdcp_tests)
@@ -348,10 +518,6 @@ add_executable(
         test/util/test_main.cpp
         test/util/test_parsing.cpp
         test/util/test_path.cpp
-        src/util/parsing.cpp
-        src/util/parsing.h
-        src/util/path.cpp
-        src/util/path.h
 )
 target_include_directories(
         util_tests
@@ -366,6 +532,7 @@ target_link_libraries(
         Boost::unit_test_framework
         LINK_PRIVATE
         test_util
+        xbdm_gdb_bridge_util
 )
 add_test(NAME util_tests COMMAND util_tests)
 
@@ -391,18 +558,63 @@ target_link_libraries(
         Boost::unit_test_framework
         LINK_PRIVATE
         test_util
+        xbdm_gdb_bridge_util
 )
 add_dependencies(dxt_library_loader_tests dyndxt_loader)
 add_test(NAME dxt_library_loader_tests COMMAND dxt_library_loader_tests)
+
+# Mock XBDM server
+add_library(
+        mock_xbdm_server
+        test/mock_xbdm_server/mock_xbdm_client_transport.cpp
+        test/mock_xbdm_server/mock_xbdm_client_transport.h
+        test/mock_xbdm_server/mock_xbdm_server.cpp
+        test/mock_xbdm_server/mock_xbdm_server.h
+        test/mock_xbdm_server/mock_xbox_state.h
+)
+target_include_directories(
+        mock_xbdm_server
+        PRIVATE src
+        PRIVATE test
+)
+target_link_libraries(
+        mock_xbdm_server
+        LINK_PRIVATE
+        Boost::log
+        Boost::program_options
+        Boost::unit_test_framework
+        LINK_PRIVATE
+        test_util
+)
+
+# test_debugger_expression_parser_tests
+add_executable(
+        test_debugger_expression_parser_tests
+        test/xbox/debugger/test_main.cpp
+        test/xbox/debugger/test_debugger_expression_parser.cpp
+)
+target_include_directories(
+        test_debugger_expression_parser_tests
+        PRIVATE src
+        PRIVATE test
+)
+target_link_libraries(
+        test_debugger_expression_parser_tests
+        LINK_PRIVATE
+        Boost::log
+        Boost::program_options
+        Boost::unit_test_framework
+        xbdm_gdb_bridge_xbox_debugger
+        test_util
+)
+add_test(NAME test_debugger_expression_parser_tests COMMAND test_debugger_expression_parser_tests)
+
 
 # xbox_debugger_tests
 add_executable(
         xbox_debugger_tests
         test/xbox/debugger/test_main.cpp
-        test/xbox/debugger/test_debugger_expression_parser.cpp
-        src/xbox/debugger/debugger_expression_parser.cpp
-        src/xbox/debugger/debugger_expression_parser.h
-        src/rdcp/types/thread_context.h
+        test/xbox/debugger/test_xbdm_debugger.cpp
 )
 target_include_directories(
         xbox_debugger_tests
@@ -415,7 +627,11 @@ target_link_libraries(
         Boost::log
         Boost::program_options
         Boost::unit_test_framework
-        LINK_PRIVATE
+        mock_xbdm_server
+        xbdm_gdb_bridge_net
+        xbdm_gdb_bridge_rdcp
+        xbdm_gdb_bridge_xbox_debugger
+        xbdm_gdb_bridge_xbox_xbdm_context
         test_util
 )
 add_test(NAME xbox_debugger_tests COMMAND xbox_debugger_tests)
