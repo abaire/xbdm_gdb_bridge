@@ -15,6 +15,15 @@ class Shell {
   void Run();
   Command::Result ProcessCommand(const std::vector<std::string>& args);
 
+  inline void RegisterCommand(const std::string& command,
+                              std::shared_ptr<Command> processor) {
+    std::vector<std::string> empty;
+    RegisterCommand(command, processor, empty);
+  }
+  void RegisterCommand(const std::string& command,
+                       std::shared_ptr<Command> processor,
+                       const std::vector<std::string>& aliases);
+
  private:
   void PrintHelp(std::vector<std::string>& args) const;
 

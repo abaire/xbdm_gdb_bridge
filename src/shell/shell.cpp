@@ -33,7 +33,6 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
   commands_["help"] = nullptr;
   commands_["?"] = nullptr;
   commands_["!"] = nullptr;
-  REGISTER("gdb", ShellCommandGDB);
   REGISTER("trace", ShellCommandTrace);
   REGISTER("reconnect", ShellCommandReconnect);
   REGISTER("quit", ShellCommandQuit);
@@ -152,6 +151,15 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
 
 #undef ALIAS
 #undef REGISTER
+}
+
+void Shell::RegisterCommand(const std::string& command,
+                            std::shared_ptr<Command> processor,
+                            const std::vector<std::string>& aliases) {
+  commands_[command] = processor;
+  for (auto& alias : aliases) {
+    commands_[alias] = processor;
+  }
 }
 
 void Shell::Run() {

@@ -6,24 +6,25 @@
 #include "util/parsing.h"
 
 Command::Result MacroCommandSyncFile::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args) {
+    XBOXInterface& interface, const std::vector<std::string>& args,
+    std::ostream& out) {
   ArgParser parser(args);
   std::string local_path;
   if (!parser.Parse(0, local_path)) {
-    std::cout << "Missing required local_path argument." << std::endl;
+    out << "Missing required local_path argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
 
   std::string remote_path;
   if (!parser.Parse(1, remote_path)) {
-    std::cout << "Missing required remote_path argument." << std::endl;
+    out << "Missing required remote_path argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
 
   if (!std::filesystem::is_regular_file(local_path)) {
-    std::cout << "Invalid local_path, must be a regular file." << std::endl;
+    out << "Invalid local_path, must be a regular file." << std::endl;
     return HANDLED;
   }
 
@@ -36,7 +37,7 @@ Command::Result MacroCommandSyncFile::operator()(
   uint64_t remote_change_timestamp;
   if (!CheckRemotePath(interface, remote_path, remote_exists, remote_is_dir,
                        remote_filesize, remote_create_timestamp,
-                       remote_change_timestamp)) {
+                       remote_change_timestamp, out)) {
     return HANDLED;
   }
 
@@ -48,35 +49,36 @@ Command::Result MacroCommandSyncFile::operator()(
     remote_path += std::filesystem::path(local_path).filename();
     if (!CheckRemotePath(interface, remote_path, remote_exists, remote_is_dir,
                          remote_filesize, remote_create_timestamp,
-                         remote_change_timestamp)) {
+                         remote_change_timestamp, out)) {
       return HANDLED;
     }
   }
 
-  SyncFile(interface, local_path, remote_path);
+  SyncFile(interface, local_path, remote_path, out);
   return HANDLED;
 }
 
 Command::Result MacroCommandSyncDirectory::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args) {
+    XBOXInterface& interface, const std::vector<std::string>& args,
+    std::ostream& out) {
   ArgParser parser(args);
   std::string local_path;
   if (!parser.Parse(0, local_path)) {
-    std::cout << "Missing required local_directory argument." << std::endl;
+    out << "Missing required local_directory argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
 
   std::string remote_path;
   if (!parser.Parse(1, remote_path)) {
-    std::cout << "Missing required remote_directory argument." << std::endl;
+    out << "Missing required remote_directory argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
 
   if (!std::filesystem::is_directory(local_path)) {
-    std::cout << "Invalid local_directory '" << local_path
-              << "', must be a directory." << std::endl;
+    out << "Invalid local_directory '" << local_path
+        << "', must be a directory." << std::endl;
     return HANDLED;
   }
   remote_path = EnsureXFATStylePath(remote_path);
@@ -86,7 +88,7 @@ Command::Result MacroCommandSyncDirectory::operator()(
           ? SyncFileMissingAction::DELETE
           : SyncFileMissingAction::LEAVE;
 
-  SyncDirectory(interface, local_path, remote_path, missing_action);
+  SyncDirectory(interface, local_path, remote_path, missing_action, out);
 
   return HANDLED;
 }

@@ -7,8 +7,8 @@
 
 struct ShellCommandQuit : Command {
   ShellCommandQuit() : Command("Terminate the connection and exit.") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>&) override {
+  Result operator()(XBOXInterface& interface, const std::vector<std::string>&,
+                    std::ostream& out) override {
     return Result::EXIT_REQUESTED;
   }
 };
@@ -16,27 +16,8 @@ struct ShellCommandQuit : Command {
 struct ShellCommandReconnect : Command {
   ShellCommandReconnect()
       : Command("Attempt to disconnect and reconnect from XBDM.") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>&) override;
-};
-
-struct ShellCommandGDB : Command {
-  ShellCommandGDB()
-      : Command(
-            "Start GDB <-> XBDM service.",
-            "[IP]:port [xbe_launch_path]\n"
-            "\n"
-            "Start a GDB server, allowing GDB to communicate with the XBDM "
-            "target.\n"
-            "\n"
-            "[IP]:port - The IP and port at which GDB can connect.\n"
-            "              The IP is optional, where the default behavior is "
-            "bind to all local interfaces.\n"
-            "[xbe_launch_path] - An XBOX path to an XBE (or directory "
-            "containing a default.xbe) that should be launched "
-            "when a GDB debugger first connects.") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args) override;
+  Result operator()(XBOXInterface& interface, const std::vector<std::string>&,
+                    std::ostream& out) override;
 };
 
 struct ShellCommandTrace : Command {
@@ -65,7 +46,8 @@ struct ShellCommandTrace : Command {
                 "PFB region. Default: off.") {}
 
   Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args) override;
+                    const std::vector<std::string>& args,
+                    std::ostream& out) override;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SHELL_COMMANDS_H

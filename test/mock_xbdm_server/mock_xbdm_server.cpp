@@ -265,7 +265,11 @@ bool MockXBDMServer::ProcessCommand(ClientTransport& client,
 
 #undef HANDLE
 
-  SendResponse(client, ERR_UNKNOWN_COMMAND, "Command unimplemented");
+  std::stringstream error_message_builder;
+  error_message_builder << "Command '" << command << "' unimplemented";
+  auto err = error_message_builder.str();
+  LOG_SERVER(trace) << err;
+  SendResponse(client, ERR_UNKNOWN_COMMAND, err);
   return true;
 }
 

@@ -14,6 +14,7 @@
 #include "util/parsing.h"
 #include "winapi/winnt.h"
 #include "xbdm_exports.h"
+#include "xbox/debugger/debugger_xbox_interface.h"
 #include "xbox/debugger/xbdm_debugger.h"
 #include "xbox/xbdm_context.h"
 #include "xbox/xbox_interface.h"
@@ -91,7 +92,8 @@ bool Loader::Install(XBOXInterface& interface,
   return singleton_->InstallDynDXT(interface, data);
 }
 
-bool Loader::InjectLoader(XBOXInterface& interface) {
+bool Loader::InjectLoader(XBOXInterface& base_interface) {
+  GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
     LOG_LOADER(error) << "Debugger not attached.";
@@ -221,7 +223,9 @@ bool Loader::InstallL2Loader(const std::shared_ptr<XBDMDebugger>& debugger,
   return true;
 }
 
-bool Loader::InstallDynDXT(XBOXInterface& interface, const std::string& path) {
+bool Loader::InstallDynDXT(XBOXInterface& base_interface,
+                           const std::string& path) {
+  GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
     LOG_LOADER(error) << "Debugger not attached.";
@@ -330,7 +334,8 @@ static bool L2BootstrapInstall(XBOXInterface& interface, uint32_t entrypoint,
   return true;
 }
 
-bool Loader::InstallDynamicDXTLoader(XBOXInterface& interface) {
+bool Loader::InstallDynamicDXTLoader(XBOXInterface& base_interface) {
+  GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto stream = std::make_shared<boost::interprocess::bufferstream>(
       (char*)kDynDXTLoader, sizeof(kDynDXTLoader));
   DXTLibrary lib(std::dynamic_pointer_cast<std::istream>(stream),
@@ -505,9 +510,10 @@ static bool BulkResolve(
   return true;
 }
 
-bool Loader::ResolveImports(XBOXInterface& interface,
+bool Loader::ResolveImports(XBOXInterface& base_interface,
                             const std::string& module_name,
                             std::vector<DXTLibraryImport>& imports) {
+  GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   if (!FetchBaseAddress(interface.Debugger(), module_name)) {
     return false;
   }

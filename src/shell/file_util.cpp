@@ -69,21 +69,23 @@ static uint64_t SafeXFATTimestampForFile(const std::string& local_path) {
 }
 
 bool CheckRemotePath(XBOXInterface& interface, const std::string& path,
-                     bool& exists, bool& is_dir) {
+                     bool& exists, bool& is_dir, std::ostream& out) {
   uint64_t size;
   uint64_t create;
   uint64_t change;
 
-  return CheckRemotePath(interface, path, exists, is_dir, size, create, change);
+  return CheckRemotePath(interface, path, exists, is_dir, size, create, change,
+                         out);
 }
 
 bool CheckRemotePath(XBOXInterface& interface, const std::string& path,
                      bool& exists, bool& is_dir, uint64_t& size,
-                     uint64_t& create_timestamp, uint64_t& change_timestamp) {
+                     uint64_t& create_timestamp, uint64_t& change_timestamp,
+                     std::ostream& out) {
   auto request = std::make_shared<GetFileAttributes>(path);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
-    std::cout << *request << std::endl;
+    out << *request << std::endl;
     return false;
   }
 
@@ -97,14 +99,15 @@ bool CheckRemotePath(XBOXInterface& interface, const std::string& path,
 
 bool FetchDirectoryEntries(XBOXInterface& interface, const std::string& path,
                            std::list<DirList::Entry>& directories,
-                           std::list<DirList::Entry>& files) {
+                           std::list<DirList::Entry>& files,
+                           std::ostream& out) {
   directories.clear();
   files.clear();
 
   auto request = std::make_shared<DirList>(EnsureXFATStylePath(path));
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
-    std::cout << *request << std::endl;
+    out << *request << std::endl;
     return false;
   }
 
@@ -133,17 +136,17 @@ template <typename ProcessFileCallback, typename ProcessDirectoryCallback>
 static bool WalkRemoteDir(XBOXInterface& interface,
                           const std::string& remote_directory,
                           ProcessFileCallback&& process_file,
-                          ProcessDirectoryCallback&& process_dir) {
+                          ProcessDirectoryCallback&& process_dir,
+                          std::ostream& out) {
   std::string full_remote_directory = EnsureTrailingBackslash(remote_directory);
   bool remote_exists;
   bool remote_is_dir;
   if (!CheckRemotePath(interface, full_remote_directory, remote_exists,
-                       remote_is_dir)) {
+                       remote_is_dir, out)) {
     return false;
   }
   if (remote_exists && !remote_is_dir) {
-    std::cout << "Remote path '" << remote_directory << "' is a file."
-              << std::endl;
+    out << "Remote path '" << remote_directory << "' is a file." << std::endl;
     return false;
   }
 
@@ -158,7 +161,7 @@ static bool WalkRemoteDir(XBOXInterface& interface,
 
     std::list<DirList::Entry> subdirectories;
     std::list<DirList::Entry> files;
-    if (!FetchDirectoryEntries(interface, dir, subdirectories, files)) {
+    if (!FetchDirectoryEntries(interface, dir, subdirectories, files, out)) {
       return false;
     }
 
@@ -185,10 +188,11 @@ static bool WalkRemoteDir(XBOXInterface& interface,
   return true;
 }
 
-bool DeleteRecursively(XBOXInterface& interface, const std::string& path) {
+bool DeleteRecursively(XBOXInterface& interface, const std::string& path,
+                       std::ostream& out) {
   std::list<DirList::Entry> directories;
   std::list<DirList::Entry> files;
-  if (!FetchDirectoryEntries(interface, path, directories, files)) {
+  if (!FetchDirectoryEntries(interface, path, directories, files, out)) {
     return false;
   }
 
@@ -199,16 +203,16 @@ bool DeleteRecursively(XBOXInterface& interface, const std::string& path) {
     auto request = std::make_shared<Delete>(full_path, false);
     interface.SendCommandSync(request);
     if (!request->IsOK()) {
-      std::cout << *request << std::endl;
+      out << *request << std::endl;
       return false;
     }
 
-    std::cout << "rm " << full_path << std::endl;
+    out << "rm " << full_path << std::endl;
   }
 
   for (auto& dir : directories) {
     std::string full_path = root_path + dir.name;
-    if (!DeleteRecursively(interface, full_path)) {
+    if (!DeleteRecursively(interface, full_path, out)) {
       return false;
     }
   }
@@ -217,28 +221,28 @@ bool DeleteRecursively(XBOXInterface& interface, const std::string& path) {
     auto request = std::make_shared<Delete>(path, true);
     interface.SendCommandSync(request);
     if (!request->IsOK()) {
-      std::cout << *request << std::endl;
+      out << *request << std::endl;
       return false;
     }
 
-    std::cout << "rm " << path << std::endl;
+    out << "rm " << path << std::endl;
   }
 
   return true;
 }
 
 bool SaveFile(XBOXInterface& interface, const std::string& remote,
-              const std::filesystem::path& local) {
+              const std::filesystem::path& local, std::ostream& out) {
   auto request = std::make_shared<GetFile>(remote);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
-    std::cout << *request << std::endl;
+    out << *request << std::endl;
     return false;
   }
 
   std::ofstream of(local, std::ofstream::binary | std::ofstream::trunc);
   if (!of) {
-    std::cout << "Failed to create local file " << local << std::endl;
+    out << "Failed to create local file " << local << std::endl;
     return false;
   }
   of.write(reinterpret_cast<char*>(request->data.data()),
@@ -249,10 +253,10 @@ bool SaveFile(XBOXInterface& interface, const std::string& remote,
 }
 
 bool SaveDirectory(XBOXInterface& interface, const std::string& remote,
-                   const std::filesystem::path& local) {
+                   const std::filesystem::path& local, std::ostream& out) {
   std::list<DirList::Entry> directories;
   std::list<DirList::Entry> files;
-  if (!FetchDirectoryEntries(interface, remote, directories, files)) {
+  if (!FetchDirectoryEntries(interface, remote, directories, files, out)) {
     return false;
   }
 
@@ -264,7 +268,7 @@ bool SaveDirectory(XBOXInterface& interface, const std::string& remote,
     std::error_code err;
     std::filesystem::create_directories(local_path, err);
 
-    if (!SaveDirectory(interface, remote_path, local_path)) {
+    if (!SaveDirectory(interface, remote_path, local_path, out)) {
       return false;
     }
   }
@@ -272,10 +276,10 @@ bool SaveDirectory(XBOXInterface& interface, const std::string& remote,
   for (auto& file : files) {
     std::string remote_path = remote_dir + file.name;
     std::filesystem::path local_path = local / file.name;
-    if (!SaveFile(interface, remote_path, local_path)) {
+    if (!SaveFile(interface, remote_path, local_path, out)) {
       return false;
     }
-    std::cout << remote_path << " -> " << local_path << std::endl;
+    out << remote_path << " -> " << local_path << std::endl;
   }
 
   return true;
@@ -283,7 +287,7 @@ bool SaveDirectory(XBOXInterface& interface, const std::string& remote,
 
 bool SaveRawFile(const std::string& filename_root, uint32_t width,
                  uint32_t height, uint32_t bpp, uint32_t format,
-                 const std::vector<uint8_t>& data) {
+                 const std::vector<uint8_t>& data, std::ostream& out) {
   char buf[256] = {0};
   snprintf(buf, 255, "%s-w%d_h%d_bpp%d_fmt%d.bin", filename_root.c_str(), width,
            height, bpp, format);
@@ -291,7 +295,7 @@ bool SaveRawFile(const std::string& filename_root, uint32_t width,
   // TODO: Check to see if the file already exists and dedup.
   std::ofstream of(buf, std::ofstream::binary | std::ofstream::trunc);
   if (!of) {
-    std::cout << "Failed to create local file " << buf << std::endl;
+    out << "Failed to create local file " << buf << std::endl;
     return false;
   }
 
@@ -300,7 +304,7 @@ bool SaveRawFile(const std::string& filename_root, uint32_t width,
   of.close();
 
   if (!of.good()) {
-    std::cout << "Failed to save local file " << buf << std::endl;
+    out << "Failed to save local file " << buf << std::endl;
   }
   return of.good();
 }
@@ -308,11 +312,10 @@ bool SaveRawFile(const std::string& filename_root, uint32_t width,
 bool UploadFileWithoutChecking(XBOXInterface& interface,
                                const std::string& local_path,
                                const std::string& full_remote_path,
-                               bool set_timestamp) {
+                               bool set_timestamp, std::ostream& out) {
   std::ifstream ifs(local_path, std::ifstream::binary);
   if (!ifs) {
-    std::cout << "Failed to open '" << local_path << "' for reading."
-              << std::endl;
+    out << "Failed to open '" << local_path << "' for reading." << std::endl;
     return false;
   }
   std::istreambuf_iterator<char> ifs_begin(ifs);
@@ -321,18 +324,17 @@ bool UploadFileWithoutChecking(XBOXInterface& interface,
   ifs.close();
 
   auto safe_full_remote_path = EnsureXFATStylePath(full_remote_path);
-  std::cout << local_path << " => " << safe_full_remote_path << " ... "
-            << std::flush;
+  out << local_path << " => " << safe_full_remote_path << " ... " << std::flush;
 
   auto request = std::make_shared<SendFile>(safe_full_remote_path, data);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
-    std::cout << "Failed" << std::endl;
-    std::cout << *request << std::endl;
+    out << "Failed" << std::endl;
+    out << *request << std::endl;
     return false;
   }
 
-  std::cout << "OK" << std::endl;
+  out << "OK" << std::endl;
 
   if (set_timestamp) {
     auto change_timestamp = SafeXFATTimestampForFile(local_path);
@@ -341,9 +343,8 @@ bool UploadFileWithoutChecking(XBOXInterface& interface,
         change_timestamp);
     interface.SendCommandSync(update_request);
     if (!update_request->IsOK()) {
-      std::cout << "Failed to update timestamp after uploading file '"
-                << safe_full_remote_path << "': " << *update_request
-                << std::endl;
+      out << "Failed to update timestamp after uploading file '"
+          << safe_full_remote_path << "': " << *update_request << std::endl;
       return false;
     }
   }
@@ -353,12 +354,12 @@ bool UploadFileWithoutChecking(XBOXInterface& interface,
 
 bool UploadFile(XBOXInterface& interface, const std::string& local_path,
                 const std::string& remote_path,
-                UploadFileOverwriteAction overwrite_action) {
+                UploadFileOverwriteAction overwrite_action, std::ostream& out) {
   auto safe_remote_path = EnsureXFATStylePath(remote_path);
 
   bool exists;
   bool is_dir;
-  if (!CheckRemotePath(interface, safe_remote_path, exists, is_dir)) {
+  if (!CheckRemotePath(interface, safe_remote_path, exists, is_dir, out)) {
     return false;
   }
 
@@ -366,7 +367,7 @@ bool UploadFile(XBOXInterface& interface, const std::string& local_path,
     auto request = std::make_shared<Mkdir>(safe_remote_path);
     interface.SendCommandSync(request);
     if (!request->IsOK()) {
-      std::cout << *request << std::endl;
+      out << *request << std::endl;
       return false;
     }
     is_dir = true;
@@ -379,7 +380,7 @@ bool UploadFile(XBOXInterface& interface, const std::string& local_path,
     }
     full_remote_path += std::filesystem::path(local_path).filename();
 
-    if (!CheckRemotePath(interface, full_remote_path, exists, is_dir)) {
+    if (!CheckRemotePath(interface, full_remote_path, exists, is_dir, out)) {
       return false;
     }
   }
@@ -390,18 +391,19 @@ bool UploadFile(XBOXInterface& interface, const std::string& local_path,
         break;
 
       case UploadFileOverwriteAction::SKIP:
-        std::cout << "Remote file '" << remote_path
-                  << "' already exists, skipping..." << std::endl;
+        out << "Remote file '" << remote_path << "' already exists, skipping..."
+            << std::endl;
         return true;
 
       case UploadFileOverwriteAction::ABORT:
-        std::cout << "Remote file '" << remote_path
-                  << "' already exists, aborting..." << std::endl;
+        out << "Remote file '" << remote_path << "' already exists, aborting..."
+            << std::endl;
         return false;
     }
   }
 
-  return UploadFileWithoutChecking(interface, local_path, full_remote_path);
+  return UploadFileWithoutChecking(interface, local_path, full_remote_path,
+                                   out);
 }
 
 template <typename ProcessFileCallback>
@@ -430,17 +432,17 @@ static bool WalkDirectory(const std::string& root_path,
 bool UploadDirectory(XBOXInterface& interface, const std::string& local_path,
                      const std::string& remote_path,
                      UploadFileOverwriteAction overwrite_action,
-                     bool contents_only) {
+                     bool contents_only, std::ostream& out) {
   auto safe_remote_path = EnsureXFATStylePath(remote_path);
 
   bool exists;
   bool is_dir;
-  if (!CheckRemotePath(interface, safe_remote_path, exists, is_dir)) {
+  if (!CheckRemotePath(interface, safe_remote_path, exists, is_dir, out)) {
     return false;
   }
   if (exists && !is_dir) {
-    std::cout << "Remote path '" << safe_remote_path
-              << "' exists and is a file. Aborting." << std::endl;
+    out << "Remote path '" << safe_remote_path
+        << "' exists and is a file. Aborting." << std::endl;
     return false;
   }
 
@@ -448,7 +450,7 @@ bool UploadDirectory(XBOXInterface& interface, const std::string& local_path,
     auto request = std::make_shared<Mkdir>(safe_remote_path);
     interface.SendCommandSync(request);
     if (!request->IsOK()) {
-      std::cout << *request << std::endl;
+      out << *request << std::endl;
       return false;
     }
   }
@@ -459,17 +461,17 @@ bool UploadDirectory(XBOXInterface& interface, const std::string& local_path,
     full_remote_path = EnsureTrailingBackslash(full_remote_path);
   }
 
-  auto process_file = [&interface, &full_remote_path,
-                       overwrite_action](const std::string& local_file) {
-    return UploadFile(interface, local_file, full_remote_path,
-                      overwrite_action);
+  auto process_file = [&interface, &full_remote_path, overwrite_action,
+                       &out](const std::string& local_file) {
+    return UploadFile(interface, local_file, full_remote_path, overwrite_action,
+                      out);
   };
 
   return WalkDirectory(local_path, process_file);
 }
 
 bool SyncFile(XBOXInterface& interface, const std::string& local_path,
-              const std::string& remote_path) {
+              const std::string& remote_path, std::ostream& out) {
   std::string full_remote_path = remote_path;
 
   bool remote_exists;
@@ -479,7 +481,7 @@ bool SyncFile(XBOXInterface& interface, const std::string& local_path,
   uint64_t remote_change_timestamp;
   if (!CheckRemotePath(interface, full_remote_path, remote_exists,
                        remote_is_dir, remote_filesize, remote_create_timestamp,
-                       remote_change_timestamp)) {
+                       remote_change_timestamp, out)) {
     return false;
   }
 
@@ -491,15 +493,16 @@ bool SyncFile(XBOXInterface& interface, const std::string& local_path,
     full_remote_path += std::filesystem::path(local_path).filename();
     if (!CheckRemotePath(interface, full_remote_path, remote_exists,
                          remote_is_dir, remote_filesize,
-                         remote_create_timestamp, remote_change_timestamp)) {
+                         remote_create_timestamp, remote_change_timestamp,
+                         out)) {
       return false;
     }
   }
 
-  auto upload_file = [&interface, &local_path, &full_remote_path]() {
+  auto upload_file = [&interface, &local_path, &full_remote_path, &out]() {
     if (!UploadFileWithoutChecking(interface, local_path, full_remote_path,
-                                   true)) {
-      std::cout << "Failed to upload file." << std::endl;
+                                   true, out)) {
+      out << "Failed to upload file." << std::endl;
       return false;
     }
     return true;
@@ -513,8 +516,8 @@ bool SyncFile(XBOXInterface& interface, const std::string& local_path,
   remote_change_timestamp &= kUsableTimestampRange;
   if (change_timestamp == remote_change_timestamp &&
       remote_filesize == std::filesystem::file_size(local_path)) {
-    std::cout << "Skipping '" << local_path << "' with same modification time."
-              << std::endl;
+    out << "Skipping '" << local_path << "' with same modification time."
+        << std::endl;
     return true;
   }
 
@@ -522,18 +525,17 @@ bool SyncFile(XBOXInterface& interface, const std::string& local_path,
 }
 
 static bool MakeDirs(XBOXInterface& interface,
-                     const std::string& remote_directory) {
+                     const std::string& remote_directory, std::ostream& out) {
   auto safe_remote_path = EnsureXFATStylePath(remote_directory);
   bool remote_exists;
   bool remote_is_dir;
   if (!CheckRemotePath(interface, safe_remote_path, remote_exists,
-                       remote_is_dir)) {
+                       remote_is_dir, out)) {
     return false;
   }
 
   if (remote_exists && !remote_is_dir) {
-    std::cout << "Remote path '" << safe_remote_path << "' is a file."
-              << std::endl;
+    out << "Remote path '" << safe_remote_path << "' is a file." << std::endl;
     return false;
   }
 
@@ -548,7 +550,7 @@ static bool MakeDirs(XBOXInterface& interface,
       auto request = std::make_shared<Mkdir>(subpath);
       interface.SendCommandSync(request);
       if (!request->IsOK() && request->status != ERR_EXISTS) {
-        std::cout << *request << std::endl;
+        out << *request << std::endl;
         return false;
       }
     }
@@ -560,11 +562,11 @@ static bool MakeDirs(XBOXInterface& interface,
 
 static bool CreateRemoteDirectoryHierarchy(
     XBOXInterface& interface, const std::string& remote_directory,
-    const std::set<std::string>& hierarchy) {
+    const std::set<std::string>& hierarchy, std::ostream& out) {
   std::string full_remote_dir =
       EnsureTrailingBackslash(EnsureXFATStylePath(remote_directory));
 
-  if (!MakeDirs(interface, full_remote_dir)) {
+  if (!MakeDirs(interface, full_remote_dir, out)) {
     return false;
   }
 
@@ -578,7 +580,7 @@ static bool CreateRemoteDirectoryHierarchy(
     auto request = std::make_shared<Mkdir>(full_remote_subdir);
     interface.SendCommandSync(request);
     if (!request->IsOK() && request->status != ERR_EXISTS) {
-      std::cout << *request << std::endl;
+      out << *request << std::endl;
       return false;
     }
   }
@@ -588,17 +590,16 @@ static bool CreateRemoteDirectoryHierarchy(
 
 bool SyncDirectory(XBOXInterface& interface, const std::string& local_directory,
                    const std::string& remote_directory,
-                   SyncFileMissingAction missing_action) {
+                   SyncFileMissingAction missing_action, std::ostream& out) {
   bool remote_exists;
   bool remote_is_dir;
   if (!CheckRemotePath(interface, remote_directory, remote_exists,
-                       remote_is_dir)) {
+                       remote_is_dir, out)) {
     return false;
   }
 
   if (remote_exists && !remote_is_dir) {
-    std::cout << "Remote path '" << remote_directory << "' is a file."
-              << std::endl;
+    out << "Remote path '" << remote_directory << "' is a file." << std::endl;
     return false;
   }
 
@@ -621,8 +622,8 @@ bool SyncDirectory(XBOXInterface& interface, const std::string& local_directory,
     };
 
     if (!WalkDirectory(local_directory, process_file)) {
-      std::cout << "Failed to process local directory '" << local_directory
-                << "'" << std::endl;
+      out << "Failed to process local directory '" << local_directory << "'"
+          << std::endl;
       return false;
     }
   }
@@ -630,9 +631,9 @@ bool SyncDirectory(XBOXInterface& interface, const std::string& local_directory,
   std::string remote_root = EnsureTrailingBackslash(remote_directory);
   auto local_root = std::filesystem::path(local_directory);
   auto process_remote_file = [&interface, &local_files, &relative_local_files,
-                              &local_root, &missing_action,
-                              &remote_root](const std::string& subdir,
-                                            const DirList::Entry& remote_file) {
+                              &local_root, &missing_action, &remote_root,
+                              &out](const std::string& subdir,
+                                    const DirList::Entry& remote_file) {
     std::string relative_path = remote_file.name;
     if (!subdir.empty()) {
       relative_path = XFATPathToLocalPath(
@@ -652,12 +653,12 @@ bool SyncDirectory(XBOXInterface& interface, const std::string& local_directory,
           remote_file.change_timestamp & kUsableTimestampRange;
       if (change_timestamp == remote_change_timestamp &&
           remote_file.filesize == std::filesystem::file_size(local_file)) {
-        std::cout << "Skipping '" << local_file
-                  << "' with same modification time." << std::endl;
+        out << "Skipping '" << local_file << "' with same modification time."
+            << std::endl;
       } else {
-        std::cout << "Uploading '" << local_file << "'" << std::endl;
+        out << "Uploading '" << local_file << "'" << std::endl;
         if (!UploadFileWithoutChecking(interface, local_file, full_remote_path,
-                                       true)) {
+                                       true, out)) {
           return false;
         }
       }
@@ -665,7 +666,7 @@ bool SyncDirectory(XBOXInterface& interface, const std::string& local_directory,
       auto request = std::make_shared<Delete>(full_remote_path, false);
       interface.SendCommandSync(request);
       if (!request->IsOK()) {
-        std::cout << *request << std::endl;
+        out << *request << std::endl;
         return false;
       }
     }
@@ -673,12 +674,12 @@ bool SyncDirectory(XBOXInterface& interface, const std::string& local_directory,
   };
 
   auto process_remote_dir = [&interface, &missing_action, &local_populated_dirs,
-                             &remote_root](const std::string& remote_dir,
-                                           bool& should_skip) {
+                             &remote_root, &out](const std::string& remote_dir,
+                                                 bool& should_skip) {
     std::string full_remote_dir = EnsureTrailingBackslash(remote_dir);
     if (full_remote_dir.find(remote_root) != 0) {
-      std::cout << "Error: Remote directory '" << full_remote_dir
-                << "' is not relative to '" << remote_root << "'" << std::endl;
+      out << "Error: Remote directory '" << full_remote_dir
+          << "' is not relative to '" << remote_root << "'" << std::endl;
       return false;
     }
     std::string subdir = full_remote_dir.substr(remote_root.size());
@@ -689,7 +690,7 @@ bool SyncDirectory(XBOXInterface& interface, const std::string& local_directory,
     should_skip = (!subdir.empty() && local_populated_dirs.find(subdir) ==
                                           local_populated_dirs.end());
     if (should_skip && missing_action == SyncFileMissingAction::DELETE) {
-      if (!DeleteRecursively(interface, full_remote_dir)) {
+      if (!DeleteRecursively(interface, full_remote_dir, out)) {
         return false;
       }
     }
@@ -698,21 +699,21 @@ bool SyncDirectory(XBOXInterface& interface, const std::string& local_directory,
 
   // Remove or update everything that exists on the remote.
   if (!WalkRemoteDir(interface, remote_directory, process_remote_file,
-                     process_remote_dir)) {
+                     process_remote_dir, out)) {
     return false;
   }
 
   // Add anything that only exists locally.
   if (!CreateRemoteDirectoryHierarchy(interface, remote_directory,
-                                      local_populated_dirs)) {
+                                      local_populated_dirs, out)) {
     return false;
   }
 
   for (auto& file : local_files) {
     auto remote_relative_path = remote_root;
     remote_relative_path += std::filesystem::relative(file, local_directory);
-    if (!UploadFileWithoutChecking(interface, file, remote_relative_path,
-                                   true)) {
+    if (!UploadFileWithoutChecking(interface, file, remote_relative_path, true,
+                                   out)) {
       return false;
     }
   }
