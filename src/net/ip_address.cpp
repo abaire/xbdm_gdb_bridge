@@ -47,6 +47,13 @@ IPAddress::IPAddress(const std::string& addr, uint16_t default_port)
 
 IPAddress::IPAddress(const sockaddr_in& addr) : hostname_(), addr_(addr) {}
 
+IPAddress IPAddress::WithPort(uint16_t port) const {
+  auto addr = addr_;
+  addr.sin_port = htons(port);
+
+  return IPAddress(addr);
+}
+
 std::ostream& operator<<(std::ostream& os, IPAddress const& addr) {
   char buf[64] = {0};
   inet_ntop(addr.addr_.sin_family, &addr.addr_.sin_addr, buf, 64);

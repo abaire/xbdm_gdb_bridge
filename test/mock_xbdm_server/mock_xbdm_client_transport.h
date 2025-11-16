@@ -19,8 +19,16 @@ class ClientTransport : public TCPConnection {
 
   void Close() override;
 
+  /**
+   * Connects to a notification server at the given address.
+   */
   std::shared_ptr<TCPConnection> CreateNotificationConnection(
-      int sock, const IPAddress& address);
+      const IPAddress& address);
+
+  /**
+   * Closes and releases the associated notification connection, if one exists.
+   */
+  void CloseNotificationConnection();
 
   [[nodiscard]] std::shared_ptr<TCPConnection> GetNotificationConnection()
       const {

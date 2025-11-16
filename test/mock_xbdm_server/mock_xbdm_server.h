@@ -43,8 +43,9 @@ struct DebugEvent {
   std::string message;
 };
 
-// Mock XBDM Server
-// This simulates an Xbox running XBDM for testing purposes
+/**
+ * Simulates an Xbox running XBDM for testing purposes
+ */
 class MockXBDMServer {
  public:
   explicit MockXBDMServer(uint16_t port = 0);
