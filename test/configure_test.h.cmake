@@ -3,4 +3,6 @@
 
 #define DYNDXT_LIB_DIR "${dyndxt_lib_dir}"
 
+#define TEST_TIMEOUT_SECONDS ${TEST_TIMEOUT_SECONDS}
+
 #endif  // XBDM_GDB_BRIDGE_TEST_CONFIGURE_TEST_H_CMAKE_H_
