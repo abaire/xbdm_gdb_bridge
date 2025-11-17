@@ -8,9 +8,10 @@
 #include "util/parsing.h"
 
 Command::Result TracerCommandInit::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args) {
+    XBOXInterface& interface, const std::vector<std::string>& args,
+    std::ostream& out) {
   if (!NTRCTracer::Tracer::Initialize(interface)) {
-    std::cout << "Failed to initialize tracer." << std::endl;
+    out << "Failed to initialize tracer." << std::endl;
     return HANDLED;
   }
 
@@ -21,13 +22,13 @@ Command::Result TracerCommandInit::operator()(
   while (it != args.end()) {
     auto key = boost::algorithm::to_lower_copy(*it++);
     if (opts.find(key) == opts.end()) {
-      std::cout << "Unknown parameter '" << key << "'." << std::endl;
+      out << "Unknown parameter '" << key << "'." << std::endl;
       return HANDLED;
     }
 
     if (it == args.end()) {
-      std::cout << "Invalid argument list, missing value for argument '" << key
-                << "'" << std::endl;
+      out << "Invalid argument list, missing value for argument '" << key << "'"
+          << std::endl;
       return HANDLED;
     }
 
@@ -39,17 +40,18 @@ Command::Result TracerCommandInit::operator()(
   if (!NTRCTracer::Tracer::Attach(interface, opts["tex"], opts["depth"],
                                   opts["color"], opts["rdi"], opts["pgraph"],
                                   opts["pfb"])) {
-    std::cout << "Failed to attach to tracer." << std::endl;
+    out << "Failed to attach to tracer." << std::endl;
     return HANDLED;
   }
 
   return HANDLED;
 }
 
-Command::Result TracerCommandDetach::operator()(
-    XBOXInterface& interface, const std::vector<std::string>&) {
+Command::Result TracerCommandDetach::operator()(XBOXInterface& interface,
+                                                const std::vector<std::string>&,
+                                                std::ostream& out) {
   if (!NTRCTracer::Tracer::Detach(interface)) {
-    std::cout << "Failed to detach from the tracer." << std::endl;
+    out << "Failed to detach from the tracer." << std::endl;
     return HANDLED;
   }
 
@@ -57,9 +59,10 @@ Command::Result TracerCommandDetach::operator()(
 }
 
 Command::Result TracerCommandBreakOnNextFlip::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args) {
+    XBOXInterface& interface, const std::vector<std::string>& args,
+    std::ostream& out) {
   if (!NTRCTracer::Tracer::BreakOnFrameStart(interface, !args.empty())) {
-    std::cout << "Failed to request break." << std::endl;
+    out << "Failed to request break." << std::endl;
     return HANDLED;
   }
 
@@ -67,7 +70,8 @@ Command::Result TracerCommandBreakOnNextFlip::operator()(
 }
 
 Command::Result TracerCommandTraceFrames::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args) {
+    XBOXInterface& interface, const std::vector<std::string>& args,
+    std::ostream& out) {
   auto local_artifact_path = std::filesystem::current_path();
   auto num_frames = 1;
   auto verbose = false;
@@ -82,8 +86,8 @@ Command::Result TracerCommandTraceFrames::operator()(
     }
 
     if (it == args.end()) {
-      std::cout << "Invalid argument list, missing value for argument '" << key
-                << "'" << std::endl;
+      out << "Invalid argument list, missing value for argument '" << key << "'"
+          << std::endl;
       return HANDLED;
     }
 
@@ -96,29 +100,29 @@ Command::Result TracerCommandTraceFrames::operator()(
           local_artifact_path = explicit_path;
         }
       } catch (...) {
-        std::cout << "Invalid '" << key << "' argument." << std::endl;
+        out << "Invalid '" << key << "' argument." << std::endl;
         return HANDLED;
       }
     } else if (key == "frames") {
       try {
         num_frames = std::stoi((*it++));
       } catch (std::invalid_argument& e) {
-        std::cout << "Invalid '" << key << "' argument." << std::endl;
+        out << "Invalid '" << key << "' argument." << std::endl;
         return HANDLED;
       }
     } else {
-      std::cout << "Unknown config argument '" << key << "'" << std::endl;
+      out << "Unknown config argument '" << key << "'" << std::endl;
     }
   }
 
   if (!NTRCTracer::Tracer::BreakOnFrameStart(interface, false)) {
-    std::cout << "Failed to request break on frame start." << std::endl;
+    out << "Failed to request break on frame start." << std::endl;
     return HANDLED;
   }
 
   if (!NTRCTracer::Tracer::TraceFrames(interface, local_artifact_path,
                                        num_frames, verbose)) {
-    std::cout << "Failed to trace frames." << std::endl;
+    out << "Failed to trace frames." << std::endl;
     return HANDLED;
   }
 

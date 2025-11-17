@@ -25,7 +25,13 @@ struct Command {
   }
 
   virtual Result operator()(XBOXInterface& interface,
-                            const std::vector<std::string>& args) = 0;
+                            const std::vector<std::string>& args,
+                            std::ostream& out) = 0;
+
+  Result operator()(XBOXInterface& interface,
+                    const std::vector<std::string>& args) {
+    return (*this)(interface, args, std::cout);
+  };
 
   void PrintUsage() const { std::cout << help << std::endl; }
 

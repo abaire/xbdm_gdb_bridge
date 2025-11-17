@@ -9,15 +9,15 @@ class XBOXInterface;
 
 struct DynDXTCommandLoadBootstrap : Command {
   DynDXTCommandLoadBootstrap() : Command("Load the XBDM handler injector.") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>&) override;
+  Result operator()(XBOXInterface& interface, const std::vector<std::string>&,
+                    std::ostream& out) override;
 };
 
 struct DynDXTCommandHello : Command {
   DynDXTCommandHello()
       : Command("Verify that the XBDM handler injector is available.") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>&) override;
+  Result operator()(XBOXInterface& interface, const std::vector<std::string>&,
+                    std::ostream& out) override;
 };
 
 struct DynDXTCommandInvokeSimple : Command {
@@ -29,7 +29,8 @@ struct DynDXTCommandInvokeSimple : Command {
             "Invokes an arbitrary debug command processor with the given "
             "arguments.") {}
   Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args) override;
+                    const std::vector<std::string>& args,
+                    std::ostream& out) override;
 };
 
 struct DynDXTCommandInvokeMultiline : Command {
@@ -41,7 +42,8 @@ struct DynDXTCommandInvokeMultiline : Command {
             "Invoke an arbitrary debug command processor with the given "
             "arguments, expecting a multiline response.") {}
   Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args) override;
+                    const std::vector<std::string>& args,
+                    std::ostream& out) override;
 };
 
 struct DynDXTCommandInvokeSendBinary : Command {
@@ -53,7 +55,8 @@ struct DynDXTCommandInvokeSendBinary : Command {
                 "arguments, sending the contents of `binary_path` as a binary "
                 "attachment.") {}
   Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args) override;
+                    const std::vector<std::string>& args,
+                    std::ostream& out) override;
 };
 
 struct DynDXTCommandInvokeReceiveSizePrefixedBinary : Command {
@@ -67,7 +70,8 @@ struct DynDXTCommandInvokeReceiveSizePrefixedBinary : Command {
             "4-byte length, which will be saved into a file at the given "
             "path.") {}
   Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args) override;
+                    const std::vector<std::string>& args,
+                    std::ostream& out) override;
 };
 
 struct DynDXTCommandInvokeReceiveKnownSizedBinary : Command {
@@ -82,7 +86,8 @@ struct DynDXTCommandInvokeReceiveKnownSizedBinary : Command {
             "bytes in length, which will be saved into a file at the given "
             "path.") {}
   Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args) override;
+                    const std::vector<std::string>& args,
+                    std::ostream& out) override;
 };
 
 struct DynDXTCommandLoad : Command {
@@ -91,8 +96,8 @@ struct DynDXTCommandLoad : Command {
                 "<dll_path>\n"
                 "\n"
                 "Load the given DXT DLL.") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>&) override;
+  Result operator()(XBOXInterface& interface, const std::vector<std::string>&,
+                    std::ostream& out) override;
 };
 
 #endif  // XBDM_GDB_BRIDGE_HANDLER_COMMANDS_H

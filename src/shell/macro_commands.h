@@ -11,7 +11,8 @@ struct MacroCommandSyncFile : Command {
                 "Checks the file modification time of `remote_path` and "
                 "uploads `local_path` if it is newer.\n") {}
   Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args) override;
+                    const std::vector<std::string>& args,
+                    std::ostream& out) override;
 };
 
 struct MacroCommandSyncDirectory : Command {
@@ -25,7 +26,8 @@ struct MacroCommandSyncDirectory : Command {
                 "Files that only exist in `remote_directory` will be left "
                 "alone unless the `-d` flag is given.\n") {}
   Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args) override;
+                    const std::vector<std::string>& args,
+                    std::ostream& out) override;
 };
 
 #endif  // XBDM_GDB_BRIDGE_MACRO_COMMANDS_H

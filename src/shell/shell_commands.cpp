@@ -1,53 +1,23 @@
 #include "shell_commands.h"
 
 #include <boost/algorithm/string/case_conv.hpp>
-#include <filesystem>
 
 #include "tracer_commands.h"
 
 Command::Result ShellCommandReconnect::operator()(
-    XBOXInterface& interface, const std::vector<std::string>&) {
+    XBOXInterface& interface, const std::vector<std::string>&,
+    std::ostream& out) {
   if (interface.ReconnectXBDM()) {
-    std::cout << "Connected." << std::endl;
+    out << "Connected." << std::endl;
   } else {
-    std::cout << "Failed to connect." << std::endl;
+    out << "Failed to connect." << std::endl;
   }
-  return Result::HANDLED;
-}
-
-Command::Result ShellCommandGDB::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args) {
-  std::vector<std::string> components;
-  IPAddress address;
-
-  if (args.empty()) {
-    std::cout << "Missing required port argument." << std::endl;
-    PrintUsage();
-    return Result::HANDLED;
-  }
-  address = IPAddress(args.front());
-
-  if (!interface.StartGDBServer(address)) {
-    std::cout << "Failed to start GDB server." << std::endl;
-    return Result::HANDLED;
-  }
-
-  if (args.size() > 1) {
-    interface.SetGDBLaunchTarget(args.back());
-  }
-
-  if (!interface.GetGDBListenAddress(address)) {
-    std::cout << "GDB server failed to bind." << std::endl;
-    interface.ClearGDBLaunchTarget();
-  } else {
-    std::cout << "GDB server listening at Address " << address << std::endl;
-  }
-
   return Result::HANDLED;
 }
 
 Command::Result ShellCommandTrace::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args) {
+    XBOXInterface& interface, const std::vector<std::string>& args,
+    std::ostream& out) {
   std::vector<std::string> attach_args;
   std::vector<std::string> trace_args;
 
@@ -55,8 +25,8 @@ Command::Result ShellCommandTrace::operator()(
   while (it != args.end()) {
     auto key = boost::algorithm::to_lower_copy(*it++);
     if (it == args.end()) {
-      std::cout << "Invalid argument list, missing value for argument '" << key
-                << "'" << std::endl;
+      out << "Invalid argument list, missing value for argument '" << key << "'"
+          << std::endl;
       return HANDLED;
     }
 
@@ -71,17 +41,17 @@ Command::Result ShellCommandTrace::operator()(
 
   {
     auto init = TracerCommandInit();
-    init(interface, attach_args);
+    init(interface, attach_args, out);
   }
 
   {
     auto trace = TracerCommandTraceFrames();
-    trace(interface, trace_args);
+    trace(interface, trace_args, out);
   }
 
   {
     auto detach = TracerCommandDetach();
-    detach(interface, {});
+    detach(interface, {}, out);
   }
 
   return HANDLED;

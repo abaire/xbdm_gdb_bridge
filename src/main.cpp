@@ -4,8 +4,10 @@
 
 #include "configure.h"
 #include "net/ip_address.h"
+#include "shell/gdb/gdb_commands.h"
 #include "shell/shell.h"
 #include "util/logging.h"
+#include "xbox/bridge/gdb_xbox_interface.h"
 #include "xbox/xbox_interface.h"
 
 #define DEFAULT_PORT 731
@@ -27,10 +29,13 @@ static int main_(const IPAddress& xbox_addr,
                  const std::vector<std::vector<std::string>>& commands,
                  bool run_shell) {
   LOG(trace) << "Startup - XBDM @ " << xbox_addr;
-  auto interface = std::make_shared<XBOXInterface>("XBOX", xbox_addr);
+  std::shared_ptr<XBOXInterface> interface =
+      std::make_shared<GDBXBOXInterface>("XBOX", xbox_addr);
   interface->Start();
 
   auto shell = Shell(interface);
+  RegisterGDBCommands(shell);
+
   for (auto& command : commands) {
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
     LOG(trace) << "Processing startup command '" << command.front() << "'";
