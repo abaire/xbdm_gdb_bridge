@@ -2,6 +2,7 @@
 #include <chrono>
 #include <memory>
 
+#include "configure_test.h"
 #include "mock_xbdm_server/mock_xbdm_server.h"
 #include "net/select_thread.h"
 #include "shell/dyndxt_commands.h"
@@ -65,7 +66,7 @@ std::string trimmed(const std::stringstream& captured) {
 }  // namespace
 
 #define DEBUGGER_TEST_CASE(__name) \
-  BOOST_AUTO_TEST_CASE(__name, *boost::unit_test::timeout(2))
+  BOOST_AUTO_TEST_CASE(__name, *boost::unit_test::timeout(TEST_TIMEOUT_SECONDS))
 
 // ============================================================================
 // Connection Tests

@@ -2,6 +2,7 @@
 #include <chrono>
 #include <memory>
 
+#include "configure_test.h"
 #include "mock_xbdm_server/mock_xbdm_server.h"
 #include "net/select_thread.h"
 #include "xbox/debugger/xbdm_debugger.h"
@@ -54,7 +55,7 @@ struct XBDMDebuggerFixture {
 };
 
 #define DEBUGGER_TEST_CASE(__name) \
-  BOOST_AUTO_TEST_CASE(__name, *boost::unit_test::timeout(2))
+  BOOST_AUTO_TEST_CASE(__name, *boost::unit_test::timeout(TEST_TIMEOUT_SECONDS))
 
 // ============================================================================
 // Connection Tests

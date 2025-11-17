@@ -22,6 +22,8 @@ if(NOT NXDK_DIR)
 endif()
 set(ENV{NXDK_DIR} ${NXDK_DIR})
 
+set(TEST_TIMEOUT_SECONDS 2 CACHE INTERNAL "Default timeout for tests, in seconds")
+
 ExternalProject_Add(
         dyndxt_loader
         PREFIX ddxt
