@@ -110,7 +110,7 @@ jobs:
         run: |
           cd xbdm_gdb_bridge
           export NXDK_DIR="${GITHUB_WORKSPACE}/nxdk"
-          cmake -B build -DCMAKE_BUILD_TYPE=Release -DNXDK_DIR="${GITHUB_WORKSPACE}/nxdk" -DTEST_TIMEOUT_SECONDS=10
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DNXDK_DIR="${GITHUB_WORKSPACE}/nxdk" -DTEST_TIMEOUT_SECONDS=5
           cmake --build build -- -j$(if [ "$(uname)" == "Darwin" ]; then sysctl -n hw.ncpu; else nproc; fi)
 
       - name: Test

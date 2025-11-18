@@ -4,7 +4,10 @@
 #include <cstring>
 #include <utility>
 
+#include "configure.h"
 #include "util/logging.h"
+
+#define LOG_NOTIF(lvl) LOG_TAGGED(lvl, ::logging::kLoggingTagXBDMNotification)
 
 static constexpr uint8_t kTerminator[] = {'\r', '\n'};
 static constexpr long kTerminatorLen =
@@ -19,10 +22,20 @@ XBDMNotificationTransport::XBDMNotificationTransport(
       notification_handler_(std::move(handler)),
       hello_received_(false) {}
 
+void XBDMNotificationTransport::Close() {
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
+  if (socket_ >= 0) {
+    LOG_NOTIF(trace) << "Closing notification channel [" << name_ << "] from "
+                     << address_;
+  }
+#endif
+  TCPConnection::Close();
+}
+
 void XBDMNotificationTransport::OnBytesRead() {
   TCPConnection::OnBytesRead();
 
-  const std::lock_guard<std::recursive_mutex> read_lock(read_lock_);
+  const std::lock_guard read_lock(read_lock_);
   char const* buffer = reinterpret_cast<char*>(read_buffer_.data());
 
   auto buffer_end = buffer + read_buffer_.size();
@@ -45,6 +58,10 @@ void XBDMNotificationTransport::OnBytesRead() {
 void XBDMNotificationTransport::HandleNotification(const char* message,
                                                    long message_len) {
   if (message_len == 5 && !memcmp(message, "hello", message_len)) {
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
+    LOG_NOTIF(trace) << "Notification channel [" << name_
+                     << "]: hello message received";
+#endif
     hello_received_ = true;
     return;
   }
@@ -52,10 +69,17 @@ void XBDMNotificationTransport::HandleNotification(const char* message,
   auto notification = ParseXBDMNotification(message, message_len);
   if (!notification) {
     std::string dbg_message(message, message + message_len);
-    LOG(warning) << "Unhandled notification '" << dbg_message << "'"
-                 << std::endl;
+    LOG_NOTIF(warning) << "Notification channel [" << name_
+                       << "]: Unhandled notification '" << dbg_message << "'"
+                       << std::endl;
     return;
   }
+
+#ifdef ENABLE_HIGH_VERBOSITY_LOGGING
+  std::string msg_str(message, message_len);
+  LOG_NOTIF(trace) << "Notification channel [" << name_
+                   << "]: message received '" << msg_str << "'";
+#endif
 
   notification_handler_(notification);
 }

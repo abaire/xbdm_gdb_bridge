@@ -24,6 +24,7 @@ class IPAddress {
     return reinterpret_cast<struct sockaddr const*>(&addr_);
   }
   bool operator<(const IPAddress& other) const;
+  bool operator==(const IPAddress& ip_address) const;
 
  private:
   friend std::ostream& operator<<(std::ostream&, IPAddress const&);

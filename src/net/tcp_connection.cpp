@@ -15,7 +15,7 @@ void TCPConnection::ShiftReadBuffer(long shift_bytes) {
     return;
   }
 
-  const std::lock_guard<std::recursive_mutex> lock(read_lock_);
+  const std::lock_guard lock(read_lock_);
   if (shift_bytes > read_buffer_.size()) {
     return;
   }
@@ -25,53 +25,59 @@ void TCPConnection::ShiftReadBuffer(long shift_bytes) {
 }
 
 size_t TCPConnection::BytesAvailable() {
-  const std::lock_guard<std::recursive_mutex> lock(read_lock_);
+  const std::lock_guard lock(read_lock_);
   return read_buffer_.size();
 }
 
 void TCPConnection::DropReceiveBuffer() {
-  const std::lock_guard<std::recursive_mutex> lock(read_lock_);
+  const std::lock_guard lock(read_lock_);
   read_buffer_.clear();
 }
 
 void TCPConnection::DropSendBuffer() {
-  const std::lock_guard<std::recursive_mutex> lock(write_lock_);
+  const std::lock_guard lock(write_lock_);
   write_buffer_.clear();
 }
 
 void TCPConnection::Send(const uint8_t* buffer, size_t len) {
-  const std::lock_guard<std::recursive_mutex> lock(write_lock_);
+  const std::lock_guard lock(write_lock_);
   write_buffer_.insert(write_buffer_.end(), buffer, buffer + len);
+  SignalProcessingNeeded();
 }
 
 bool TCPConnection::HasBufferedData() {
-  const std::lock_guard<std::recursive_mutex> read_lock(read_lock_);
-  const std::lock_guard<std::recursive_mutex> write_lock(write_lock_);
+  const std::lock_guard read_lock(read_lock_);
+  const std::lock_guard write_lock(write_lock_);
 
   return !read_buffer_.empty() || !write_buffer_.empty();
 }
 
 int TCPConnection::Select(fd_set& read_fds, fd_set& write_fds,
                           fd_set& except_fds) {
-  const std::lock_guard<std::recursive_mutex> lock(socket_lock_);
+  int ret = TCPSocketBase::Select(read_fds, write_fds, except_fds);
+  const std::lock_guard lock(socket_lock_);
   if (socket_ < 0) {
-    return socket_;
+    return ret;
   }
 
   FD_SET(socket_, &read_fds);
   FD_SET(socket_, &except_fds);
 
-  const std::lock_guard<std::recursive_mutex> write_lock(write_lock_);
+  const std::lock_guard write_lock(write_lock_);
   if (!write_buffer_.empty()) {
     FD_SET(socket_, &write_fds);
   }
 
-  return socket_;
+  return std::max(socket_, ret);
 }
 
 bool TCPConnection::Process(const fd_set& read_fds, const fd_set& write_fds,
                             const fd_set& except_fds) {
-  const std::lock_guard<std::recursive_mutex> lock(socket_lock_);
+  if (!TCPSocketBase::Process(read_fds, write_fds, except_fds)) {
+    return !is_shutdown_;
+  }
+
+  const std::lock_guard lock(socket_lock_);
   if (socket_ < 0) {
     // If the socket was previously connected and is now shutdown, request
     // deletion.
@@ -86,6 +92,11 @@ bool TCPConnection::Process(const fd_set& read_fds, const fd_set& write_fds,
 
   if (FD_ISSET(socket_, &write_fds)) {
     DoSend();
+    if (close_after_flush_ && write_buffer_.empty()) {
+      Close();
+      close_after_flush_ = false;
+      return false;
+    }
   }
 
   if (FD_ISSET(socket_, &read_fds)) {
@@ -98,31 +109,31 @@ bool TCPConnection::Process(const fd_set& read_fds, const fd_set& write_fds,
 }
 
 bool TCPConnection::DoReceive() {
-  const std::lock_guard<std::recursive_mutex> socket_lock(socket_lock_);
+  const std::lock_guard socket_lock(socket_lock_);
   std::vector<uint8_t> buffer(1024);
 
   ssize_t bytes_read = recv(socket_, buffer.data(), buffer.size(), 0);
   if (!bytes_read) {
-    LOG_TAGGED(trace, name_) << "remote closed socket.";
+    LOG_TAGGED(trace, name_) << "remote closed socket " << *this;
     Close();
     return false;
   }
   if (bytes_read < 0) {
-    LOG_TAGGED(trace, name_)
-        << "recv returned " << bytes_read << " errno: " << errno;
+    LOG_TAGGED(trace, name_) << "recv returned " << bytes_read
+                             << " errno: " << errno << " " << *this;
     Close();
     return false;
   }
 
-  const std::lock_guard<std::recursive_mutex> read_lock(read_lock_);
+  const std::lock_guard read_lock(read_lock_);
   buffer.resize(bytes_read);
   read_buffer_.insert(read_buffer_.end(), buffer.begin(), buffer.end());
   return true;
 }
 
 void TCPConnection::DoSend() {
-  const std::lock_guard<std::recursive_mutex> socket_lock(socket_lock_);
-  const std::lock_guard<std::recursive_mutex> write_lock(write_lock_);
+  const std::lock_guard socket_lock(socket_lock_);
+  const std::lock_guard write_lock(write_lock_);
 
   ssize_t bytes_sent =
       send(socket_, write_buffer_.data(), write_buffer_.size(), 0);
@@ -165,14 +176,25 @@ void TCPConnection::DoSend() {
 }
 
 std::vector<uint8_t>::iterator TCPConnection::FirstIndexOf(uint8_t element) {
-  const std::lock_guard<std::recursive_mutex> lock(read_lock_);
+  const std::lock_guard lock(read_lock_);
   return std::find(read_buffer_.begin(), read_buffer_.end(), element);
 }
 
 std::vector<uint8_t>::iterator TCPConnection::FirstIndexOf(
     const std::vector<uint8_t>& pattern) {
-  const std::lock_guard<std::recursive_mutex> lock(read_lock_);
+  const std::lock_guard lock(read_lock_);
 
   return std::search(read_buffer_.begin(), read_buffer_.end(), pattern.begin(),
                      pattern.end());
+}
+
+void TCPConnection::FlushAndClose() {
+  const std::lock_guard write_lock(write_lock_);
+
+  if (write_buffer_.empty()) {
+    Close();
+    return;
+  }
+
+  close_after_flush_ = true;
 }

@@ -12,7 +12,7 @@ bool XBDMTransport::Connect(const IPAddress& address) {
     Close();
   }
 
-  LOG_XBDM(trace) << "Connecting to XBDM at " << address;
+  LOG_XBDM(trace) << Name() << " connecting to XBDM at " << address;
   socket_ = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (socket_ < 0) {
     return false;
@@ -22,13 +22,16 @@ bool XBDMTransport::Connect(const IPAddress& address) {
   const struct sockaddr_in& addr = address.Address();
   if (connect(socket_, reinterpret_cast<struct sockaddr const*>(&addr),
               sizeof(addr))) {
-    LOG_XBDM(error) << "connect failed " << errno;
+    LOG_XBDM(error) << Name() << " connect failed " << errno;
     close(socket_);
     socket_ = -1;
     return false;
   }
 
-  LOG_XBDM(trace) << "Connected.";
+  LOG_XBDM(trace) << Name() << " connected.";
+
+  SignalProcessingNeeded();
+
   return true;
 }
 
@@ -36,11 +39,13 @@ void XBDMTransport::Close() {
   state_ = ConnectionState::INIT;
   TCPConnection::Close();
 
-  const std::lock_guard<std::recursive_mutex> lock(request_queue_lock_);
+  const std::lock_guard lock(request_queue_lock_);
   for (auto& request : request_queue_) {
     request->Abandon();
   }
   request_queue_.clear();
+
+  SignalProcessingNeeded();
 }
 
 void XBDMTransport::SetConnected() {
@@ -50,7 +55,7 @@ void XBDMTransport::SetConnected() {
 }
 
 void XBDMTransport::Send(const std::shared_ptr<RDCPRequest>& request) {
-  const std::lock_guard<std::recursive_mutex> lock(request_queue_lock_);
+  const std::lock_guard lock(request_queue_lock_);
   request_queue_.push_back(request);
 
   WriteNextRequest();
@@ -61,7 +66,7 @@ void XBDMTransport::WriteNextRequest() {
     return;
   }
 
-  const std::lock_guard<std::recursive_mutex> lock(request_queue_lock_);
+  const std::lock_guard lock(request_queue_lock_);
   if (request_queue_.empty()) {
     return;
   }
@@ -78,7 +83,7 @@ void XBDMTransport::WriteNextRequest() {
 void XBDMTransport::OnBytesRead() {
   TCPConnection::OnBytesRead();
 
-  const std::lock_guard<std::recursive_mutex> read_lock(read_lock_);
+  const std::lock_guard read_lock(read_lock_);
   char const* char_buffer = reinterpret_cast<char*>(read_buffer_.data());
 
   std::shared_ptr<RDCPRequest> request;

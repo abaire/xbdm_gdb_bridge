@@ -16,7 +16,7 @@ GDBTransport::GDBTransport(std::string name, int sock, IPAddress address,
 
 void GDBTransport::Send(const GDBPacket& packet) {
   {
-    const std::lock_guard<std::recursive_mutex> lock(ack_buffer_lock_);
+    const std::lock_guard lock(ack_buffer_lock_);
     ack_buffer_.push_back(packet.Serialize());
   }
 
@@ -27,12 +27,11 @@ void GDBTransport::OnBytesRead() {
   TCPConnection::OnBytesRead();
 
   {
-    const std::lock_guard<std::recursive_mutex> unescaped_lock(
-        unescaped_read_lock_);
+    const std::lock_guard unescaped_lock(unescaped_read_lock_);
     size_t read_buffer_size = unescaped_read_buffer_.size();
 
     {
-      const std::lock_guard<std::recursive_mutex> lock(read_lock_);
+      const std::lock_guard lock(read_lock_);
 
       auto it = read_buffer_.begin();
       for (; it != read_buffer_.end(); ++it) {
@@ -42,8 +41,7 @@ void GDBTransport::OnBytesRead() {
             LOG_GDB(trace) << "Ack received";
 #endif
             {
-              const std::lock_guard<std::recursive_mutex> ack_lock(
-                  ack_buffer_lock_);
+              const std::lock_guard ack_lock(ack_buffer_lock_);
               if (ack_buffer_.empty()) {
                 LOG_GDB(error) << "Ack received with empty ack buffer";
               } else {
@@ -57,8 +55,7 @@ void GDBTransport::OnBytesRead() {
             LOG_GDB(warning) << "Remote requested resend.";
 #endif
             {
-              const std::lock_guard<std::recursive_mutex> ack_lock(
-                  ack_buffer_lock_);
+              const std::lock_guard ack_lock(ack_buffer_lock_);
               if (ack_buffer_.empty()) {
                 LOG_GDB(error) << "Resend received with empty ack buffer";
               } else {
@@ -96,8 +93,7 @@ void GDBTransport::ProcessUnescapedReadBuffer() {
   std::list<std::shared_ptr<GDBPacket>> packets;
 
   {
-    const std::lock_guard<std::recursive_mutex> unescaped_lock(
-        unescaped_read_lock_);
+    const std::lock_guard unescaped_lock(unescaped_read_lock_);
     auto it = unescaped_read_buffer_.begin();
     auto it_end = unescaped_read_buffer_.end();
 

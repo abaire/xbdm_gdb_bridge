@@ -62,7 +62,7 @@ bool XBDMDebugger::Attach() {
   context_->UnregisterNotificationHandler(notification_handler_id_);
   notification_handler_id_ = context_->RegisterNotificationHandler(
       [this](const std::shared_ptr<XBDMNotification>& notification,
-             XBDMContext&) { this->OnNotification(notification); });
+             XBDMContext&) { OnNotification(notification); });
 
   if (!RequestDebugNotifications(address.Port(), context_)) {
     context_->UnregisterNotificationHandler(notification_handler_id_);
@@ -274,7 +274,7 @@ std::shared_ptr<Thread> XBDMDebugger::GetThread(int thread_id) {
     return nullptr;
   }
 
-  const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
+  const std::lock_guard lock(threads_lock_);
   for (auto thread : threads_) {
     if (thread->thread_id == thread_id) {
       return thread;
@@ -288,7 +288,7 @@ std::shared_ptr<Thread> XBDMDebugger::GetFirstStoppedThread() {
   std::list<std::shared_ptr<Thread>> threads;
   int active_thread_id;
   {
-    const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
+    const std::lock_guard lock(threads_lock_);
     if (threads_.empty()) {
       LOG_DEBUGGER(trace) << "No known threads";
       return nullptr;
@@ -318,7 +318,7 @@ std::shared_ptr<Thread> XBDMDebugger::GetFirstStoppedThread() {
 }
 
 bool XBDMDebugger::SetActiveThread(int thread_id) {
-  const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
+  const std::lock_guard lock(threads_lock_);
   for (auto thread : threads_) {
     if (thread->thread_id == thread_id) {
       active_thread_id_ = thread_id;
@@ -466,7 +466,7 @@ void XBDMDebugger::OnSectionUnloaded(
 void XBDMDebugger::OnThreadCreated(
     const std::shared_ptr<NotificationThreadCreated>& msg) {
   LOG_DEBUGGER(info) << "Thread created: " << msg->thread_id;
-  const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
+  const std::lock_guard lock(threads_lock_);
   for (auto thread : threads_) {
     if (thread->thread_id == msg->thread_id) {
       LOG_DEBUGGER(warning)
@@ -481,7 +481,7 @@ void XBDMDebugger::OnThreadCreated(
 void XBDMDebugger::OnThreadTerminated(
     const std::shared_ptr<NotificationThreadTerminated>& msg) {
   LOG_DEBUGGER(info) << "Thread terminated: " << msg->thread_id;
-  const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
+  const std::lock_guard lock(threads_lock_);
   for (auto it = threads_.begin(); it != threads_.end(); ++it) {
     auto& thread = *it;
     if (thread->thread_id == msg->thread_id) {
@@ -503,7 +503,7 @@ void XBDMDebugger::OnExecutionStateChanged(
   LOG_DEBUGGER(info) << "XBDMNotif: State changed: " << *msg;
 
   {
-    const std::lock_guard<std::mutex> lock(state_lock_);
+    const std::lock_guard lock(state_lock_);
     state_ = msg->state;
     if (state_ == ExecutionState::S_REBOOTING) {
       modules_.clear();
@@ -541,6 +541,10 @@ void XBDMDebugger::OnBreakpoint(
   if (thread->suspend_count > 0) {
     thread->Resume(*context_);
   }
+
+  if (print_thread_info_on_break_) {
+    LOG_DEBUGGER(info) << *thread;
+  }
 }
 
 void XBDMDebugger::OnWatchpoint(
@@ -564,6 +568,10 @@ void XBDMDebugger::OnSingleStep(
   thread->last_known_address = msg->address;
   // TODO: Set the stop reason from the notification content.
   thread->FetchStopReasonSync(*context_);
+
+  if (print_thread_info_on_break_) {
+    LOG_DEBUGGER(info) << *thread;
+  }
 }
 
 void XBDMDebugger::OnException(
@@ -581,6 +589,10 @@ void XBDMDebugger::OnException(
   thread->last_known_address = msg->address;
   // TODO: Set the stop reason from the notification content.
   thread->FetchStopReasonSync(*context_);
+
+  if (print_thread_info_on_break_) {
+    LOG_DEBUGGER(info) << *thread;
+  }
 }
 
 bool XBDMDebugger::RestartAndAttach(int flags) {
@@ -648,7 +660,7 @@ bool XBDMDebugger::FetchThreads() {
     return false;
   }
 
-  const std::lock_guard<std::recursive_mutex> lock(threads_lock_);
+  const std::lock_guard lock(threads_lock_);
   threads_.clear();
   for (auto thread_id : request->threads) {
     threads_.emplace_back(std::make_shared<Thread>(thread_id));
@@ -674,7 +686,7 @@ bool XBDMDebugger::FetchModules() {
     return false;
   }
 
-  const std::lock_guard<std::recursive_mutex> lock(modules_lock_);
+  const std::lock_guard lock(modules_lock_);
   modules_.clear();
   for (auto& module : request->modules) {
     modules_.emplace_back(std::make_shared<Module>(module));
@@ -692,7 +704,7 @@ bool XBDMDebugger::FetchMemoryMap() {
     return false;
   }
 
-  const std::lock_guard<std::recursive_mutex> lock(memory_regions_lock_);
+  const std::lock_guard lock(memory_regions_lock_);
   memory_regions_.clear();
   for (auto& region : request->regions) {
     memory_regions_.emplace_back(std::make_shared<MemoryRegion>(region));
@@ -725,10 +737,8 @@ bool XBDMDebugger::RestartAndReconnect(uint32_t reboot_flags) {
     LOG_DEBUGGER(warning) << "Timed out waiting for rebooting message.";
   }
 
-  // Gracefully drop all connections.
+  // Gracefully drop all connections except notification channels.
   {
-    context_->ResetNotificationConnections();
-
     LOG_DEBUGGER(trace) << "Sending bye message.";
     auto request = std::make_shared<::Bye>();
     context_->SendCommandSync(request);
@@ -737,15 +747,16 @@ bool XBDMDebugger::RestartAndReconnect(uint32_t reboot_flags) {
     context_->CloseActiveConnections();
   }
 
-  // Then for the notification connection to be reestablished. A real devkit
-  // interaction waits for a pending notification before reconnecting the 731
-  // transport, but the bridge fetches module information on the modload
+  // Then wait for the notification connection to be reestablished. A real
+  // devkit interaction waits for a pending notification before reconnecting the
+  // 731 transport, but the bridge fetches module information on the modload
   // notifications that come in before pending. To avoid having to delay these
   // fetches, the notification channel reconnect triggers the transport level
-  // reconnect in .
+  // reconnect.
 
   LOG_DEBUGGER(trace) << "Awaiting pending notification.";
-  if (!WaitForState(S_PENDING, kRestartPendingMaxWaitMilliseconds)) {
+  if (!WaitForStateIn({S_PENDING, S_STARTED},
+                      kRestartPendingMaxWaitMilliseconds)) {
     LOG_DEBUGGER(warning) << "Timed out waiting for pending message.";
     return false;
   }
@@ -758,7 +769,7 @@ bool XBDMDebugger::WaitForState(ExecutionState s,
   std::unique_lock<std::mutex> lock(state_lock_);
   return state_condition_variable_.wait_for(
       lock, std::chrono::milliseconds(max_wait_milliseconds),
-      [this, s] { return this->state_ == s; });
+      [this, s] { return state_ == s; });
 }
 
 bool XBDMDebugger::WaitForStateIn(const std::set<ExecutionState>& target_states,
@@ -767,7 +778,7 @@ bool XBDMDebugger::WaitForStateIn(const std::set<ExecutionState>& target_states,
   return state_condition_variable_.wait_for(
       lock, std::chrono::milliseconds(max_wait_milliseconds),
       [this, &target_states] {
-        return target_states.find(this->state_) != target_states.end();
+        return target_states.find(state_) != target_states.end();
       });
 }
 
@@ -778,7 +789,7 @@ bool XBDMDebugger::WaitForStateNotIn(
   return state_condition_variable_.wait_for(
       lock, std::chrono::milliseconds(max_wait_milliseconds),
       [this, &banned_states] {
-        return banned_states.find(this->state_) == banned_states.end();
+        return banned_states.find(state_) == banned_states.end();
       });
 }
 
@@ -984,7 +995,7 @@ bool XBDMDebugger::RemoveWriteWatch(uint32_t address, uint32_t length) {
 
 bool XBDMDebugger::ValidateMemoryAccess(uint32_t address, uint32_t length,
                                         bool is_write) {
-  std::lock_guard<std::recursive_mutex> lock(memory_regions_lock_);
+  std::lock_guard lock(memory_regions_lock_);
   if (memory_regions_.empty()) {
     LOG_DEBUGGER(warning) << "No memory regions mapped, assuming access is OK.";
     return true;

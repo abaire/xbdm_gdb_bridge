@@ -22,7 +22,7 @@ XBDMContext::XBDMContext(std::string name, IPAddress xbox_address,
   notification_server_ = std::make_shared<DelegatingServer>(
       name_ + "__xbdm_notification_server",
       [this](int sock, IPAddress& address) {
-        this->OnNotificationChannelConnected(sock, address);
+        OnNotificationChannelConnected(sock, address);
       });
   select_thread_->AddConnection(notification_server_);
 
@@ -94,6 +94,7 @@ void XBDMContext::OnNotificationChannelConnected(int sock, IPAddress& address) {
       [this](std::shared_ptr<XBDMNotification> notification) {
         this->OnNotificationReceived(std::move(notification));
       });
+
   notification_transports_.insert(transport);
 
   select_thread_->AddConnection(transport, [this, transport]() {
@@ -114,7 +115,6 @@ void XBDMContext::OnNotificationReceived(
 void XBDMContext::CloseActiveConnections() {
   if (xbdm_transport_) {
     xbdm_transport_->Close();
-    xbdm_transport_.reset();
   }
 
   ResetNotificationConnections();
@@ -130,7 +130,6 @@ void XBDMContext::ResetNotificationConnections() {
 bool XBDMContext::Reconnect() {
   if (xbdm_transport_) {
     xbdm_transport_->Close();
-    xbdm_transport_.reset();
   }
 
   xbdm_transport_ = std::make_shared<XBDMTransport>(logging::kLoggingTagXBDM);
@@ -140,6 +139,10 @@ bool XBDMContext::Reconnect() {
 
 std::shared_ptr<RDCPProcessedRequest> XBDMContext::SendCommandSync(
     const std::shared_ptr<RDCPProcessedRequest>& command) {
+  if (!xbdm_transport_) {
+    return nullptr;
+  }
+
   auto future = SendCommand(command);
   future.get();
   return command;
@@ -183,8 +186,10 @@ std::future<std::shared_ptr<RDCPProcessedRequest>> XBDMContext::SendCommand(
     const std::shared_ptr<RDCPProcessedRequest>& command,
     const std::shared_ptr<XBDMTransport>& transport) {
   assert(xbdm_control_executor_ && "SendCommand called before Start.");
+  assert(transport && "transport must not be null");
   std::promise<std::shared_ptr<RDCPProcessedRequest>> promise;
   auto future = promise.get_future();
+
   boost::asio::dispatch(
       *xbdm_control_executor_,
       [this, promise = std::move(promise), command, transport]() mutable {
@@ -227,6 +232,7 @@ void XBDMContext::ExecuteXBDMPromise(
     std::promise<std::shared_ptr<RDCPProcessedRequest>>& promise,
     const std::shared_ptr<RDCPProcessedRequest>& request,
     const std::shared_ptr<XBDMTransport>& transport) {
+  assert(transport && "Invalid transport during ExecuteXBDMPromise");
   if (!XBDMConnect(transport)) {
     request->status = StatusCode::ERR_NOT_CONNECTED;
   } else {
@@ -240,7 +246,7 @@ void XBDMContext::ExecuteXBDMPromise(
 
 bool XBDMContext::XBDMConnect(const std::shared_ptr<XBDMTransport>& transport,
                               int max_wait_millis) {
-  assert(transport);
+  assert(transport && "Invalid transport during XBDMConnect");
   if (transport->CanProcessCommands()) {
     return true;
   }
@@ -265,7 +271,7 @@ bool XBDMContext::XBDMConnect(const std::shared_ptr<XBDMTransport>& transport,
 }
 int XBDMContext::RegisterNotificationHandler(
     XBDMContext::NotificationHandler handler) {
-  const std::lock_guard<std::recursive_mutex> lock(notification_handler_lock_);
+  const std::lock_guard lock(notification_handler_lock_);
   int id = next_notification_handler_id_++;
   notification_handlers_[id] = std::move(handler);
   return id;
@@ -275,7 +281,7 @@ void XBDMContext::UnregisterNotificationHandler(int id) {
     return;
   }
 
-  const std::lock_guard<std::recursive_mutex> lock(notification_handler_lock_);
+  const std::lock_guard lock(notification_handler_lock_);
   notification_handlers_.erase(id);
 }
 
@@ -284,8 +290,7 @@ void XBDMContext::DispatchNotification(
   std::map<int, NotificationHandler> handlers;
 
   {
-    const std::lock_guard<std::recursive_mutex> lock(
-        notification_handler_lock_);
+    const std::lock_guard lock(notification_handler_lock_);
     handlers = notification_handlers_;
   }
 

@@ -9,7 +9,7 @@
 #include "util/logging.h"
 
 bool TCPServer::Listen(const IPAddress& address) {
-  const std::lock_guard<std::recursive_mutex> lock(socket_lock_);
+  const std::lock_guard lock(socket_lock_);
   address_ = address;
 
   socket_ = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -70,19 +70,25 @@ void TCPServer::SetConnection(int sock, const IPAddress& address) {
 }
 
 int TCPServer::Select(fd_set& read_fds, fd_set& write_fds, fd_set& except_fds) {
-  const std::lock_guard<std::recursive_mutex> lock(socket_lock_);
+  int ret = TCPSocketBase::Select(read_fds, write_fds, except_fds);
+
+  const std::lock_guard lock(socket_lock_);
   if (socket_ < 0) {
-    return socket_;
+    return is_shutdown_ ? -1 : ret;
   }
 
   FD_SET(socket_, &read_fds);
   FD_SET(socket_, &except_fds);
-  return socket_;
+  return std::max(ret, socket_);
 }
 
 bool TCPServer::Process(const fd_set& read_fds, const fd_set& write_fds,
                         const fd_set& except_fds) {
-  const std::lock_guard<std::recursive_mutex> lock(socket_lock_);
+  if (!TCPSocketBase::Process(read_fds, write_fds, except_fds)) {
+    return !is_shutdown_;
+  }
+
+  const std::lock_guard lock(socket_lock_);
   if (socket_ < 0) {
     // If the socket was previously connected and is now shutdown, request
     // deletion.

@@ -128,6 +128,22 @@ struct DebuggerCommandGetThreadInfoAndContext : Command {
                     std::ostream& out) override;
 };
 
+struct DebuggerCommandSetAutoInfo : Command {
+  DebuggerCommandSetAutoInfo()
+      : Command(
+            "Enable/disable automatic output of thread context on "
+            "breakpoints.\n"
+            "[basic] [off]\n"
+            "\n"
+            "Modifies automatic output at breakpoints.\n"
+            "\n"
+            "[basic] (default) - Automatically run `getcontext` when "
+            "breakpoints are hit.\n"
+            "[off] - Disable automatic info output.") {}
+  Result operator()(XBOXInterface& interface, const std::vector<std::string>&,
+                    std::ostream& out) override;
+};
+
 struct DebuggerCommandHaltAll : Command {
   DebuggerCommandHaltAll() : Command("Halt all threads.") {}
   Result operator()(XBOXInterface& interface, const std::vector<std::string>&,
