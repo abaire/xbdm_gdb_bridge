@@ -28,8 +28,7 @@ struct ShellCommandGDB : Command {
             "[xbe_launch_path] - An XBOX path to an XBE (or directory "
             "containing a default.xbe) that should be launched "
             "when a GDB debugger first connects.") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args,
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
                     std::ostream& out) override;
 };
 

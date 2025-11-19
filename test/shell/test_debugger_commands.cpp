@@ -39,7 +39,7 @@ DEBUGGER_TEST_CASE(RunWithInvalidPathFails) {
 
   std::stringstream capture;
   DebuggerCommandRun cmd;
-  std::vector<std::string> args{"e:\\test.xbe"};
+  ArgParser args("run", std::vector<std::string>{"e:\\test.xbe"});
   BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
 
   BOOST_CHECK_EQUAL(Trimmed(capture), "Failed to launch XBE");
@@ -48,7 +48,7 @@ DEBUGGER_TEST_CASE(RunWithInvalidPathFails) {
 DEBUGGER_TEST_CASE(RunWithValidPathSucceeds) {
   std::stringstream capture;
   DebuggerCommandRun cmd;
-  std::vector<std::string> args{"e:\\test.xbe"};
+  ArgParser args("run", std::vector<std::string>{"e:\\test.xbe"});
   BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
 
   BOOST_CHECK_EQUAL(Trimmed(capture), "");
@@ -77,7 +77,7 @@ DEBUGGER_TEST_CASE(LaunchWaitWithInvalidPathFails) {
 
   std::stringstream capture;
   DebuggerCommandLaunchWait cmd;
-  std::vector<std::string> args{"e:\\test.xbe"};
+  ArgParser args("/launchwait", std::vector<std::string>{"e:\\test.xbe"});
   BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
 
   BOOST_CHECK_EQUAL(Trimmed(capture), "Failed to launch XBE");
@@ -99,7 +99,7 @@ DEBUGGER_TEST_CASE(LaunchWaitWithValidPathSucceeds) {
 
   std::stringstream capture;
   DebuggerCommandLaunchWait cmd;
-  std::vector<std::string> args{"e:\\test.xbe"};
+  ArgParser args("/launchwait", std::vector<std::string>{"e:\\test.xbe"});
   BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
 
   BOOST_CHECK_EQUAL(Trimmed(capture), "");

@@ -8,7 +8,7 @@
 static std::expected<uint32_t, std::string> evaluate(const std::string& expr,
                                                      const ThreadContext& ctx) {
   DebuggerExpressionParser parser(ctx);
-  return parser.parse(expr);
+  return parser.Parse(expr);
 }
 
 BOOST_AUTO_TEST_SUITE(BasicArithmeticTests)

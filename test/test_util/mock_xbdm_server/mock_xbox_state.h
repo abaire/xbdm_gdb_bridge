@@ -146,6 +146,22 @@ struct MockXboxState {
     return execution_phase != TitleExecutionPhase::RUNNING;
   }
 
+  /**
+   * Reads a block of memory from the simulated Xbox state.
+   *
+   * If the requested range overlaps with unmapped memory, those bytes
+   * will be set to 0x00 in the result.
+   *
+   * @param buffer The vector to be populated with fetched data.
+   * @param address The starting virtual address to read from.
+   * @param length The number of bytes to read.
+   * @param fill Value to be written into `buffer` when reading from unmapped
+   *             data.
+   * @return false if the full range was not mapped
+   */
+  bool ReadVirtualMemory(std::vector<uint8_t>& buffer, uint32_t address,
+                         uint32_t length, uint8_t fill = 0xCC);
+
   std::string xbox_name = "XBOX-TEST";
   std::string xbox_version = "1.0.5838.1";
 

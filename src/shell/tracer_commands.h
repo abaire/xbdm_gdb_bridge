@@ -28,15 +28,14 @@ struct TracerCommandInit : Command {
                 "PGRAPH region. Default: off.\n"
                 "  pfb <on|off> - Enables or disables capture of the raw "
                 "PFB region. Default: off.") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args,
+  Result operator()(XBOXInterface& interface, const ArgParser&,
                     std::ostream& out) override;
 };
 
 struct TracerCommandDetach : Command {
   TracerCommandDetach()
       : Command("Detaches from the ntrc nv2a tracer DynamicDXT.") {}
-  Result operator()(XBOXInterface& interface, const std::vector<std::string>&,
+  Result operator()(XBOXInterface& interface, const ArgParser&,
                     std::ostream& out) override;
 };
 
@@ -50,8 +49,7 @@ struct TracerCommandBreakOnNextFlip : Command {
             "\n"
             "[require_flip] - Forces discard until the next frame, even if the "
             "tracer is already at the start of a frame.") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args,
+  Result operator()(XBOXInterface& interface, const ArgParser&,
                     std::ostream& out) override;
 };
 
@@ -70,8 +68,7 @@ struct TracerCommandTraceFrames : Command {
                 "Default: 1.\n"
                 "  verbose - Emits more verbose information into the capture "
                 "log.") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args,
+  Result operator()(XBOXInterface& interface, const ArgParser&,
                     std::ostream& out) override;
 };
 

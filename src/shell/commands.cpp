@@ -21,9 +21,15 @@ static void SendAndPrintMessage(
 }
 
 Command::Result CommandBreak::operator()(XBOXInterface& interface,
-                                         const std::vector<std::string>& args,
+                                         const ArgParser& args,
                                          std::ostream& out) {
-  ArgParser parser(args, true);
+  auto maybe_parser = args.ExtractSubcommand();
+  if (!maybe_parser.has_value()) {
+    PrintUsage();
+    return HANDLED;
+  }
+  auto& parser = *maybe_parser;
+
   if (!parser.HasCommand()) {
     PrintUsage();
     return HANDLED;
@@ -95,21 +101,20 @@ Command::Result CommandBreak::operator()(XBOXInterface& interface,
     return HANDLED;
   }
 
-  out << "Invalid mode " << args.front() << std::endl;
+  out << "Invalid mode " << *args.begin() << std::endl;
   PrintUsage();
   return HANDLED;
 }
 
 Command::Result CommandBye::operator()(XBOXInterface& interface,
-                                       const std::vector<std::string>&,
-                                       std::ostream& out) {
+                                       const ArgParser&, std::ostream& out) {
   SendAndPrintMessage(interface, std::make_shared<Bye>(), out);
   return HANDLED;
 }
 
-Command::Result CommandContinue::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandContinue::operator()(XBOXInterface& interface,
+                                            const ArgParser& args,
+                                            std::ostream& out) {
   ArgParser parser(args);
   int thread_id;
   if (!parser.Parse(0, thread_id)) {
@@ -126,9 +131,9 @@ Command::Result CommandContinue::operator()(
   return HANDLED;
 }
 
-Command::Result CommandDebugOptions::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandDebugOptions::operator()(XBOXInterface& interface,
+                                                const ArgParser& args,
+                                                std::ostream& out) {
   if (args.empty()) {
     SendAndPrintMessage(interface, std::make_shared<GetDebugOptions>(), out);
     return HANDLED;
@@ -144,9 +149,9 @@ Command::Result CommandDebugOptions::operator()(
   return HANDLED;
 }
 
-Command::Result CommandDebugger::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandDebugger::operator()(XBOXInterface& interface,
+                                            const ArgParser& args,
+                                            std::ostream& out) {
   ArgParser parser(args);
   bool disable = parser.ArgExists("d", "disable", "off");
   SendAndPrintMessage(interface, std::make_shared<Debugger>(disable), out);
@@ -159,20 +164,20 @@ Command::Result CommandDebugger::operator()(
 //   return HANDLED;
 // }
 
-Command::Result CommandDedicate::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandDedicate::operator()(XBOXInterface& interface,
+                                            const ArgParser& args,
+                                            std::ostream& out) {
   if (args.empty()) {
     SendAndPrintMessage(interface, std::make_shared<Dedicate>(nullptr), out);
   } else {
-    SendAndPrintMessage(interface, std::make_shared<Dedicate>(args[0].c_str()),
-                        out);
+    SendAndPrintMessage(interface,
+                        std::make_shared<Dedicate>(args.begin()->c_str()), out);
   }
   return HANDLED;
 }
 
 Command::Result CommandDelete::operator()(XBOXInterface& interface,
-                                          const std::vector<std::string>& args,
+                                          const ArgParser& args,
                                           std::ostream& out) {
   ArgParser parser(args);
   std::string path;
@@ -199,7 +204,7 @@ Command::Result CommandDelete::operator()(XBOXInterface& interface,
 }
 
 Command::Result CommandDirList::operator()(XBOXInterface& interface,
-                                           const std::vector<std::string>& args,
+                                           const ArgParser& args,
                                            std::ostream& out) {
   ArgParser parser(args);
   std::string path;
@@ -237,9 +242,9 @@ Command::Result CommandDirList::operator()(XBOXInterface& interface,
   return HANDLED;
 }
 
-Command::Result CommandDebugMonitorVersion::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandDebugMonitorVersion::operator()(XBOXInterface& interface,
+                                                       const ArgParser& args,
+                                                       std::ostream& out) {
   auto request = std::make_shared<DebugMonitorVersion>();
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
@@ -250,9 +255,9 @@ Command::Result CommandDebugMonitorVersion::operator()(
   return HANDLED;
 }
 
-Command::Result CommandDriveFreeSpace::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandDriveFreeSpace::operator()(XBOXInterface& interface,
+                                                  const ArgParser& args,
+                                                  std::ostream& out) {
   ArgParser parser(args);
   std::string drive_letter;
   if (!parser.Parse(0, drive_letter)) {
@@ -273,9 +278,9 @@ Command::Result CommandDriveFreeSpace::operator()(
   return HANDLED;
 }
 
-Command::Result CommandDriveList::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandDriveList::operator()(XBOXInterface& interface,
+                                             const ArgParser& args,
+                                             std::ostream& out) {
   auto request = std::make_shared<DriveList>();
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
@@ -289,9 +294,9 @@ Command::Result CommandDriveList::operator()(
   return HANDLED;
 }
 
-Command::Result CommandGetChecksum::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandGetChecksum::operator()(XBOXInterface& interface,
+                                               const ArgParser& args,
+                                               std::ostream& out) {
   ArgParser parser(args);
   int address;
   int length;
@@ -338,9 +343,9 @@ Command::Result CommandGetChecksum::operator()(
   return Command::HANDLED;
 }
 
-Command::Result CommandGetContext::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandGetContext::operator()(XBOXInterface& interface,
+                                              const ArgParser& args,
+                                              std::ostream& out) {
   ArgParser parser(args);
   int thread_id;
   if (!parser.Parse(0, thread_id)) {
@@ -370,9 +375,9 @@ Command::Result CommandGetContext::operator()(
   return HANDLED;
 }
 
-Command::Result CommandGetExtContext::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandGetExtContext::operator()(XBOXInterface& interface,
+                                                 const ArgParser& args,
+                                                 std::ostream& out) {
   ArgParser parser(args);
   int thread_id;
   if (!parser.Parse(0, thread_id)) {
@@ -392,7 +397,7 @@ Command::Result CommandGetExtContext::operator()(
 }
 
 Command::Result CommandGetFile::operator()(XBOXInterface& interface,
-                                           const std::vector<std::string>& args,
+                                           const ArgParser& args,
                                            std::ostream& out) {
   ArgParser parser(args);
   std::string path;
@@ -443,9 +448,9 @@ Command::Result CommandGetFile::operator()(XBOXInterface& interface,
   return HANDLED;
 }
 
-Command::Result CommandGetFileAttributes::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandGetFileAttributes::operator()(XBOXInterface& interface,
+                                                     const ArgParser& args,
+                                                     std::ostream& out) {
   ArgParser parser(args);
   std::string path;
   if (!parser.Parse(0, path)) {
@@ -470,13 +475,13 @@ Command::Result CommandGetFileAttributes::operator()(
 }
 
 Command::Result CommandGetMem::operator()(XBOXInterface& interface,
-                                          const std::vector<std::string>& args,
+                                          const ArgParser& args,
                                           std::ostream& out) {
   ArgParser parser(args);
   uint32_t address;
   uint32_t size;
   if (!parser.Parse(0, address)) {
-    out << "Missing required Address argument." << std::endl;
+    out << "Missing required address argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
@@ -508,9 +513,9 @@ Command::Result CommandGetMem::operator()(XBOXInterface& interface,
   return HANDLED;
 }
 
-Command::Result CommandGetProcessID::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandGetProcessID::operator()(XBOXInterface& interface,
+                                                const ArgParser& args,
+                                                std::ostream& out) {
   auto request = std::make_shared<GetProcessID>();
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
@@ -522,9 +527,9 @@ Command::Result CommandGetProcessID::operator()(
   return HANDLED;
 }
 
-Command::Result CommandGetUtilityDriveInfo::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandGetUtilityDriveInfo::operator()(XBOXInterface& interface,
+                                                       const ArgParser& args,
+                                                       std::ostream& out) {
   auto request = std::make_shared<GetUtilityDriveInfo>();
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
@@ -539,14 +544,14 @@ Command::Result CommandGetUtilityDriveInfo::operator()(
 }
 
 Command::Result CommandGo::operator()(XBOXInterface& interface,
-                                      const std::vector<std::string>& args,
+                                      const ArgParser& args,
                                       std::ostream& out) {
   SendAndPrintMessage(interface, std::make_shared<Go>(), out);
   return HANDLED;
 }
 
 Command::Result CommandHalt::operator()(XBOXInterface& interface,
-                                        const std::vector<std::string>& args,
+                                        const ArgParser& args,
                                         std::ostream& out) {
   ArgParser parser(args);
   int thread_id;
@@ -560,7 +565,7 @@ Command::Result CommandHalt::operator()(XBOXInterface& interface,
 }
 
 Command::Result CommandIsBreak::operator()(XBOXInterface& interface,
-                                           const std::vector<std::string>& args,
+                                           const ArgParser& args,
                                            std::ostream& out) {
   ArgParser parser(args);
   int address;
@@ -600,9 +605,9 @@ Command::Result CommandIsBreak::operator()(XBOXInterface& interface,
   return HANDLED;
 }
 
-Command::Result CommandIsDebugger::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandIsDebugger::operator()(XBOXInterface& interface,
+                                              const ArgParser& args,
+                                              std::ostream& out) {
   auto request = std::make_shared<IsDebugger>();
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
@@ -613,9 +618,9 @@ Command::Result CommandIsDebugger::operator()(
   return HANDLED;
 }
 
-Command::Result CommandIsStopped::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandIsStopped::operator()(XBOXInterface& interface,
+                                             const ArgParser& args,
+                                             std::ostream& out) {
   ArgParser parser(args);
   int thread_id;
   if (!parser.Parse(0, thread_id)) {
@@ -639,9 +644,9 @@ Command::Result CommandIsStopped::operator()(
   return HANDLED;
 }
 
-Command::Result CommandMagicBoot::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandMagicBoot::operator()(XBOXInterface& interface,
+                                             const ArgParser& args,
+                                             std::ostream& out) {
   ArgParser parser(args);
   std::string path;
   if (!parser.Parse(0, path)) {
@@ -657,9 +662,9 @@ Command::Result CommandMagicBoot::operator()(
   return HANDLED;
 }
 
-Command::Result CommandMemoryMap::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandMemoryMap::operator()(XBOXInterface& interface,
+                                             const ArgParser& args,
+                                             std::ostream& out) {
   auto request = std::make_shared<MemoryMapGlobal>();
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
@@ -683,9 +688,9 @@ Command::Result CommandMemoryMap::operator()(
   return HANDLED;
 }
 
-Command::Result CommandMakeDirectory::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandMakeDirectory::operator()(XBOXInterface& interface,
+                                                 const ArgParser& args,
+                                                 std::ostream& out) {
   ArgParser parser(args);
   std::string path;
   if (!parser.Parse(0, path)) {
@@ -698,9 +703,9 @@ Command::Result CommandMakeDirectory::operator()(
   return HANDLED;
 }
 
-Command::Result CommandModuleSections::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandModuleSections::operator()(XBOXInterface& interface,
+                                                  const ArgParser& args,
+                                                  std::ostream& out) {
   ArgParser parser(args);
   std::string path;
   if (!parser.Parse(0, path)) {
@@ -722,7 +727,7 @@ Command::Result CommandModuleSections::operator()(
 }
 
 Command::Result CommandModules::operator()(XBOXInterface& interface,
-                                           const std::vector<std::string>& args,
+                                           const ArgParser& args,
                                            std::ostream& out) {
   auto request = std::make_shared<Modules>();
   interface.SendCommandSync(request);
@@ -736,9 +741,9 @@ Command::Result CommandModules::operator()(XBOXInterface& interface,
   return HANDLED;
 }
 
-Command::Result CommandNoStopOn::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandNoStopOn::operator()(XBOXInterface& interface,
+                                            const ArgParser& args,
+                                            std::ostream& out) {
   uint32_t flags = 0;
   ArgParser parser(args);
   if (parser.ArgExists("fce", "exception")) {
@@ -760,9 +765,9 @@ Command::Result CommandNoStopOn::operator()(
   return HANDLED;
 }
 
-Command::Result CommandNotifyAt::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandNotifyAt::operator()(XBOXInterface& base_interface,
+                                            const ArgParser& args,
+                                            std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   ArgParser parser(args);
   uint32_t port;
@@ -798,7 +803,7 @@ Command::Result CommandNotifyAt::operator()(
 }
 
 Command::Result CommandPutFile::operator()(XBOXInterface& interface,
-                                           const std::vector<std::string>& args,
+                                           const ArgParser& args,
                                            std::ostream& out) {
   ArgParser parser(args);
   std::string local_path;
@@ -840,7 +845,7 @@ Command::Result CommandPutFile::operator()(XBOXInterface& interface,
 }
 
 Command::Result CommandRename::operator()(XBOXInterface& interface,
-                                          const std::vector<std::string>& args,
+                                          const ArgParser& args,
                                           std::ostream& out) {
   ArgParser parser(args);
   std::string path;
@@ -863,7 +868,7 @@ Command::Result CommandRename::operator()(XBOXInterface& interface,
 }
 
 Command::Result CommandReboot::operator()(XBOXInterface& interface,
-                                          const std::vector<std::string>& args,
+                                          const ArgParser& args,
                                           std::ostream& out) {
   uint32_t flags = 0;
   ArgParser parser(args);
@@ -884,7 +889,7 @@ Command::Result CommandReboot::operator()(XBOXInterface& interface,
 }
 
 Command::Result CommandResume::operator()(XBOXInterface& interface,
-                                          const std::vector<std::string>& args,
+                                          const ArgParser& args,
                                           std::ostream& out) {
   ArgParser parser(args);
   int thread_id;
@@ -898,9 +903,9 @@ Command::Result CommandResume::operator()(XBOXInterface& interface,
   return HANDLED;
 }
 
-Command::Result CommandScreenshot::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandScreenshot::operator()(XBOXInterface& interface,
+                                              const ArgParser& args,
+                                              std::ostream& out) {
   auto request = std::make_shared<Screenshot>();
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
@@ -947,7 +952,7 @@ Command::Result CommandScreenshot::operator()(
 }
 
 Command::Result CommandSetMem::operator()(XBOXInterface& interface,
-                                          const std::vector<std::string>& args,
+                                          const ArgParser& args,
                                           std::ostream& out) {
   ArgParser parser(args);
   uint32_t address;
@@ -973,14 +978,14 @@ Command::Result CommandSetMem::operator()(XBOXInterface& interface,
 }
 
 Command::Result CommandStop::operator()(XBOXInterface& interface,
-                                        const std::vector<std::string>& args,
+                                        const ArgParser& args,
                                         std::ostream& out) {
   SendAndPrintMessage(interface, std::make_shared<Stop>(), out);
   return HANDLED;
 }
 
 Command::Result CommandStopOn::operator()(XBOXInterface& interface,
-                                          const std::vector<std::string>& args,
+                                          const ArgParser& args,
                                           std::ostream& out) {
   uint32_t flags = 0;
   ArgParser parser(args);
@@ -1004,7 +1009,7 @@ Command::Result CommandStopOn::operator()(XBOXInterface& interface,
 }
 
 Command::Result CommandSuspend::operator()(XBOXInterface& interface,
-                                           const std::vector<std::string>& args,
+                                           const ArgParser& args,
                                            std::ostream& out) {
   ArgParser parser(args);
   int thread_id;
@@ -1018,9 +1023,9 @@ Command::Result CommandSuspend::operator()(XBOXInterface& interface,
   return HANDLED;
 }
 
-Command::Result CommandThreadInfo::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result CommandThreadInfo::operator()(XBOXInterface& interface,
+                                              const ArgParser& args,
+                                              std::ostream& out) {
   ArgParser parser(args);
   int thread_id;
   if (!parser.Parse(0, thread_id)) {
@@ -1048,7 +1053,7 @@ Command::Result CommandThreadInfo::operator()(
 }
 
 Command::Result CommandThreads::operator()(XBOXInterface& interface,
-                                           const std::vector<std::string>& args,
+                                           const ArgParser& args,
                                            std::ostream& out) {
   auto request = std::make_shared<Threads>();
   interface.SendCommandSync(request);
@@ -1063,7 +1068,7 @@ Command::Result CommandThreads::operator()(XBOXInterface& interface,
 }
 
 Command::Result CommandWalkMem::operator()(XBOXInterface& interface,
-                                           const std::vector<std::string>& args,
+                                           const ArgParser& args,
                                            std::ostream& out) {
   auto request = std::make_shared<WalkMem>();
   interface.SendCommandSync(request);
@@ -1084,7 +1089,7 @@ Command::Result CommandWalkMem::operator()(XBOXInterface& interface,
 }
 
 Command::Result CommandXBEInfo::operator()(XBOXInterface& interface,
-                                           const std::vector<std::string>& args,
+                                           const ArgParser& args,
                                            std::ostream& out) {
   ArgParser parser(args);
   std::string path;
@@ -1109,7 +1114,7 @@ Command::Result CommandXBEInfo::operator()(XBOXInterface& interface,
 }
 
 Command::Result CommandXTLInfo::operator()(XBOXInterface& interface,
-                                           const std::vector<std::string>& args,
+                                           const ArgParser& args,
                                            std::ostream& out) {
   auto request = std::make_shared<XTLInfo>();
   interface.SendCommandSync(request);

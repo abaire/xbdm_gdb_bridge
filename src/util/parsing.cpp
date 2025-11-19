@@ -40,6 +40,67 @@ uint32_t ParseUint32(const std::string& value) {
   return static_cast<uint32_t>(strtoul(value.c_str(), nullptr, base));
 }
 
+std::vector<ArgParser::Argument> ArgParser::Tokenize(std::string_view input) {
+  std::vector<Argument> args;
+  std::string current_token;
+
+  bool in_quote = false;
+  int paren_depth = 0;
+  bool token_dirty = false;
+  ArgType current_type = ArgType::BASIC;
+
+  auto flush_token = [&]() {
+    if (token_dirty) {
+      args.push_back({current_token, current_type});
+      current_token.clear();
+      token_dirty = false;
+      current_type = ArgType::BASIC;
+    }
+  };
+
+  for (size_t i = 0; i < input.size(); ++i) {
+    char c = input[i];
+
+    if (in_quote) {
+      if (c == '\\' && i + 1 < input.size() && input[i + 1] == '"') {
+        current_token += '"';
+        ++i;
+      } else if (c == '"') {
+        in_quote = false;
+      } else {
+        current_token += c;
+      }
+    } else if (paren_depth > 0) {
+      if (c == '(') {
+        paren_depth++;
+        current_token += c;
+      } else if (c == ')') {
+        paren_depth--;
+        if (paren_depth > 0) current_token += c;
+      } else {
+        current_token += c;
+      }
+    } else {
+      if (c == ' ' || c == '\t') {
+        flush_token();
+      } else if (c == '"') {
+        in_quote = true;
+        token_dirty = true;
+        current_type = ArgType::QUOTED;
+      } else if (c == '(') {
+        paren_depth = 1;
+        token_dirty = true;
+        current_type = ArgType::PARENTHESIZED;
+      } else {
+        current_token += c;
+        token_dirty = true;
+      }
+    }
+  }
+  flush_token();
+  return args;
+}
+
 namespace command_line_command_tokenizer {
 std::vector<std::vector<std::string>> SplitCommands(
     const std::vector<std::string>& additional_commands) {

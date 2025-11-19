@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "test_util/mock_xbdm_server/mock_xbdm_server.h"
+#include "util/parsing.h"
 
 class XBOXInterface;
 
@@ -21,7 +22,7 @@ struct XBDMDebuggerInterfaceFixture {
   std::unique_ptr<MockXBDMServer> server;
   uint16_t port = 0;
 
-  const std::vector<std::string> empty_args;
+  const ArgParser empty_args;
 };
 
 }  // namespace xbdm_gdb_bridge::testing

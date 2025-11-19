@@ -3,10 +3,11 @@
 #include <boost/algorithm/string/case_conv.hpp>
 
 #include "tracer_commands.h"
+#include "util/parsing.h"
 
-Command::Result ShellCommandReconnect::operator()(
-    XBOXInterface& interface, const std::vector<std::string>&,
-    std::ostream& out) {
+Command::Result ShellCommandReconnect::operator()(XBOXInterface& interface,
+                                                  const ArgParser&,
+                                                  std::ostream& out) {
   if (interface.ReconnectXBDM()) {
     out << "Connected." << std::endl;
   } else {
@@ -15,9 +16,9 @@ Command::Result ShellCommandReconnect::operator()(
   return Result::HANDLED;
 }
 
-Command::Result ShellCommandTrace::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result ShellCommandTrace::operator()(XBOXInterface& interface,
+                                              const ArgParser& args,
+                                              std::ostream& out) {
   std::vector<std::string> attach_args;
   std::vector<std::string> trace_args;
 
@@ -40,18 +41,21 @@ Command::Result ShellCommandTrace::operator()(
   }
 
   {
+    ArgParser subcommand_args("init", attach_args);
     auto init = TracerCommandInit();
-    init(interface, attach_args, out);
+    init(interface, subcommand_args, out);
   }
 
   {
+    ArgParser subcommand_args("trace", trace_args);
     auto trace = TracerCommandTraceFrames();
-    trace(interface, trace_args, out);
+    trace(interface, subcommand_args, out);
   }
 
   {
+    ArgParser empty({"detach"});
     auto detach = TracerCommandDetach();
-    detach(interface, {}, out);
+    detach(interface, empty, out);
   }
 
   return HANDLED;

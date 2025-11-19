@@ -84,7 +84,21 @@ class MockXBDMServer {
                      uint32_t size, uint32_t index, uint32_t flags = 1);
   void RemoveXbeSection(const std::string& name);
 
-  void AddRegion(uint32_t base_address, uint32_t size, uint32_t protect);
+  /**
+   * Adds a memory region to the simulated Xbox
+   * @param base_address Start address of the region
+   * @param size Size of the region in bytes
+   * @param protect Memory protect flags
+   */
+  void AddRegion(uint32_t base_address, uint32_t size, uint32_t protect = 2);
+  /**
+   * Adds a memory region to the simulated Xbox
+   * @param base_address Start address of the region
+   * @param data The contents of the region
+   * @param protect Memory protect flags
+   */
+  void AddRegion(uint32_t base_address, const std::vector<uint8_t>& data,
+                 uint32_t protect = 2);
   void RemoveRegion(uint32_t base_address);
 
   /**
@@ -128,6 +142,14 @@ class MockXBDMServer {
 
   void OnClientConnected(int sock, IPAddress& address);
   void OnClientBytesReceived(ClientTransport& transport);
+
+  void SendBinaryResponse(std::shared_ptr<ClientTransport> transport,
+                          const std::vector<uint8_t>& binary) {
+    SendBinaryResponse(*transport, binary);
+  }
+
+  void SendBinaryResponse(ClientTransport& transport,
+                          const std::vector<uint8_t>& binary);
 
   void SendResponse(std::shared_ptr<ClientTransport> transport,
                     StatusCode code) const {
@@ -203,6 +225,7 @@ class MockXBDMServer {
   bool HandleBye(ClientTransport& client, const std::string& parameters);
   bool HandleContinue(ClientTransport& client, const std::string& parameters);
   bool HandleDebugger(ClientTransport& client, const std::string& parameters);
+  bool HandleGetMem2(ClientTransport& client, const std::string& parameters);
   bool HandleGo(ClientTransport& client, const std::string& parameters);
   bool HandleIsStopped(ClientTransport& client, const std::string& parameters);
   bool HandleModules(ClientTransport& client, const std::string& parameters);

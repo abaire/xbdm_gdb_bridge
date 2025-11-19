@@ -7,9 +7,9 @@
 #include "xbox/debugger/debugger_xbox_interface.h"
 #include "xbox/debugger/xbdm_debugger.h"
 
-static bool DebugXBE(XBOXInterface& base_interface,
-                     const std::vector<std::string>& args, bool wait_forever,
-                     bool break_at_start, std::ostream& out) {
+static bool DebugXBE(XBOXInterface& base_interface, const ArgParser& args,
+                     bool wait_forever, bool break_at_start,
+                     std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   ArgParser parser(args);
   std::string path;
@@ -34,36 +34,36 @@ static bool DebugXBE(XBOXInterface& base_interface,
   return true;
 }
 
-Command::Result DebuggerCommandRun::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result DebuggerCommandRun::operator()(XBOXInterface& interface,
+                                               const ArgParser& args,
+                                               std::ostream& out) {
   if (!DebugXBE(interface, args, false, false, out)) {
     PrintUsage();
   }
   return HANDLED;
 }
 
-Command::Result DebuggerCommandLaunch::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result DebuggerCommandLaunch::operator()(XBOXInterface& interface,
+                                                  const ArgParser& args,
+                                                  std::ostream& out) {
   if (!DebugXBE(interface, args, false, true, out)) {
     PrintUsage();
   }
   return HANDLED;
 }
 
-Command::Result DebuggerCommandLaunchWait::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result DebuggerCommandLaunchWait::operator()(XBOXInterface& interface,
+                                                      const ArgParser& args,
+                                                      std::ostream& out) {
   if (!DebugXBE(interface, args, true, true, out)) {
     PrintUsage();
   }
   return HANDLED;
 }
 
-Command::Result DebuggerCommandAttach::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>&,
-    std::ostream& out) {
+Command::Result DebuggerCommandAttach::operator()(XBOXInterface& base_interface,
+                                                  const ArgParser&,
+                                                  std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   if (!interface.AttachDebugger()) {
     out << "Failed to attach debugger." << std::endl;
@@ -71,17 +71,16 @@ Command::Result DebuggerCommandAttach::operator()(
   return HANDLED;
 }
 
-Command::Result DebuggerCommandDetach::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>&,
-    std::ostream& out) {
+Command::Result DebuggerCommandDetach::operator()(XBOXInterface& base_interface,
+                                                  const ArgParser&,
+                                                  std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   interface.DetachDebugger();
   return HANDLED;
 }
 
 Command::Result DebuggerCommandRestart::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>&,
-    std::ostream& out) {
+    XBOXInterface& base_interface, const ArgParser&, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
@@ -95,8 +94,7 @@ Command::Result DebuggerCommandRestart::operator()(
 }
 
 Command::Result DebuggerCommandSetActiveThread::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+    XBOXInterface& base_interface, const ArgParser& args, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
@@ -121,8 +119,7 @@ Command::Result DebuggerCommandSetActiveThread::operator()(
 }
 
 Command::Result DebuggerCommandStepFunction::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>&,
-    std::ostream& out) {
+    XBOXInterface& base_interface, const ArgParser&, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
@@ -139,8 +136,7 @@ Command::Result DebuggerCommandStepFunction::operator()(
 }
 
 Command::Result DebuggerCommandGetThreads::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>&,
-    std::ostream& out) {
+    XBOXInterface& base_interface, const ArgParser&, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
@@ -165,8 +161,7 @@ Command::Result DebuggerCommandGetThreads::operator()(
 }
 
 Command::Result DebuggerCommandGetThreadInfo::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>&,
-    std::ostream& out) {
+    XBOXInterface& base_interface, const ArgParser&, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
@@ -190,8 +185,7 @@ Command::Result DebuggerCommandGetThreadInfo::operator()(
 }
 
 Command::Result DebuggerCommandGetThreadInfoAndContext::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+    XBOXInterface& base_interface, const ArgParser& args, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
@@ -215,13 +209,14 @@ Command::Result DebuggerCommandGetThreadInfoAndContext::operator()(
   std::vector<std::string> augmented_args;
   augmented_args.push_back(std::to_string(thread->thread_id));
   augmented_args.insert(augmented_args.end(), args.begin(), args.end());
+
+  ArgParser delegate_args("getcontext", augmented_args);
   auto context_command = CommandGetContext();
-  return context_command(interface, augmented_args, out);
+  return context_command(interface, delegate_args, out);
 }
 
 Command::Result DebuggerCommandSetAutoInfo::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+    XBOXInterface& base_interface, const ArgParser& args, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
@@ -239,8 +234,7 @@ Command::Result DebuggerCommandSetAutoInfo::operator()(
 }
 
 Command::Result DebuggerCommandHaltAll::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>&,
-    std::ostream& out) {
+    XBOXInterface& base_interface, const ArgParser&, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
@@ -254,7 +248,7 @@ Command::Result DebuggerCommandHaltAll::operator()(
 }
 
 Command::Result DebuggerCommandHalt::operator()(XBOXInterface& base_interface,
-                                                const std::vector<std::string>&,
+                                                const ArgParser&,
                                                 std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
@@ -278,8 +272,7 @@ Command::Result DebuggerCommandHalt::operator()(XBOXInterface& base_interface,
 }
 
 Command::Result DebuggerCommandContinueAll::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+    XBOXInterface& base_interface, const ArgParser& args, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   ArgParser parser(args);
   bool no_break_on_exception =
@@ -297,8 +290,7 @@ Command::Result DebuggerCommandContinueAll::operator()(
 }
 
 Command::Result DebuggerCommandContinue::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+    XBOXInterface& base_interface, const ArgParser& args, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   ArgParser parser(args);
   bool no_break_on_exception = parser.ArgExists("nobreak", "n", "false", "no");
@@ -324,8 +316,7 @@ Command::Result DebuggerCommandContinue::operator()(
 }
 
 Command::Result DebuggerCommandSuspend::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>&,
-    std::ostream& out) {
+    XBOXInterface& base_interface, const ArgParser&, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
@@ -347,9 +338,9 @@ Command::Result DebuggerCommandSuspend::operator()(
   return HANDLED;
 }
 
-Command::Result DebuggerCommandResume::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>&,
-    std::ostream& out) {
+Command::Result DebuggerCommandResume::operator()(XBOXInterface& base_interface,
+                                                  const ArgParser&,
+                                                  std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
@@ -372,8 +363,7 @@ Command::Result DebuggerCommandResume::operator()(
 }
 
 Command::Result DebuggerCommandGetModules::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>&,
-    std::ostream& out) {
+    XBOXInterface& base_interface, const ArgParser&, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
@@ -389,8 +379,7 @@ Command::Result DebuggerCommandGetModules::operator()(
 }
 
 Command::Result DebuggerCommandGetSections::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>&,
-    std::ostream& out) {
+    XBOXInterface& base_interface, const ArgParser&, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
@@ -406,8 +395,7 @@ Command::Result DebuggerCommandGetSections::operator()(
 }
 
 Command::Result DebuggerCommandContinueAllAndGo::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+    XBOXInterface& base_interface, const ArgParser& args, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   ArgParser parser(args);
   bool no_break_on_exception =

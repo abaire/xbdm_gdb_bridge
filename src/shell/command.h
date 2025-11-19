@@ -7,6 +7,7 @@
 
 #include "xbox/xbox_interface.h"
 
+struct ArgParser;
 struct Command {
   virtual ~Command() = default;
   enum Result {
@@ -24,12 +25,10 @@ struct Command {
     }
   }
 
-  virtual Result operator()(XBOXInterface& interface,
-                            const std::vector<std::string>& args,
+  virtual Result operator()(XBOXInterface& interface, const ArgParser& args,
                             std::ostream& out) = 0;
 
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args) {
+  Result operator()(XBOXInterface& interface, const ArgParser& args) {
     return (*this)(interface, args, std::cout);
   };
 

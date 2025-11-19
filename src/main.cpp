@@ -41,7 +41,11 @@ int main_(const IPAddress& xbox_addr,
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
     LOG(trace) << "Processing startup command '" << command.front() << "'";
 #endif
-    shell.ProcessCommand(command);
+
+    std::string flat_command = boost::algorithm::join(command, " ");
+    ;
+    ArgParser parser(flat_command);
+    shell.ProcessCommand(parser);
   }
 
   if (run_shell) {

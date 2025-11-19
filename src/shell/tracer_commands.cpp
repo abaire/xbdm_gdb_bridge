@@ -7,9 +7,9 @@
 #include "tracer/tracer.h"
 #include "util/parsing.h"
 
-Command::Result TracerCommandInit::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result TracerCommandInit::operator()(XBOXInterface& interface,
+                                              const ArgParser& args,
+                                              std::ostream& out) {
   if (!NTRCTracer::Tracer::Initialize(interface)) {
     out << "Failed to initialize tracer." << std::endl;
     return HANDLED;
@@ -48,7 +48,7 @@ Command::Result TracerCommandInit::operator()(
 }
 
 Command::Result TracerCommandDetach::operator()(XBOXInterface& interface,
-                                                const std::vector<std::string>&,
+                                                const ArgParser&,
                                                 std::ostream& out) {
   if (!NTRCTracer::Tracer::Detach(interface)) {
     out << "Failed to detach from the tracer." << std::endl;
@@ -59,8 +59,7 @@ Command::Result TracerCommandDetach::operator()(XBOXInterface& interface,
 }
 
 Command::Result TracerCommandBreakOnNextFlip::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+    XBOXInterface& interface, const ArgParser& args, std::ostream& out) {
   if (!NTRCTracer::Tracer::BreakOnFrameStart(interface, !args.empty())) {
     out << "Failed to request break." << std::endl;
     return HANDLED;
@@ -69,9 +68,9 @@ Command::Result TracerCommandBreakOnNextFlip::operator()(
   return HANDLED;
 }
 
-Command::Result TracerCommandTraceFrames::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result TracerCommandTraceFrames::operator()(XBOXInterface& interface,
+                                                     const ArgParser& args,
+                                                     std::ostream& out) {
   auto local_artifact_path = std::filesystem::current_path();
   auto num_frames = 1;
   auto verbose = false;
