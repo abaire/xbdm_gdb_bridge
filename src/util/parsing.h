@@ -137,4 +137,13 @@ struct ArgParser {
   const std::vector<std::string>& arguments;
 };
 
+namespace command_line_command_tokenizer {
+
+//! Splits the given vector of strings into sub-vectors delimited by "&&"
+// kCommandDelimiter
+std::vector<std::vector<std::string>> SplitCommands(
+    const std::vector<std::string>& additional_commands);
+
+}  // namespace command_line_command_tokenizer
+
 #endif  // XBDM_GDB_BRIDGE_PARSING_H
