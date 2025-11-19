@@ -7,14 +7,13 @@
 #include "shell/gdb/gdb_commands.h"
 #include "shell/shell.h"
 #include "util/logging.h"
+#include "util/parsing.h"
 #include "xbox/bridge/gdb_xbox_interface.h"
 #include "xbox/xbox_interface.h"
 
 #define DEFAULT_PORT 731
 
 namespace po = boost::program_options;
-
-static const std::string kCommandDelimiter{"&&"};
 
 void validate(boost::any& v, const std::vector<std::string>& values, IPAddress*,
               int) {
@@ -25,9 +24,11 @@ void validate(boost::any& v, const std::vector<std::string>& values, IPAddress*,
   v = boost::any(addr);
 }
 
-static int main_(const IPAddress& xbox_addr,
-                 const std::vector<std::vector<std::string>>& commands,
-                 bool run_shell) {
+namespace {
+
+int main_(const IPAddress& xbox_addr,
+          const std::vector<std::vector<std::string>>& commands,
+          bool run_shell) {
   LOG(trace) << "Startup - XBDM @ " << xbox_addr;
   std::shared_ptr<XBOXInterface> interface =
       std::make_shared<GDBXBOXInterface>("XBOX", xbox_addr);
@@ -54,30 +55,7 @@ static int main_(const IPAddress& xbox_addr,
   return 0;
 }
 
-// Splits the given vector of strings into sub-vectors delimited by
-// kCommandDelimiter
-static std::vector<std::vector<std::string>> split_commands(
-    const std::vector<std::string>& additional_commands) {
-  std::vector<std::vector<std::string>> ret;
-
-  if (additional_commands.empty()) {
-    return ret;
-  }
-
-  std::vector<std::string> cmd;
-  for (auto& elem : additional_commands) {
-    if (elem == "&&") {
-      ret.push_back(cmd);
-      cmd.clear();
-      continue;
-    }
-
-    cmd.push_back(elem);
-  }
-  ret.push_back(cmd);
-
-  return std::move(ret);
-}
+}  // namespace
 
 int main(int argc, char* argv[]) {
   bool run_shell{false};
@@ -145,7 +123,7 @@ int main(int argc, char* argv[]) {
   logging::SetDebuggerTraceEnabled(!disable_debugger_logging);
 
   std::vector<std::vector<std::string>> commands =
-      split_commands(additional_commands);
+      command_line_command_tokenizer::SplitCommands(additional_commands);
 
   return main_(xbox_addr, commands, run_shell || commands.empty());
 }

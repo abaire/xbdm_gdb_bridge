@@ -24,6 +24,8 @@ class Shell {
                        std::shared_ptr<Command> processor,
                        const std::vector<std::string>& aliases);
 
+  static std::vector<std::string> Tokenize(const std::string& line);
+
  private:
   void PrintHelp(std::vector<std::string>& args) const;
 
