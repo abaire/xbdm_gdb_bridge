@@ -27,8 +27,10 @@ static bool DebugXBE(XBOXInterface& base_interface,
   auto debugger = interface.Debugger();
   assert(debugger);
 
-  debugger->DebugXBE(EnsureXFATStylePath(path), command_line_args, wait_forever,
-                     break_at_start);
+  if (!debugger->DebugXBE(EnsureXFATStylePath(path), command_line_args,
+                          wait_forever, break_at_start)) {
+    out << "Failed to launch XBE" << std::endl;
+  }
   return true;
 }
 
@@ -215,6 +217,25 @@ Command::Result DebuggerCommandGetThreadInfoAndContext::operator()(
   augmented_args.insert(augmented_args.end(), args.begin(), args.end());
   auto context_command = CommandGetContext();
   return context_command(interface, augmented_args, out);
+}
+
+Command::Result DebuggerCommandSetAutoInfo::operator()(
+    XBOXInterface& base_interface, const std::vector<std::string>& args,
+    std::ostream& out) {
+  GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
+  auto debugger = interface.Debugger();
+  if (!debugger) {
+    out << "Debugger not attached." << std::endl;
+    return HANDLED;
+  }
+
+  ArgParser parser(args);
+  bool disable = parser.ArgExists("d", "disable", "off");
+
+  debugger->SetDisplayExpandedBreakpointOutput(disable);
+
+  out << "OK" << std::endl;
+  return HANDLED;
 }
 
 Command::Result DebuggerCommandHaltAll::operator()(

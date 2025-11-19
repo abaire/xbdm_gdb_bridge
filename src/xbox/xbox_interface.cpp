@@ -15,7 +15,7 @@ XBOXInterface::XBOXInterface(std::string name, IPAddress xbox_address)
 void XBOXInterface::Start() {
   Stop();
 
-  select_thread_ = std::make_shared<SelectThread>();
+  select_thread_ = std::make_shared<SelectThread>("ST_XboxIface");
   xbdm_context_ =
       std::make_shared<XBDMContext>(name_, xbox_address_, select_thread_);
   select_thread_->Start();

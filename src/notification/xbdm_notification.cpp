@@ -43,7 +43,7 @@ std::shared_ptr<XBDMNotification> ParseXBDMNotification(const char* buffer,
 #undef SETIF
 
   {
-    const std::lock_guard<std::recursive_mutex> lock(customNotificationMutex);
+    const std::lock_guard lock(customNotificationMutex);
 
     auto delimiter = strchr(buffer, '!');
     if (!delimiter) {
@@ -63,7 +63,7 @@ std::shared_ptr<XBDMNotification> ParseXBDMNotification(const char* buffer,
 //! Registers an XBDMNotification constructor for a custom event prefix.
 bool RegisterXBDMNotificationConstructor(
     const char* prefix, XBDMNotificationConstructor constructor) {
-  const std::lock_guard<std::recursive_mutex> lock(customNotificationMutex);
+  const std::lock_guard lock(customNotificationMutex);
 
   if (customNotificationConstructors.find(prefix) !=
       customNotificationConstructors.end()) {
@@ -79,7 +79,7 @@ bool RegisterXBDMNotificationConstructor(
 
 //! Unregisters the custom constructor for the given event prefix.
 bool UnregisterXBDMNotificationConstructor(const char* prefix) {
-  const std::lock_guard<std::recursive_mutex> lock(customNotificationMutex);
+  const std::lock_guard lock(customNotificationMutex);
 
   auto entry = customNotificationConstructors.find(prefix);
   if (entry == customNotificationConstructors.end()) {

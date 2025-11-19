@@ -15,14 +15,15 @@ include(FindPkgConfig)
 
 set(NXDK_DIR $ENV{NXDK_DIR} CACHE PATH "Path to the nxdk installation root")
 
-if(NOT NXDK_DIR)
+if (NOT NXDK_DIR)
     message(FATAL_ERROR "Error: NXDK_DIR is not set. "
             "Please set the NXDK_DIR environment variable, "
             "or pass -DNXDK_DIR=/path/to/nxdk to cmake.")
-endif()
+endif ()
 set(ENV{NXDK_DIR} ${NXDK_DIR})
 
 set(TEST_TIMEOUT_SECONDS 2 CACHE INTERNAL "Default timeout for tests, in seconds")
+set(TEST_MOCK_XBDM_PORT 0 CACHE INTERNAL "Port used for the mock XBDM server in tests")
 
 ExternalProject_Add(
         dyndxt_loader
@@ -229,18 +230,26 @@ target_link_libraries(
 add_library(
         xbdm_gdb_bridge_net
         STATIC
-        src/net/ip_address.cpp
-        src/net/ip_address.h
         src/net/delegating_server.cpp
         src/net/delegating_server.h
+        src/net/ip_address.cpp
+        src/net/ip_address.h
         src/net/select_thread.cpp
         src/net/select_thread.h
+        src/net/selectable_base.cpp
+        src/net/selectable_base.h
+        src/net/signaling_base.cpp
+        src/net/signaling_base.h
+        src/net/task_connection.cpp
+        src/net/task_connection.h
+        src/net/tcp_connection.cpp
+        src/net/tcp_connection.h
         src/net/tcp_server.cpp
         src/net/tcp_server.h
         src/net/tcp_socket_base.cpp
         src/net/tcp_socket_base.h
-        src/net/tcp_connection.cpp
-        src/net/tcp_connection.h
+        src/util/thread_debug_util.cpp
+        src/util/thread_debug_util.h
 )
 target_include_directories(
         xbdm_gdb_bridge_net
@@ -251,6 +260,7 @@ target_link_libraries(
         xbdm_gdb_bridge_net
         LINK_PUBLIC
         Boost::log
+        xbdm_gdb_bridge_util
 )
 
 
@@ -656,11 +666,14 @@ add_test(NAME dxt_library_loader_tests COMMAND dxt_library_loader_tests)
 # Mock XBDM server
 add_library(
         mock_xbdm_server
-        test/mock_xbdm_server/mock_xbdm_client_transport.cpp
-        test/mock_xbdm_server/mock_xbdm_client_transport.h
-        test/mock_xbdm_server/mock_xbdm_server.cpp
-        test/mock_xbdm_server/mock_xbdm_server.h
-        test/mock_xbdm_server/mock_xbox_state.h
+        test/test_util/mock_xbdm_server/mock_server_debugger_interface_fixture.cpp
+        test/test_util/mock_xbdm_server/mock_server_debugger_interface_fixture.h
+        test/test_util/mock_xbdm_server/mock_xbdm_client_transport.cpp
+        test/test_util/mock_xbdm_server/mock_xbdm_client_transport.h
+        test/test_util/mock_xbdm_server/mock_xbdm_server.cpp
+        test/test_util/mock_xbdm_server/mock_xbdm_server.h
+        test/test_util/mock_xbdm_server/mock_xbox_state.cpp
+        test/test_util/mock_xbdm_server/mock_xbox_state.h
 )
 target_include_directories(
         mock_xbdm_server
@@ -702,6 +715,7 @@ add_test(NAME test_debugger_expression_parser_tests COMMAND test_debugger_expres
 add_executable(
         shell_tests
         test/shell/test_main.cpp
+        test/shell/test_debugger_commands.cpp
         test/shell/test_dyndxt_commands.cpp
 )
 target_include_directories(

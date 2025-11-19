@@ -1,9 +1,6 @@
 #ifndef XBDM_GDB_BRIDGE_SRC_NET_IP_TRANSPORT_H_
 #define XBDM_GDB_BRIDGE_SRC_NET_IP_TRANSPORT_H_
 
-#include <sys/socket.h>
-
-#include <cctype>
 #include <list>
 #include <mutex>
 #include <string>
@@ -43,6 +40,8 @@ class TCPConnection : public TCPSocketBase {
   std::vector<uint8_t>::iterator FirstIndexOf(
       const std::vector<uint8_t>& pattern);
 
+  void FlushAndClose();
+
  protected:
   virtual void OnBytesRead() {}
 
@@ -54,6 +53,9 @@ class TCPConnection : public TCPSocketBase {
   std::vector<uint8_t> read_buffer_;
   std::recursive_mutex write_lock_;
   std::vector<uint8_t> write_buffer_;
+
+  //! Flags that this connection should be closed after all data is written.
+  bool close_after_flush_{false};
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_NET_IP_TRANSPORT_H_

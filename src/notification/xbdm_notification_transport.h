@@ -19,6 +19,8 @@ class XBDMNotificationTransport : public TCPConnection {
 
   [[nodiscard]] bool IsHelloReceived() const { return hello_received_; }
 
+  void Close() override;
+
  protected:
   void OnBytesRead() override;
   void HandleNotification(const char* message, long message_len);

@@ -3,8 +3,8 @@
 #include <memory>
 
 #include "configure_test.h"
-#include "mock_xbdm_server/mock_xbdm_server.h"
 #include "net/select_thread.h"
+#include "test_util/mock_xbdm_server/mock_xbdm_server.h"
 #include "xbox/debugger/xbdm_debugger.h"
 #include "xbox/xbdm_context.h"
 
@@ -14,10 +14,10 @@ using namespace std::chrono_literals;
 
 struct XBDMDebuggerFixture {
   XBDMDebuggerFixture() {
-    server = std::make_unique<MockXBDMServer>(0);
+    server = std::make_unique<MockXBDMServer>(TEST_MOCK_XBDM_PORT);
     BOOST_REQUIRE(server->Start());
 
-    select_thread_ = std::make_shared<SelectThread>();
+    select_thread_ = std::make_shared<SelectThread>("ST_ClntFixture");
     context_ = std::make_shared<XBDMContext>("Client", server->GetAddress(),
                                              select_thread_);
     select_thread_->Start();
@@ -39,7 +39,7 @@ struct XBDMDebuggerFixture {
     context_.reset();
   }
 
-  void Connect() {
+  void Connect() const {
     BOOST_REQUIRE(debugger->Attach());
     BOOST_REQUIRE(debugger->IsAttached());
   }

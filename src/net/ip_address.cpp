@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
+#include <cstring>
 #include <ostream>
 
 IPAddress::IPAddress(const std::string& addr) {
@@ -69,4 +70,12 @@ bool IPAddress::operator<(const IPAddress& other) const {
     return true;
   }
   return addr_.sin_port < oaddr.sin_port;
+}
+
+bool IPAddress::operator==(const IPAddress& other) const {
+  if (hostname_ != other.hostname_) {
+    return false;
+  }
+
+  return !memcmp(&addr_, &other.addr_, sizeof(addr_));
 }

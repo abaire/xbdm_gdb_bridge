@@ -119,6 +119,10 @@ class XBDMDebugger {
   std::optional<uint32_t> GetDWORD(uint32_t address);
   bool SetMemory(uint32_t address, const std::vector<uint8_t>& data);
 
+  void SetDisplayExpandedBreakpointOutput(bool enable) {
+    print_thread_info_on_break_ = enable;
+  };
+
   bool AddBreakpoint(uint32_t address);
   bool AddReadWatch(uint32_t address, uint32_t length);
   bool AddWriteWatch(uint32_t address, uint32_t length);
@@ -192,6 +196,8 @@ class XBDMDebugger {
 
   bool target_not_debuggable_{false};
   int notification_handler_id_{0};
+
+  bool print_thread_info_on_break_{true};
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_XBOX_DEBUGGER_DEBUGGER_H_
