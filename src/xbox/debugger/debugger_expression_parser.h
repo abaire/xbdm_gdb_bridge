@@ -4,11 +4,12 @@
 #include <expected>
 
 #include "rdcp/types/thread_context.h"
+#include "util/parsing.h"
 
 /**
  * Processes basic arithmetic expressions and resolves register references.
  */
-class DebuggerExpressionParser {
+class DebuggerExpressionParser : public ExpressionParser {
  public:
   explicit DebuggerExpressionParser(const ThreadContext& context)
       : context_(context), pos(0) {}
@@ -18,28 +19,28 @@ class DebuggerExpressionParser {
    * @param expr - The expression to evaluate
    * @return The final value or a string indicating an error.
    */
-  std::expected<uint32_t, std::string> parse(const std::string& expr);
+  std::expected<uint32_t, std::string> Parse(const std::string& expr);
 
  private:
-  [[nodiscard]] inline char peek() const {
+  [[nodiscard]] char Peek() const {
     return pos < input_.size() ? input_[pos] : 0;
   }
 
-  inline char consume() { return pos < input_.size() ? input_[pos++] : 0; }
+  char Consume() { return pos < input_.size() ? input_[pos++] : 0; }
 
-  inline void skip_whitespace() {
+  void SkipWhitespace() {
     while (pos < input_.size() && std::isspace(input_[pos])) {
       pos++;
     }
   }
 
-  [[nodiscard]] std::expected<uint32_t, std::string> resolve_reg_value(
+  [[nodiscard]] std::expected<uint32_t, std::string> ResolveRegisterValue(
       const std::string& reg) const;
-  std::expected<std::string, std::string> parse_register();
-  std::expected<uint32_t, std::string> parse_number();
-  std::expected<uint32_t, std::string> parse_factor();
-  std::expected<uint32_t, std::string> parse_term();
-  std::expected<uint32_t, std::string> parse_expression();
+  std::expected<std::string, std::string> ParseRegister();
+  std::expected<uint32_t, std::string> ParseNumber();
+  std::expected<uint32_t, std::string> ParseFactor();
+  std::expected<uint32_t, std::string> ParseTerm();
+  std::expected<uint32_t, std::string> ParseExpression();
 
  private:
   const ThreadContext& context_;

@@ -32,7 +32,8 @@ DEBUGGER_TEST_CASE(InvokeSimpleWithNoCommandFails) {
 DEBUGGER_TEST_CASE(InvokeSimpleBuiltInWithNoArgumentsSucceeds) {
   std::stringstream capture;
   DynDXTCommandInvokeSimple cmd;
-  cmd(*interface, {"threads"}, capture);
+  ArgParser args("invokesimple", std::vector<std::string>{"threads"});
+  cmd(*interface, args, capture);
 
   BOOST_CHECK_EQUAL(Trimmed(capture), "threads: 202 thread list follows");
 }
@@ -40,7 +41,10 @@ DEBUGGER_TEST_CASE(InvokeSimpleBuiltInWithNoArgumentsSucceeds) {
 DEBUGGER_TEST_CASE(InvokeSimpleBuiltInWithArgumentSucceeds) {
   std::stringstream capture;
   DynDXTCommandInvokeSimple cmd;
-  cmd(*interface, {"debugger", "disconnect"}, capture);
+  ArgParser args("invokesimple",
+                 std::vector<std::string>{"debugger", "disconnect"});
+
+  cmd(*interface, args, capture);
 
   BOOST_CHECK_EQUAL(Trimmed(capture), "debugger: 200 OK");
 }

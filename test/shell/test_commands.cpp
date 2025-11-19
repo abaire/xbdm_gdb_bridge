@@ -32,7 +32,7 @@ DEBUGGER_TEST_CASE(GetMemWithNoAddressFails) {
 DEBUGGER_TEST_CASE(GetMemWithNoSizeFails) {
   std::stringstream capture;
   CommandGetMem cmd;
-  std::vector<std::string> args{"0x12345"};
+  ArgParser args("getmem", std::vector<std::string>{"0x12345"});
   BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
 
   BOOST_CHECK_EQUAL(Trimmed(capture), "Missing required size argument.");
@@ -47,7 +47,7 @@ DEBUGGER_TEST_CASE(GetMemSucceeds) {
 
   std::stringstream capture;
   CommandGetMem cmd;
-  std::vector<std::string> args{"0x12345", "16"};
+  ArgParser args("getmem", std::vector<std::string>{"0x12345", "16"});
   BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
 
   BOOST_CHECK_EQUAL(Trimmed(capture),

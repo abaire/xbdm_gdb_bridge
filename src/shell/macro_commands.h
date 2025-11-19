@@ -10,8 +10,7 @@ struct MacroCommandSyncFile : Command {
                 "\n"
                 "Checks the file modification time of `remote_path` and "
                 "uploads `local_path` if it is newer.\n") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args,
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
                     std::ostream& out) override;
 };
 
@@ -25,8 +24,7 @@ struct MacroCommandSyncDirectory : Command {
                 " from `local_directory` if it is newer.\n"
                 "Files that only exist in `remote_directory` will be left "
                 "alone unless the `-d` flag is given.\n") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args,
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
                     std::ostream& out) override;
 };
 

@@ -9,8 +9,7 @@
 #include "xbox/debugger/xbdm_debugger.h"
 
 Command::Result DynDXTCommandLoadBootstrap::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>&,
-    std::ostream& out) {
+    XBOXInterface& base_interface, const ArgParser&, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
@@ -41,7 +40,7 @@ cleanup:
 }
 
 Command::Result DynDXTCommandHello::operator()(XBOXInterface& interface,
-                                               const std::vector<std::string>&,
+                                               const ArgParser&,
                                                std::ostream& out) {
   if (!DynDXTLoader::Loader::Bootstrap(interface)) {
     out << "Failed to install Dynamic DXT loader.";
@@ -59,9 +58,9 @@ Command::Result DynDXTCommandHello::operator()(XBOXInterface& interface,
   return HANDLED;
 }
 
-Command::Result DynDXTCommandInvokeSimple::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result DynDXTCommandInvokeSimple::operator()(XBOXInterface& interface,
+                                                      const ArgParser& args,
+                                                      std::ostream& out) {
   ArgParser parser(args);
   std::string command;
   if (!parser.Parse(0, command)) {
@@ -85,8 +84,7 @@ Command::Result DynDXTCommandInvokeSimple::operator()(
 }
 
 Command::Result DynDXTCommandInvokeMultiline::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+    XBOXInterface& interface, const ArgParser& args, std::ostream& out) {
   ArgParser parser(args);
   std::string command;
   if (!parser.Parse(0, command)) {
@@ -110,8 +108,7 @@ Command::Result DynDXTCommandInvokeMultiline::operator()(
 }
 
 Command::Result DynDXTCommandInvokeSendBinary::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+    XBOXInterface& interface, const ArgParser& args, std::ostream& out) {
   ArgParser parser(args);
   std::string command;
   if (!parser.Parse(0, command)) {
@@ -158,8 +155,7 @@ Command::Result DynDXTCommandInvokeSendBinary::operator()(
 }
 
 Command::Result DynDXTCommandInvokeReceiveSizePrefixedBinary::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+    XBOXInterface& interface, const ArgParser& args, std::ostream& out) {
   ArgParser parser(args);
   std::string command;
   if (!parser.Parse(0, command)) {
@@ -191,8 +187,7 @@ Command::Result DynDXTCommandInvokeReceiveSizePrefixedBinary::operator()(
 }
 
 Command::Result DynDXTCommandInvokeReceiveKnownSizedBinary::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+    XBOXInterface& interface, const ArgParser& args, std::ostream& out) {
   ArgParser parser(args);
   std::string command;
   if (!parser.Parse(0, command)) {
@@ -227,9 +222,9 @@ Command::Result DynDXTCommandInvokeReceiveKnownSizedBinary::operator()(
   return HANDLED;
 }
 
-Command::Result DynDXTCommandLoad::operator()(
-    XBOXInterface& interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result DynDXTCommandLoad::operator()(XBOXInterface& interface,
+                                              const ArgParser& args,
+                                              std::ostream& out) {
   ArgParser parser(args);
   std::string path;
   if (!parser.Parse(0, path)) {

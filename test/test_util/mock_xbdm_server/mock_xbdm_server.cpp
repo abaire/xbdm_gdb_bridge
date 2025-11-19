@@ -676,7 +676,7 @@ bool MockXBDMServer::HandleGetMem2(ClientTransport& client,
   }
 
   // TODO: Investigate behavior in actual XBDM when requesting regions with
-  // gaps.
+  //       gaps.
 
   std::vector<uint8_t> data;
 

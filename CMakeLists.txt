@@ -63,9 +63,9 @@ ExternalProject_Get_Property(ntrc_dyndxt INSTALL_DIR)
 set(ntrc_dyndxt_lib_dir ${INSTALL_DIR}/lib)
 set(ntrc_dyndxt_include_dir ${INSTALL_DIR}/include)
 
-if(POLICY CMP0167)
+if (POLICY CMP0167)
     cmake_policy(SET CMP0167 NEW)
-endif()
+endif ()
 find_package(
         Boost 1.70
         COMPONENTS
@@ -621,6 +621,7 @@ add_test(NAME rdcp_tests COMMAND rdcp_tests)
 # util_tests
 add_executable(
         util_tests
+        test/util/test_command_line_command_tokenizer.cpp
         test/util/test_main.cpp
         test/util/test_parsing.cpp
         test/util/test_path.cpp
@@ -722,7 +723,6 @@ add_executable(
         test/shell/test_commands.cpp
         test/shell/test_debugger_commands.cpp
         test/shell/test_dyndxt_commands.cpp
-        test/shell/test_shell.cpp
 )
 target_include_directories(
         shell_tests
