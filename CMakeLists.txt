@@ -29,10 +29,11 @@ ExternalProject_Add(
         dyndxt_loader
         PREFIX ddxt
         GIT_REPOSITORY https://github.com/abaire/nxdk_dyndxt.git
-        GIT_TAG a59832df505373c7b58e4a27aec61ffaa47822c5
+        GIT_TAG f7c6bceab191ea7218920bb662eb5132dfb212ea
         CMAKE_ARGS
         -DCMAKE_TOOLCHAIN_FILE=${NXDK_DIR}/share/toolchain-nxdk.cmake
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DBUILD_TESTING=OFF
         BUILD_BYPRODUCTS
         ddxt/lib/bootstrap_l1.asm.obj
         ddxt/lib/bootstrap_l2.asm.obj
@@ -49,10 +50,11 @@ ExternalProject_Add(
         ntrc_dyndxt
         PREFIX ntrc
         GIT_REPOSITORY https://github.com/abaire/nxdk_ntrc_dyndxt.git
-        GIT_TAG 395440a9615416d17684d9f5d2000509e7e7c72e
+        GIT_TAG 26d708c4b4e2d96119bfd2628ede88b310f62ce6
         CMAKE_ARGS
         -DCMAKE_TOOLCHAIN_FILE=${NXDK_DIR}/share/toolchain-nxdk.cmake
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DBUILD_TESTING=OFF
         BUILD_BYPRODUCTS
         ntrc/lib/libntrc_dyndxt.dll
         ntrc/include/ntrc_dyndxt.h
