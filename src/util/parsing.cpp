@@ -1,5 +1,7 @@
 #include "parsing.h"
 
+static constexpr char kCommandDelimiter[] = "&&";
+
 int32_t ParseInt32(const std::vector<uint8_t>& data) {
   std::string value(reinterpret_cast<const char*>(data.data()), data.size());
   return ParseInt32(value);
@@ -37,3 +39,28 @@ uint32_t ParseUint32(const std::string& value) {
 
   return static_cast<uint32_t>(strtoul(value.c_str(), nullptr, base));
 }
+
+namespace command_line_command_tokenizer {
+std::vector<std::vector<std::string>> SplitCommands(
+    const std::vector<std::string>& additional_commands) {
+  std::vector<std::vector<std::string>> ret;
+
+  if (additional_commands.empty()) {
+    return ret;
+  }
+
+  std::vector<std::string> cmd;
+  for (auto& elem : additional_commands) {
+    if (elem == kCommandDelimiter) {
+      ret.push_back(cmd);
+      cmd.clear();
+      continue;
+    }
+
+    cmd.push_back(elem);
+  }
+  ret.push_back(cmd);
+
+  return std::move(ret);
+}
+}  // namespace command_line_command_tokenizer
