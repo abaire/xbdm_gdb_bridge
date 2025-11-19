@@ -232,7 +232,7 @@ Command::Result DebuggerCommandSetAutoInfo::operator()(
   ArgParser parser(args);
   bool disable = parser.ArgExists("d", "disable", "off");
 
-  debugger->SetDisplayExpandedBreakpointOutput(disable);
+  debugger->SetDisplayExpandedBreakpointOutput(!disable);
 
   out << "OK" << std::endl;
   return HANDLED;

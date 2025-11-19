@@ -2,13 +2,11 @@
 #define XBDM_GDB_BRIDGE_MOCK_XBDM_SERVER_H
 
 #include <atomic>
-#include <condition_variable>
 #include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "mock_xbox_state.h"
