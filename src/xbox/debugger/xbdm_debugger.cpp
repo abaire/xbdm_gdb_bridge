@@ -542,9 +542,7 @@ void XBDMDebugger::OnBreakpoint(
     thread->Resume(*context_);
   }
 
-  if (print_thread_info_on_break_) {
-    LOG_DEBUGGER(info) << *thread;
-  }
+  PerformAfterStopActions(thread);
 }
 
 void XBDMDebugger::OnWatchpoint(
@@ -552,6 +550,21 @@ void XBDMDebugger::OnWatchpoint(
   LOG_DEBUGGER(trace) << "Watchpoint " << msg->thread_id << "@" << std::hex
                       << msg->address << " accessing " << msg->watched_address
                       << std::dec;
+
+  auto thread = GetThread(msg->thread_id);
+  if (!thread) {
+    LOG_DEBUGGER(warning)
+        << "XBDMNotif: Received breakpoint message for unknown thread "
+        << msg->thread_id;
+    return;
+  }
+
+  SetActiveThread(thread->thread_id);
+  thread->last_known_address = msg->address;
+  // TODO: Set the stop reason from the notification content.
+  thread->FetchStopReasonSync(*context_);
+
+  PerformAfterStopActions(thread);
 }
 
 void XBDMDebugger::OnSingleStep(
@@ -569,9 +582,7 @@ void XBDMDebugger::OnSingleStep(
   // TODO: Set the stop reason from the notification content.
   thread->FetchStopReasonSync(*context_);
 
-  if (print_thread_info_on_break_) {
-    LOG_DEBUGGER(info) << *thread;
-  }
+  PerformAfterStopActions(thread);
 }
 
 void XBDMDebugger::OnException(
@@ -590,8 +601,24 @@ void XBDMDebugger::OnException(
   // TODO: Set the stop reason from the notification content.
   thread->FetchStopReasonSync(*context_);
 
+  PerformAfterStopActions(thread);
+}
+
+void XBDMDebugger::PerformAfterStopActions(
+    const std::shared_ptr<Thread>& active_thread) {
   if (print_thread_info_on_break_) {
-    LOG_DEBUGGER(info) << *thread;
+    auto request = std::make_shared<GetContext>(active_thread->thread_id, true,
+                                                true, true);
+    context_->SendCommandSync(request);
+    std::stringstream context_info;
+    if (request->IsOK()) {
+      context_info << request->context;
+    } else {
+      context_info << "[Failed to fetch context " << *request << "]";
+    }
+
+    LOG_DEBUGGER(info) << "Active thread:" << std::endl
+                       << *active_thread << context_info.str();
   }
 }
 

@@ -170,6 +170,11 @@ class XBDMDebugger {
   void OnSingleStep(const std::shared_ptr<NotificationSingleStep>&);
   void OnException(const std::shared_ptr<NotificationException>&);
 
+  /**
+   * Called by the various On<x> handlers for breakpoints/watches/steps/fce's
+   */
+  void PerformAfterStopActions(const std::shared_ptr<Thread>& active_thread);
+
  private:
   bool is_attached_{false};
   std::shared_ptr<XBDMContext> context_;
