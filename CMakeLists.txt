@@ -61,7 +61,9 @@ ExternalProject_Get_Property(ntrc_dyndxt INSTALL_DIR)
 set(ntrc_dyndxt_lib_dir ${INSTALL_DIR}/lib)
 set(ntrc_dyndxt_include_dir ${INSTALL_DIR}/include)
 
-cmake_policy(SET CMP0167 NEW)
+if(POLICY CMP0167)
+  cmake_policy(SET CMP0167 NEW)
+endif()
 find_package(
         Boost 1.70
         COMPONENTS
@@ -717,6 +719,7 @@ add_executable(
         test/shell/test_main.cpp
         test/shell/test_debugger_commands.cpp
         test/shell/test_dyndxt_commands.cpp
+        test/shell_test.cpp
 )
 target_include_directories(
         shell_tests

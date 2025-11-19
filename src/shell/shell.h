@@ -13,6 +13,7 @@ class Shell {
   explicit Shell(std::shared_ptr<XBOXInterface>& interface);
 
   void Run();
+  std::vector<std::string> Tokenize(const std::string& line);
   Command::Result ProcessCommand(const std::vector<std::string>& args);
 
   inline void RegisterCommand(const std::string& command,

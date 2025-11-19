@@ -184,22 +184,7 @@ void Shell::Run() {
       continue;
     }
 
-    std::vector<std::string> args;
-    boost::escaped_list_separator<char> separator('~', ' ', '\"');
-    typedef boost::tokenizer<boost::escaped_list_separator<char>>
-        SpaceTokenizer;
-    SpaceTokenizer keyvals(line, separator);
-    for (auto it = keyvals.begin(); it != keyvals.end(); ++it) {
-      const std::string& token = *it;
-      if (token[0] == '\"') {
-        // Insert the unescaped contents of the string.
-        std::string value = token.substr(1, token.size() - 1);
-        boost::replace_all(value, "\\\"", "\"");
-        args.push_back(value);
-      } else {
-        args.push_back(token);
-      }
-    }
+    std::vector<std::string> args = Tokenize(line);
 
     Command::Result result = ProcessCommand(args);
     if (result == Command::EXIT_REQUESTED) {
@@ -210,6 +195,17 @@ void Shell::Run() {
       std::cout << "Unknown command." << std::endl;
     }
   }
+}
+
+std::vector<std::string> Shell::Tokenize(const std::string& line) {
+  std::vector<std::string> args;
+  boost::escaped_list_separator<char> separator('~', ' ', '\"');
+  typedef boost::tokenizer<boost::escaped_list_separator<char>> SpaceTokenizer;
+  SpaceTokenizer keyvals(line, separator);
+  for (auto it = keyvals.begin(); it != keyvals.end(); ++it) {
+    args.push_back(*it);
+  }
+  return args;
 }
 
 Command::Result Shell::ProcessCommand(
