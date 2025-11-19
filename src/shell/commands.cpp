@@ -476,7 +476,7 @@ Command::Result CommandGetMem::operator()(XBOXInterface& interface,
   uint32_t address;
   uint32_t size;
   if (!parser.Parse(0, address)) {
-    out << "Missing required Address argument." << std::endl;
+    out << "Missing required address argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
