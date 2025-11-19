@@ -475,17 +475,16 @@ Command::Result CommandGetFileAttributes::operator()(XBOXInterface& interface,
 }
 
 Command::Result CommandGetMem::operator()(XBOXInterface& interface,
-                                          const ArgParser& args,
+                                          const ArgParser& parser,
                                           std::ostream& out) {
-  ArgParser parser(args);
   uint32_t address;
   uint32_t size;
-  if (!parser.Parse(0, address)) {
+  if (!parser.Parse(0, address, interface.GetExpressionParser())) {
     out << "Missing required address argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
-  if (!parser.Parse(1, size)) {
+  if (!parser.Parse(1, size, interface.GetExpressionParser())) {
     out << "Missing required size argument." << std::endl;
     PrintUsage();
     return HANDLED;
