@@ -6,7 +6,8 @@ To build this project successfully you must follow the instructions in this sect
 
  ```bash
  # Clone nxdk and checkout the correct commit
- cd <someplace_outside_of_this_repository>
+ cd <someplace_outside_of_this_repository> # Alternatively, you may add the nxdk checkout to your .git/info/exclude file.
+
  git clone --recursive https://github.com/XboxDev/nxdk.git && \
  cd nxdk && \
  git checkout 3b24b559124aba8fcb94fddff1d2dc9ef32de461 && \
