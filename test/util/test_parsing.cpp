@@ -1,7 +1,6 @@
 #include <boost/test/unit_test.hpp>
 
 #include "util/parsing.h"
-#include "xbox/debugger/debugger_expression_parser.h"
 
 struct MockExpressionParser : ExpressionParser {
   std::expected<uint32_t, std::string> Parse(const std::string& expr) override {
@@ -85,15 +84,50 @@ BOOST_AUTO_TEST_CASE(parse_hex_int_invalid_string) {
   BOOST_TEST(!parsed);
 }
 
-/*
- *
- template <typename T>
-bool MaybeParseHexInt(T &ret, const std::vector<uint8_t> &data,
-                      size_t offset = 0) {
+BOOST_AUTO_TEST_CASE(ParseInt32_String_Decimal) {
+  BOOST_TEST(ParseInt32("123") == 123);
+  BOOST_TEST(ParseInt32("-123") == -123);
+  BOOST_TEST(ParseInt32("0") == 0);
+}
 
- template <typename T>
-bool MaybeParseHexInt(T &ret, const std::string &data) {
- */
+BOOST_AUTO_TEST_CASE(ParseInt32_String_Hex) {
+  BOOST_TEST(ParseInt32("0x10") == 16);
+  BOOST_TEST(ParseInt32("0X10") == 16);
+  BOOST_TEST(ParseInt32("0xFF") == 255);
+  // ParseInt32 uses strtol which handles negative hex if it fits in long, but
+  // here we expect 32-bit behavior. Let's check standard positive hex values.
+}
+
+BOOST_AUTO_TEST_CASE(ParseInt32_VectorUint8) {
+  std::vector<uint8_t> data = {'1', '2', '3'};
+  BOOST_TEST(ParseInt32(data) == 123);
+}
+
+BOOST_AUTO_TEST_CASE(ParseInt32_VectorChar) {
+  std::vector<char> data = {'-', '4', '5'};
+  BOOST_TEST(ParseInt32(data) == -45);
+}
+
+BOOST_AUTO_TEST_CASE(ParseUint32_String_Decimal) {
+  BOOST_TEST(ParseUint32("123") == 123);
+  BOOST_TEST(ParseUint32("0") == 0);
+}
+
+BOOST_AUTO_TEST_CASE(ParseUint32_String_Hex) {
+  BOOST_TEST(ParseUint32("0x10") == 16);
+  BOOST_TEST(ParseUint32("0X10") == 16);
+  BOOST_TEST(ParseUint32("0xFFFFFFFF") == 0xFFFFFFFF);
+}
+
+BOOST_AUTO_TEST_CASE(ParseUint32_VectorUint8) {
+  std::vector<uint8_t> data = {'1', '2', '3'};
+  BOOST_TEST(ParseUint32(data) == 123);
+}
+
+BOOST_AUTO_TEST_CASE(ParseUint32_VectorChar) {
+  std::vector<char> data = {'4', '5'};
+  BOOST_TEST(ParseUint32(data) == 45);
+}
 
 BOOST_AUTO_TEST_CASE(ArgParser_BasicCommandArgs) {
   ArgParser p("process file1 file2");
@@ -615,6 +649,84 @@ BOOST_AUTO_TEST_CASE(ArgParser_Flatten_EmptyArgs) {
 BOOST_AUTO_TEST_CASE(ArgParser_Flatten_ExplicitEmptyCommand) {
   ArgParser p("", std::vector<std::string>{"cmd", "arg1", "arg2"});
   BOOST_TEST(p.Flatten() == "cmd arg1 arg2");
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Parse_Int_OutOfBounds) {
+  ArgParser p("cmd 123");
+  int result;
+  auto type = p.Parse(1, result);  // Index 1 is out of bounds
+  BOOST_TEST((type == ArgParser::ArgType::NOT_FOUND));
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Parse_Bool_OutOfBounds) {
+  ArgParser p("cmd true");
+  bool result;
+  auto type = p.Parse(1, result);  // Index 1 is out of bounds
+  BOOST_TEST((type == ArgParser::ArgType::NOT_FOUND));
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Parse_SharedPtrExpressionParser) {
+  ArgParser p("cmd (1 + 2)");
+  auto mock = std::make_shared<MockExpressionParser>();
+  uint32_t result = 0;
+
+  auto type = p.Parse(0, result, mock);
+
+  BOOST_TEST((type == ArgParser::ArgType::PARENTHESIZED));
+  BOOST_TEST(result == 3);
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Parse_SharedPtrExpressionParser_Null) {
+  ArgParser p("cmd 123");
+  std::shared_ptr<MockExpressionParser> mock = nullptr;
+  uint32_t result = 0;
+
+  auto type = p.Parse(0, result, mock);
+
+  BOOST_TEST((type == ArgParser::ArgType::BASIC));
+  BOOST_TEST(result == 123);
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Iterator_Operators) {
+  ArgParser p("cmd one two three");
+  auto it = p.begin();
+
+  // operator->
+  BOOST_TEST(it->size() == 3);  // "one".size()
+
+  // Post-increment
+  auto it_copy = it++;
+  BOOST_TEST(*it_copy == "one");
+  BOOST_TEST(*it == "two");
+
+  // Pre-decrement
+  --it;
+  BOOST_TEST(*it == "one");
+
+  // Post-decrement
+  it++;  // back to "two"
+  auto it_copy2 = it--;
+  BOOST_TEST(*it_copy2 == "two");
+  BOOST_TEST(*it == "one");
+
+  // operator<
+  BOOST_TEST((p.begin() < p.end()));
+  BOOST_TEST(!(p.end() < p.begin()));
+
+  // operator-(difference_type)
+  auto it_end = p.end();
+  auto it_prev = it_end - 1;
+  BOOST_TEST(*it_prev == "three");
+
+  // operator[]
+  BOOST_TEST(p.begin()[0] == "one");
+  BOOST_TEST(p.begin()[1] == "two");
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_ExtractSubcommand_NoArgs) {
+  ArgParser p("cmd");
+  auto maybe_sub = p.ExtractSubcommand();
+  BOOST_TEST(!maybe_sub);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
