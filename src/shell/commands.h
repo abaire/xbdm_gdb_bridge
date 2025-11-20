@@ -50,7 +50,9 @@ struct CommandBreak : Command {
                 "condition. The condition may reference basic registers using "
                 "$reg syntax and perform simple\n"
                 "C-style comparisons.\n"
-                "    E.g., addr 0x12345 IF $eax == 0xFF00DD") {}
+                "    E.g., addr 0x12345 IF $eax == 0xFF00DD\n"
+                "In addition, the broken thread ID may be checked using 'tid'\n"
+                "    E.g., addr 0x12345 IF tid == 28") {}
   Result operator()(XBOXInterface& interface, const ArgParser& args,
                     std::ostream& out) override;
 };

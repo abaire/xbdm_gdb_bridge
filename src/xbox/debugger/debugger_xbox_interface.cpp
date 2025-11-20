@@ -19,6 +19,7 @@ struct ContextAwareExpressionParser : DebuggerExpressionParser {
         auto& context = active_thread->context;
         if (context) {
           context_ = *context;
+          thread_id_ = active_thread->thread_id;
           return DebuggerExpressionParser::Parse(expr);
         }
       }

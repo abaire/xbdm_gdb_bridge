@@ -2,7 +2,7 @@
 
 std::expected<uint32_t, std::string> DebuggerExpressionParser::Parse(
     const std::string& expr) {
-  ParseState state(context_);
+  ParseState state(context_, thread_id_);
   return state.Parse(expr);
 }
 
@@ -212,6 +212,14 @@ DebuggerExpressionParser::ParseState::ParseFactor() {
       return std::unexpected(reg.error());
     }
     return ResolveRegisterValue(reg.value());
+  }
+
+  if (input_.substr(pos, 3) == "tid") {
+    pos += 3;
+    if (thread_id_ == -1) {
+      return std::unexpected("Thread ID not available in this context");
+    }
+    return thread_id_;
   }
 
   return ParseNumber();

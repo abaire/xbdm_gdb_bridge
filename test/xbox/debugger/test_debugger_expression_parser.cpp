@@ -516,6 +516,35 @@ BOOST_AUTO_TEST_CASE(test_overflow_behavior) {
 
 BOOST_AUTO_TEST_SUITE_END()
 
+BOOST_AUTO_TEST_SUITE(ThreadIDTests)
+
+BOOST_AUTO_TEST_CASE(test_tid_parsing) {
+  ThreadContext ctx;
+  DebuggerExpressionParser parser(ctx, 28);
+  auto result = parser.Parse("tid");
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 28);
+}
+
+BOOST_AUTO_TEST_CASE(test_tid_comparison) {
+  ThreadContext ctx;
+  DebuggerExpressionParser parser(ctx, 28);
+  auto result = parser.Parse("tid == 28");
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 1);
+}
+
+BOOST_AUTO_TEST_CASE(test_tid_not_available) {
+  ThreadContext ctx;
+  DebuggerExpressionParser parser(ctx);
+  auto result = parser.Parse("tid");
+  BOOST_REQUIRE(!result.has_value());
+  BOOST_CHECK(result.error().find("Thread ID not available") !=
+              std::string::npos);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
 BOOST_AUTO_TEST_SUITE(parsing_suite)
 
 BOOST_AUTO_TEST_CASE(ArgParser_SimpleArithmeticExpression) {
