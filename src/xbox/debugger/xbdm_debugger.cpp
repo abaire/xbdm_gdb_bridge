@@ -555,6 +555,7 @@ void XBDMDebugger::OnBreakpoint(
         LOG_DEBUGGER(info) << "Condition '" << *condition
                            << "' false, continuing.";
         ContinueThread(thread->thread_id);
+        Go();
         return;
       }
     }
@@ -614,6 +615,7 @@ void XBDMDebugger::OnWatchpoint(
           LOG_DEBUGGER(info)
               << "Condition '" << *condition << "' false, continuing.";
           ContinueThread(thread->thread_id);
+          Go();
           return;
         }
       }

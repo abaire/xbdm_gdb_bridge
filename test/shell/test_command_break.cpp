@@ -187,10 +187,15 @@ DEBUGGER_TEST_CASE(BreakConditionalFalse) {
   server->SetAfterCommandHandler("continue",
                                  [&](const std::string&) { continued = true; });
 
+  bool go_called = false;
+  server->SetAfterCommandHandler("go",
+                                 [&](const std::string&) { go_called = true; });
+
   server->SimulateExecutionBreakpoint(0x2000, tid);
   AwaitQuiescence();
 
   BOOST_CHECK(continued);
+  BOOST_CHECK(go_called);
 }
 
 DEBUGGER_TEST_CASE(BreakConditionalReadTrue) {
@@ -245,6 +250,10 @@ DEBUGGER_TEST_CASE(BreakConditionalReadFalse) {
   server->SetAfterCommandHandler("continue",
                                  [&](const std::string&) { continued = true; });
 
+  bool go_called = false;
+  server->SetAfterCommandHandler("go",
+                                 [&](const std::string&) { go_called = true; });
+
   server->SimulateReadWatchpoint(0x4000, tid);
   AwaitQuiescence();
 
@@ -253,6 +262,7 @@ DEBUGGER_TEST_CASE(BreakConditionalReadFalse) {
     std::this_thread::sleep_for(50ms);
   }
   BOOST_CHECK(continued);
+  BOOST_CHECK(go_called);
 }
 
 DEBUGGER_TEST_CASE(BreakConditionalWriteTrue) {
@@ -307,6 +317,10 @@ DEBUGGER_TEST_CASE(BreakConditionalWriteFalse) {
   server->SetAfterCommandHandler("continue",
                                  [&](const std::string&) { continued = true; });
 
+  bool go_called = false;
+  server->SetAfterCommandHandler("go",
+                                 [&](const std::string&) { go_called = true; });
+
   server->SimulateWriteWatchpoint(0x6000, tid);
   AwaitQuiescence();
 
@@ -315,6 +329,7 @@ DEBUGGER_TEST_CASE(BreakConditionalWriteFalse) {
     std::this_thread::sleep_for(50ms);
   }
   BOOST_CHECK(continued);
+  BOOST_CHECK(go_called);
 }
 
 DEBUGGER_TEST_CASE(BreakConditionalExecuteTrue) {
@@ -369,6 +384,10 @@ DEBUGGER_TEST_CASE(BreakConditionalExecuteFalse) {
   server->SetAfterCommandHandler("continue",
                                  [&](const std::string&) { continued = true; });
 
+  bool go_called = false;
+  server->SetAfterCommandHandler("go",
+                                 [&](const std::string&) { go_called = true; });
+
   server->SimulateExecuteWatchpoint(0x8000, tid);
   AwaitQuiescence();
 
@@ -377,6 +396,7 @@ DEBUGGER_TEST_CASE(BreakConditionalExecuteFalse) {
     std::this_thread::sleep_for(50ms);
   }
   BOOST_CHECK(continued);
+  BOOST_CHECK(go_called);
 }
 
 DEBUGGER_TEST_CASE(BreakConditionalTIDTrue) {
@@ -432,6 +452,10 @@ DEBUGGER_TEST_CASE(BreakConditionalTIDFalse) {
   server->SetAfterCommandHandler("continue",
                                  [&](const std::string&) { continued = true; });
 
+  bool go_called = false;
+  server->SetAfterCommandHandler("go",
+                                 [&](const std::string&) { go_called = true; });
+
   server->SimulateExecutionBreakpoint(0xA000, tid);
   AwaitQuiescence();
 
@@ -440,6 +464,7 @@ DEBUGGER_TEST_CASE(BreakConditionalTIDFalse) {
     std::this_thread::sleep_for(50ms);
   }
   BOOST_CHECK(continued);
+  BOOST_CHECK(go_called);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
