@@ -17,6 +17,23 @@ using namespace std::chrono_literals;
 #define DEBUGGER_TEST_CASE(__name) \
   BOOST_AUTO_TEST_CASE(__name, *boost::unit_test::timeout(TEST_TIMEOUT_SECONDS))
 
+BOOST_FIXTURE_TEST_SUITE(BreakTests, XBDMDebuggerInterfaceFixture)
+
+DEBUGGER_TEST_CASE(BreakAddrWithValidArgs) {
+  std::stringstream capture;
+  CommandBreak cmd;
+  ArgParser args("break addr 0x1000");
+
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+  AwaitQuiescence();
+
+  BOOST_CHECK(server->HasBreakpoint(0x1000));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// BreakConditionalTests
+
 BOOST_FIXTURE_TEST_SUITE(BreakConditionalTests, XBDMDebuggerInterfaceFixture)
 
 DEBUGGER_TEST_CASE(BreakConditionalTrue) {

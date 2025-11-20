@@ -27,7 +27,6 @@ set(TEST_MOCK_XBDM_PORT 0 CACHE INTERNAL "Port used for the mock XBDM server in 
 
 ExternalProject_Add(
         dyndxt_loader
-        PREFIX ddxt
         GIT_REPOSITORY https://github.com/abaire/nxdk_dyndxt.git
         GIT_TAG f7c6bceab191ea7218920bb662eb5132dfb212ea
         CMAKE_ARGS
@@ -35,11 +34,11 @@ ExternalProject_Add(
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DBUILD_TESTING=OFF
         BUILD_BYPRODUCTS
-        ddxt/lib/bootstrap_l1.asm.obj
-        ddxt/lib/bootstrap_l2.asm.obj
-        ddxt/lib/dynamic_dxt_loader.lib
-        ddxt/lib/libdynamic_dxt_loader.dll
-        ddxt/lib/xbdm.lib
+        <INSTALL_DIR>/lib/bootstrap_l1.asm.obj
+        <INSTALL_DIR>/lib/bootstrap_l2.asm.obj
+        <INSTALL_DIR>/lib/dynamic_dxt_loader.lib
+        <INSTALL_DIR>/lib/libdynamic_dxt_loader.dll
+        <INSTALL_DIR>/lib/xbdm.lib
 )
 ExternalProject_Get_Property(dyndxt_loader INSTALL_DIR)
 set(dyndxt_lib_dir ${INSTALL_DIR}/lib)
@@ -48,7 +47,6 @@ set(dyndxt_include_dir ${INSTALL_DIR}/include)
 # Import the nvtrace DynamicDXT
 ExternalProject_Add(
         ntrc_dyndxt
-        PREFIX ntrc
         GIT_REPOSITORY https://github.com/abaire/nxdk_ntrc_dyndxt.git
         GIT_TAG 26d708c4b4e2d96119bfd2628ede88b310f62ce6
         CMAKE_ARGS
@@ -56,13 +54,18 @@ ExternalProject_Add(
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DBUILD_TESTING=OFF
         BUILD_BYPRODUCTS
-        ntrc/lib/libntrc_dyndxt.dll
-        ntrc/include/ntrc_dyndxt.h
+        <INSTALL_DIR>/lib/libntrc_dyndxt.dll
+        <INSTALL_DIR>/include/ntrc_dyndxt.h
 )
 ExternalProject_Get_Property(ntrc_dyndxt INSTALL_DIR)
 set(ntrc_dyndxt_lib_dir ${INSTALL_DIR}/lib)
 set(ntrc_dyndxt_include_dir ${INSTALL_DIR}/include)
 
+set(REPLXX_FILENAME "libreplxx.a")
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(REPLXX_FILENAME "libreplxx-d.a")
+endif()
 ExternalProject_Add(
         replxx
         GIT_REPOSITORY https://github.com/AmokHuginnsson/replxx.git
@@ -71,14 +74,17 @@ ExternalProject_Add(
         -DREPLXX_BUILD_EXAMPLES=OFF
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+        -DCMAKE_DEBUG_POSTFIX=
         BUILD_BYPRODUCTS
-        <INSTALL_DIR>/lib/libreplxx.a
+        <INSTALL_DIR>/lib/${REPLXX_FILENAME}
         <INSTALL_DIR>/include/replxx.h
 )
 ExternalProject_Get_Property(replxx INSTALL_DIR)
-set(replxx_lib_dir ${INSTALL_DIR}/lib)
 set(replxx_include_dir ${INSTALL_DIR}/include)
-set(REPLXX_STATIC_LIB ${replxx_lib_dir}/libreplxx.a)
+set(REPLXX_STATIC_LIB ${INSTALL_DIR}/lib/${REPLXX_FILENAME})
+add_library(libreplxx STATIC IMPORTED GLOBAL)
+set_target_properties(libreplxx PROPERTIES IMPORTED_LOCATION "${REPLXX_STATIC_LIB}")
+add_dependencies(libreplxx replxx)
 
 
 if (POLICY CMP0167)
@@ -509,9 +515,9 @@ target_link_libraries(
         xbdm_gdb_bridge_xbox_debugger
         xbdm_gdb_bridge_xbox_xbdm_context
         xbdm_gdb_bridge_xbox_interface
-        ${REPLXX_STATIC_LIB}
+        LINK_PRIVATE
+        libreplxx
 )
-add_dependencies(xbdm_gdb_bridge_shell replxx)
 
 add_library(
         xbdm_gdb_bridge_shell_gdb
@@ -748,7 +754,7 @@ add_executable(
         test/shell/test_commands.cpp
         test/shell/test_debugger_commands.cpp
         test/shell/test_dyndxt_commands.cpp
-        test/shell/test_command_break_conditional.cpp
+        test/shell/test_command_break.cpp
 )
 target_include_directories(
         shell_tests
