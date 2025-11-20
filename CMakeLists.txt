@@ -63,6 +63,24 @@ ExternalProject_Get_Property(ntrc_dyndxt INSTALL_DIR)
 set(ntrc_dyndxt_lib_dir ${INSTALL_DIR}/lib)
 set(ntrc_dyndxt_include_dir ${INSTALL_DIR}/include)
 
+ExternalProject_Add(
+        replxx
+        GIT_REPOSITORY https://github.com/AmokHuginnsson/replxx.git
+        GIT_TAG release-0.0.4
+        CMAKE_ARGS
+        -DREPLXX_BUILD_EXAMPLES=OFF
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+        BUILD_BYPRODUCTS
+        <INSTALL_DIR>/lib/libreplxx.a
+        <INSTALL_DIR>/include/replxx.h
+)
+ExternalProject_Get_Property(replxx INSTALL_DIR)
+set(replxx_lib_dir ${INSTALL_DIR}/lib)
+set(replxx_include_dir ${INSTALL_DIR}/include)
+set(REPLXX_STATIC_LIB ${replxx_lib_dir}/libreplxx.a)
+
+
 if (POLICY CMP0167)
     cmake_policy(SET CMP0167 NEW)
 endif ()
@@ -377,6 +395,8 @@ add_dependencies(xbdm_gdb_bridge_tracer ntrc_dyndxt)
 add_library(
         xbdm_gdb_bridge_util
         STATIC
+        src/util/config_path.cpp
+        src/util/config_path.h
         src/util/logging.cpp
         src/util/logging.h
         src/util/optional.h
@@ -472,6 +492,8 @@ target_include_directories(
         xbdm_gdb_bridge_shell
         PRIVATE
         src
+        PUBLIC
+        ${replxx_include_dir}
 )
 target_link_libraries(
         xbdm_gdb_bridge_shell
@@ -483,10 +505,13 @@ target_link_libraries(
         xbdm_gdb_bridge_net
         xbdm_gdb_bridge_rdcp
         xbdm_gdb_bridge_tracer
+        xbdm_gdb_bridge_util
         xbdm_gdb_bridge_xbox_debugger
         xbdm_gdb_bridge_xbox_xbdm_context
         xbdm_gdb_bridge_xbox_interface
+        ${REPLXX_STATIC_LIB}
 )
+add_dependencies(xbdm_gdb_bridge_shell replxx)
 
 add_library(
         xbdm_gdb_bridge_shell_gdb

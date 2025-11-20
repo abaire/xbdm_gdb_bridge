@@ -10,8 +10,10 @@
 #include "debugger_commands.h"
 #include "dyndxt_commands.h"
 #include "macro_commands.h"
+#include "replxx.hxx"
 #include "shell_commands.h"
 #include "tracer_commands.h"
+#include "util/config_path.h"
 #include "util/logging.h"
 
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
@@ -19,9 +21,39 @@
 #endif
 
 static constexpr char kRerunCommandHelp[] = "Re-runs the last shell command.";
+static constexpr char kAppName[] = "xbdm_gdb_bridge";
+static constexpr char kHistoryFilename[] = "shell_history";
 
 Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
-    : interface_(interface), prompt_("> ") {
+    : interface_(interface),
+      prompt_("> "),
+      rx_(std::make_unique<replxx::Replxx>()) {
+  rx_->history_load(config_path::GetConfigFilePath(kAppName, kHistoryFilename));
+
+  rx_->set_completion_callback(
+      [this](std::string const& context,
+             int& context_length) -> replxx::Replxx::completions_t {
+        std::vector<replxx::Replxx::Completion> completions;
+
+        size_t lastSpace = context.find_last_of(" \t");
+        std::string prefix;
+
+        if (lastSpace == std::string::npos) {
+          prefix = context;
+          context_length = prefix.length();
+        } else {
+          return {};
+        }
+
+        for (const auto& [cmd, handler] : commands_) {
+          if (cmd.find(prefix) == 0) {
+            completions.emplace_back(cmd);
+          }
+        }
+
+        return completions;
+      });
+
 #define REGISTER(command, handler)                    \
   do {                                                \
     commands_[command] = std::make_shared<handler>(); \
@@ -156,6 +188,8 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
 #undef REGISTER
 }
 
+Shell::~Shell() = default;
+
 void Shell::RegisterCommand(const std::string& command,
                             std::shared_ptr<Command> processor,
                             const std::vector<std::string>& aliases) {
@@ -166,25 +200,24 @@ void Shell::RegisterCommand(const std::string& command,
 }
 
 void Shell::Run() {
-  std::string line;
-
   while (true) {
-    std::cout << prompt_;
-    std::getline(std::cin, line);
+    char const* c_line{nullptr};
 
+    do {
+      c_line = rx_->input(prompt_);
+    } while (c_line && strlen(c_line) == 0);
+
+    if (!c_line) {
+      break;
+    }
+
+    std::string line = c_line;
     boost::algorithm::trim(line);
     if (line.empty()) {
-      if (std::cin.eof()) {
-        LOG(error) << "stdin closed.";
-        break;
-      }
-      if (std::cin.fail()) {
-        LOG(error) << "Failure on std::cin.";
-        // TODO: Determine if this is recoverable or not.
-        break;
-      }
       continue;
     }
+
+    rx_->history_add(line);
 
     auto args = ArgParser(line);
 
@@ -197,6 +230,7 @@ void Shell::Run() {
       std::cout << "Unknown command." << std::endl;
     }
   }
+  rx_->history_save(config_path::GetConfigFilePath(kAppName, kHistoryFilename));
 }
 
 Command::Result Shell::ProcessCommand(ArgParser parser) {
