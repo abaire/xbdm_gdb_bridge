@@ -195,6 +195,15 @@ void MockXBDMServer::Stop() {
   clients_.clear();
 }
 
+void MockXBDMServer::AwaitQuiescence() {
+  if (!running_) {
+    return;
+  }
+
+  assert(select_thread_ && "May not be called before Start");
+  select_thread_->AwaitQuiescence();
+}
+
 void MockXBDMServer::ForEachClient(std::function<bool(ClientTransport&)> f) {
   const std::lock_guard lock(clients_mutex_);
   std::erase_if(clients_, [&f](std::shared_ptr<ClientTransport> client) {
@@ -368,6 +377,7 @@ bool MockXBDMServer::ProcessCommand(ClientTransport& client,
   HANDLE("bye", Bye)
   HANDLE("continue", Continue)
   HANDLE("debugger", Debugger)
+  HANDLE("getcontext", GetContext)
   HANDLE("getmem2", GetMem2)
   HANDLE("go", Go)
   HANDLE("isstopped", IsStopped)
@@ -659,6 +669,58 @@ bool MockXBDMServer::HandleTitle(ClientTransport& client,
   return true;
 }
 
+bool MockXBDMServer::HandleGetContext(ClientTransport& client,
+                                      const std::string& parameters) {
+  RDCPMapResponse params(parameters);
+  auto thread_id = params.GetOptionalDWORD("thread");
+  if (!thread_id.has_value()) {
+    SendResponse(client, ERR_UNEXPECTED, "Missing thread");
+    return true;
+  }
+
+  std::lock_guard lock(state_mutex_);
+  auto entry = state_.threads.find(thread_id.value());
+  if (entry == state_.threads.end()) {
+    SendResponse(client, ERR_NO_SUCH_THREAD);
+    return true;
+  }
+
+  SendResponse(client, OK_MULTILINE_RESPONSE, "context follows");
+
+  auto& thread = entry->second;
+
+  std::string response;
+  auto append = [&](const char* key, const std::optional<uint32_t>& val) {
+    if (val.has_value()) {
+      char buf[32];
+      snprintf(buf, sizeof(buf), "0x%x", val.value());
+      if (!response.empty()) {
+        response += " ";
+      }
+      response += key;
+      response += "=";
+      response += buf;
+    }
+  };
+
+  append("Eax", thread.eax);
+  append("Ebx", thread.ebx);
+  append("Ecx", thread.ecx);
+  append("Edx", thread.edx);
+  append("Esi", thread.esi);
+  append("Edi", thread.edi);
+  append("Ebp", thread.ebp);
+  append("Esp", thread.esp);
+  append("Eip", thread.eip);
+  append("EFlags", thread.eflags);
+  append("Cr0NpxState", thread.cr0_npx_state);
+
+  SendStringWithTerminator(client, response);
+  SendMultilineTerminator(client);
+
+  return true;
+}
+
 bool MockXBDMServer::HandleGetMem2(ClientTransport& client,
                                    const std::string& parameters) {
   RDCPMapResponse params(parameters);
@@ -724,6 +786,7 @@ bool MockXBDMServer::HandleBreak(ClientTransport& client,
   auto read_address = params.GetOptionalDWORD("read");
   auto write_address = params.GetOptionalDWORD("write");
   auto execute_address = params.GetOptionalDWORD("execute");
+  auto addr_address = params.GetOptionalDWORD("addr");
 
   uint32_t address;
   Breakpoint::Type type;
@@ -736,6 +799,9 @@ bool MockXBDMServer::HandleBreak(ClientTransport& client,
     type = Breakpoint::Type::WRITE;
   } else if (execute_address.has_value()) {
     address = execute_address.value();
+    type = Breakpoint::Type::EXECUTE;
+  } else if (addr_address.has_value()) {
+    address = addr_address.value();
     type = Breakpoint::Type::EXECUTE;
   } else {
     SendResponse(client, ERR_UNEXPECTED, "Missing breakpoint type");
@@ -777,9 +843,8 @@ bool MockXBDMServer::HandleIsStopped(ClientTransport& client,
   }
 
   std::stringstream response;
-  // TODO: Support other stop reasons.
-  response << "break addr=" << std::hex << thread.eip.value_or(0)
-           << " thread=" << std::dec << thread.id;
+  response << thread.stop_reason << " addr=" << std::hex
+           << thread.eip.value_or(0) << " thread=" << std::dec << thread.id;
   SendResponse(client, OK, response.str());
   return true;
 }
@@ -973,7 +1038,6 @@ void MockXBDMServer::ResumeThread(uint32_t thread_id) {
 
 void MockXBDMServer::AddBreakpoint(uint32_t address, Breakpoint::Type type) {
   std::lock_guard lock(state_mutex_);
-  Breakpoint bp{address, type};
   state_.breakpoints.emplace(std::piecewise_construct,
                              std::forward_as_tuple(address),
                              std::forward_as_tuple(address, type));
@@ -1291,12 +1355,71 @@ bool MockXBDMServer::SimulateExecutionBreakpoint(uint32_t address,
   }
 
   thread->stopped = true;
+  thread->stop_reason = "break";
   SetExecutionState(S_STOPPED);
 
   std::stringstream notification;
-  notification << "break addr=" << std::hex << address << " thread=" << std::dec
-               << thread->id << " stop";
+  notification << "break addr=0x" << std::hex << address
+               << " thread=" << std::dec << thread->id << " stop\r\n";
   PostNotification(notification.str());
+  return true;
+}
+
+bool MockXBDMServer::SimulateReadWatchpoint(uint32_t address,
+                                            uint32_t thread_id, bool stop) {
+  return PostWatchpointNotification("read", address, thread_id, stop);
+}
+
+bool MockXBDMServer::SimulateWriteWatchpoint(uint32_t address,
+                                             uint32_t thread_id, bool stop) {
+  return PostWatchpointNotification("write", address, thread_id, stop);
+}
+
+bool MockXBDMServer::SimulateExecuteWatchpoint(uint32_t address,
+                                               uint32_t thread_id, bool stop) {
+  return PostWatchpointNotification("execute", address, thread_id, stop);
+}
+
+bool MockXBDMServer::PostWatchpointNotification(const std::string& type,
+                                                uint32_t address,
+                                                uint32_t thread_id, bool stop) {
+  std::lock_guard lock(state_mutex_);
+  SimulatedThread* thread = nullptr;
+  if (thread_id) {
+    auto entry = state_.threads.find(thread_id);
+    if (entry == state_.threads.end()) {
+      return false;
+    }
+    thread = &entry->second;
+  } else {
+    for (auto& entry : state_.threads) {
+      if (entry.second.ContainsAddress(address)) {
+        thread = &entry.second;
+        break;
+      }
+    }
+  }
+
+  assert(thread && "Failed to identify appropriate thread");
+  if (!thread) {
+    return false;
+  }
+
+  std::stringstream notification;
+  notification << "data thread=" << std::dec << thread->id << " addr=0x"
+               << std::hex << thread->eip.value_or(0) << " " << type << "=0x"
+               << address;
+
+  if (stop) {
+    notification << " stop";
+    thread->stopped = true;
+    thread->stop_reason = "data";
+    SetExecutionState(S_STOPPED);
+  }
+
+  notification << "\r\n";
+  PostNotification(notification.str());
+
   return true;
 }
 

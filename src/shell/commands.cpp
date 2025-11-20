@@ -12,6 +12,8 @@
 #include "screenshot_converter.h"
 #include "util/parsing.h"
 #include "xbox/debugger/debugger_xbox_interface.h"
+#include "xbox/debugger/xbdm_debugger.h"
+#include "xboxkrnl/xboxdef.h"
 
 static void SendAndPrintMessage(
     XBOXInterface& interface,
@@ -21,8 +23,12 @@ static void SendAndPrintMessage(
 }
 
 Command::Result CommandBreak::operator()(XBOXInterface& interface,
-                                         const ArgParser& args,
+                                         const ArgParser& initial_args,
                                          std::ostream& out) {
+  ArgParser args;
+  ArgParser conditional_args;
+  bool has_conditional = initial_args.SplitAt(args, conditional_args, "if");
+
   auto maybe_parser = args.ExtractSubcommand();
   if (!maybe_parser.has_value()) {
     PrintUsage();
@@ -36,16 +42,49 @@ Command::Result CommandBreak::operator()(XBOXInterface& interface,
   }
 
   if (parser.IsCommand("start")) {
+    if (has_conditional) {
+      out << "Conditional statements may not be provided for `start` "
+             "breakpoints.";
+      PrintUsage();
+      return HANDLED;
+    }
     SendAndPrintMessage(interface, std::make_shared<BreakAtStart>(), out);
     return HANDLED;
   }
 
   if (parser.IsCommand("clearall")) {
+    if (has_conditional) {
+      out << "Conditional statements may not be provided for `clearall`";
+      PrintUsage();
+      return HANDLED;
+    }
     SendAndPrintMessage(interface, std::make_shared<BreakClearAll>(), out);
     return HANDLED;
   }
 
   bool clear = parser.ShiftPrefixModifier('-');
+
+  auto UpdateCondition = [&interface, &conditional_args, &out, has_conditional](
+                             XBDMDebugger::BreakpointType mode,
+                             uint32_t address, bool clear) {
+    GET_DEBUGGERXBOXINTERFACE(interface, dbg_iface);
+
+    auto debugger = dbg_iface.Debugger();
+    if (!debugger) {
+      if (!clear && has_conditional) {
+        out << "Warning: Debugger not attached, condition not registered."
+            << std::endl;
+      }
+      return;
+    }
+
+    if (clear) {
+      debugger->RemoveBreakpointCondition(mode, address);
+    } else if (has_conditional) {
+      debugger->SetBreakpointCondition(mode, address,
+                                       conditional_args.Flatten());
+    }
+  };
 
   if (parser.IsCommand("a", "addr", "Address")) {
     uint32_t address;
@@ -54,6 +93,7 @@ Command::Result CommandBreak::operator()(XBOXInterface& interface,
       PrintUsage();
       return HANDLED;
     }
+    UpdateCondition(XBDMDebugger::BreakpointType::BREAKPOINT, address, clear);
     SendAndPrintMessage(interface,
                         std::make_shared<BreakAddress>(address, clear), out);
     return HANDLED;
@@ -68,6 +108,7 @@ Command::Result CommandBreak::operator()(XBOXInterface& interface,
     }
     int32_t size = 1;
     parser.Parse(1, size);
+    UpdateCondition(XBDMDebugger::BreakpointType::READ_WATCH, address, clear);
     SendAndPrintMessage(
         interface, std::make_shared<BreakOnRead>(address, size, clear), out);
     return HANDLED;
@@ -82,6 +123,7 @@ Command::Result CommandBreak::operator()(XBOXInterface& interface,
     }
     int32_t size = 1;
     parser.Parse(1, size);
+    UpdateCondition(XBDMDebugger::BreakpointType::WRITE_WATCH, address, clear);
     SendAndPrintMessage(
         interface, std::make_shared<BreakOnWrite>(address, size, clear), out);
     return HANDLED;
@@ -96,6 +138,8 @@ Command::Result CommandBreak::operator()(XBOXInterface& interface,
     }
     int32_t size = 1;
     parser.Parse(1, size);
+    UpdateCondition(XBDMDebugger::BreakpointType::EXECUTE_WATCH, address,
+                    clear);
     SendAndPrintMessage(
         interface, std::make_shared<BreakOnExecute>(address, size, clear), out);
     return HANDLED;

@@ -26,6 +26,8 @@ struct SimulatedThread {
   bool created{false};
   // Threads may be stopped by XBDM.
   bool stopped{false};
+  std::string stop_reason;
+
   // Threads may be suspended by the OS or via XBDM "suspend" and resumed via
   // "resume".
   bool suspended{false};
@@ -171,7 +173,7 @@ struct MockXboxState {
   BootActions boot_actions;
 
   std::atomic<bool> awaiting_debugger_{false};
-  std::atomic<ExecutionState> execution_state{S_STOPPED};
+  std::atomic<ExecutionState> execution_state{S_REBOOTING};
 
   // Simulate non-debugable processes.
   bool is_debugable_{true};

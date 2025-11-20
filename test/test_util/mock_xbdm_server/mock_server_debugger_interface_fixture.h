@@ -15,6 +15,11 @@ struct XBDMDebuggerInterfaceFixture {
   XBDMDebuggerInterfaceFixture();
   virtual ~XBDMDebuggerInterfaceFixture();
 
+  /**
+   * Blocks until the server and interface are no longer processing commands.
+   */
+  void AwaitQuiescence() const;
+
   /** Returns the contents of a stringstream without the trailing std::endl. */
   static std::string Trimmed(const std::stringstream& captured);
 

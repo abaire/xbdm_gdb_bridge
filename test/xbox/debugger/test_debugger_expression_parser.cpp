@@ -57,6 +57,104 @@ BOOST_AUTO_TEST_CASE(test_left_associativity_multiplication) {
 
 BOOST_AUTO_TEST_SUITE_END()
 
+BOOST_AUTO_TEST_SUITE(BooleanComparisonTests)
+
+BOOST_AUTO_TEST_CASE(test_equality_true) {
+  ThreadContext ctx;
+  auto result = evaluate("10 == 10", ctx);
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 1);
+}
+
+BOOST_AUTO_TEST_CASE(test_equality_false) {
+  ThreadContext ctx;
+  auto result = evaluate("10 == 11", ctx);
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0);
+}
+
+BOOST_AUTO_TEST_CASE(test_inequality_true) {
+  ThreadContext ctx;
+  auto result = evaluate("10 != 11", ctx);
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 1);
+}
+
+BOOST_AUTO_TEST_CASE(test_inequality_false) {
+  ThreadContext ctx;
+  auto result = evaluate("10 != 10", ctx);
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0);
+}
+
+BOOST_AUTO_TEST_CASE(test_less_than_true) {
+  ThreadContext ctx;
+  auto result = evaluate("10 < 11", ctx);
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 1);
+}
+
+BOOST_AUTO_TEST_CASE(test_less_than_false) {
+  ThreadContext ctx;
+  auto result = evaluate("10 < 10", ctx);
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0);
+}
+
+BOOST_AUTO_TEST_CASE(test_greater_than_true) {
+  ThreadContext ctx;
+  auto result = evaluate("12 > 11", ctx);
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 1);
+}
+
+BOOST_AUTO_TEST_CASE(test_greater_than_false) {
+  ThreadContext ctx;
+  auto result = evaluate("10 > 10", ctx);
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0);
+}
+
+BOOST_AUTO_TEST_CASE(test_less_equal_true) {
+  ThreadContext ctx;
+  auto result = evaluate("10 <= 10", ctx);
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 1);
+}
+
+BOOST_AUTO_TEST_CASE(test_greater_equal_true) {
+  ThreadContext ctx;
+  auto result = evaluate("10 >= 10", ctx);
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 1);
+}
+
+BOOST_AUTO_TEST_CASE(test_register_comparison) {
+  ThreadContext ctx;
+  ctx.eax = 100;
+  ctx.ebx = 200;
+  auto result = evaluate("$eax < $ebx", ctx);
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 1);
+}
+
+BOOST_AUTO_TEST_CASE(test_comparison_with_arithmetic) {
+  ThreadContext ctx;
+  ctx.eax = 100;
+  auto result = evaluate("$eax + 10 == 110", ctx);
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 1);
+}
+
+BOOST_AUTO_TEST_CASE(test_precedence_comparison) {
+  ThreadContext ctx;
+  auto result = evaluate("5 < 10 + 5", ctx);
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 1);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
 BOOST_AUTO_TEST_SUITE(HexadecimalTests)
 
 BOOST_AUTO_TEST_CASE(test_hex_lowercase) {

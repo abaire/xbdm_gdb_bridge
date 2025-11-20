@@ -18,7 +18,9 @@ class SignalingBase : public SelectableBase {
 
   virtual void Close();
 
- protected:
+  /**
+   * Wake up the selection thread to force Process to be called.
+   */
   virtual void SignalProcessingNeeded() const;
 
  private:

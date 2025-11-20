@@ -28,6 +28,15 @@ XBDMDebuggerInterfaceFixture::~XBDMDebuggerInterfaceFixture() {
   server.reset();
 }
 
+void XBDMDebuggerInterfaceFixture::AwaitQuiescence() const {
+  // Ping pong the peer SelectThreads to avoid a situation where one generates
+  // new work for the other after a period of quiescence.
+  for (int i = 0; i < 4; ++i) {
+    server->AwaitQuiescence();
+    interface->AwaitQuiescence();
+  }
+}
+
 std::string XBDMDebuggerInterfaceFixture::Trimmed(
     const std::stringstream& captured) {
   auto s = captured.str();

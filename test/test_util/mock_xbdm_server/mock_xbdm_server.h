@@ -50,6 +50,12 @@ class MockXBDMServer {
   void Stop();
   bool IsRunning() const { return running_; }
 
+  /**
+   * Blocks the calling thread until the SelectThread has processed all
+   * currently pending events and is quiescent.
+   */
+  void AwaitQuiescence();
+
   const IPAddress& GetAddress() const;
 
   void SetXboxName(const std::string& name) {
@@ -217,6 +223,40 @@ class MockXBDMServer {
    */
   bool SimulateExecutionBreakpoint(uint32_t address, uint32_t thread_id = 0);
 
+  /**
+   * Posts notifications simulating a watchpoint being hit within the given
+   * thread due to a memory address being read.
+   *
+   * @param address The address of the data being accessed.
+   * @param thread_id The thread ID causing the access.
+   * @param stop Whether to stop execution.
+   * @return true if the notification was posted
+   */
+  bool SimulateReadWatchpoint(uint32_t address, uint32_t thread_id = 0,
+                              bool stop = true);
+  /**
+   * Posts notifications simulating a watchpoint being hit within the given
+   * thread due to a memory address being written to.
+   *
+   * @param address The address of the data being accessed.
+   * @param thread_id The thread ID causing the access.
+   * @param stop Whether to stop execution.
+   * @return true if the notification was posted
+   */
+  bool SimulateWriteWatchpoint(uint32_t address, uint32_t thread_id = 0,
+                               bool stop = true);
+  /**
+   * Posts notifications simulating a watchpoint being hit within the given
+   * thread due to a memory address being executed.
+   *
+   * @param address The address of the execution.
+   * @param thread_id The thread ID causing the access.
+   * @param stop Whether to stop execution.
+   * @return true if the notification was posted
+   */
+  bool SimulateExecuteWatchpoint(uint32_t address, uint32_t thread_id = 0,
+                                 bool stop = true);
+
  private:
   bool ProcessCommand(ClientTransport& client, const std::string& command,
                       const std::string& params);
@@ -225,6 +265,7 @@ class MockXBDMServer {
   bool HandleBye(ClientTransport& client, const std::string& parameters);
   bool HandleContinue(ClientTransport& client, const std::string& parameters);
   bool HandleDebugger(ClientTransport& client, const std::string& parameters);
+  bool HandleGetContext(ClientTransport& client, const std::string& parameters);
   bool HandleGetMem2(ClientTransport& client, const std::string& parameters);
   bool HandleGo(ClientTransport& client, const std::string& parameters);
   bool HandleIsStopped(ClientTransport& client, const std::string& parameters);
@@ -264,6 +305,16 @@ class MockXBDMServer {
   void PostModuleLoadNotification(const Module& module);
   void PostSectionLoadNotification(const XbeSection& section);
   void PostThreadCreateNotification(const SimulatedThread& section);
+
+  /**
+   * Sends a "data" notification
+   * @param type The type flag (one of "read", "write", "execute")
+   * @param address The address of the interaction
+   * @param thread_id The thread that made the interaction
+   * @param stop Whether execution should be stopped or not
+   */
+  bool PostWatchpointNotification(const std::string& type, uint32_t address,
+                                  uint32_t thread_id, bool stop);
 
   /**
    * Advances the execution phase of the emulated Xbox.

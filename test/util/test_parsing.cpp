@@ -470,4 +470,152 @@ BOOST_AUTO_TEST_CASE(ArgParser_FrontAndBack) {
   BOOST_TEST(p.back() == "last");
 }
 
+BOOST_AUTO_TEST_CASE(ArgParser_SplitAt_FoundBasic) {
+  ArgParser p("launch program1 argA argB | pipeTo program2 argC");
+  ArgParser pre(""), post("");
+
+  // Split at the pipe
+  bool found = p.SplitAt(pre, post, "|");
+
+  BOOST_TEST(found);
+
+  // Verify PRE: "launch" [program1, argA, argB]
+  BOOST_TEST(pre.command == "launch");
+  BOOST_TEST(pre.size() == 3);
+  BOOST_TEST(pre.arguments[0].value == "program1");
+  BOOST_TEST(pre.arguments[2].value == "argB");
+
+  // Verify POST: "pipeTo" [program2, argC]
+  // Note: "pipeTo" is the token *after* the pipe, so it becomes the command
+  BOOST_TEST(post.command == "pipeto");  // Commands are auto-lowercased in ctor
+  BOOST_TEST(post.size() == 2);
+  BOOST_TEST(post.arguments[0].value == "program2");
+  BOOST_TEST(post.arguments[1].value == "argC");
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_SplitAt_NotFound) {
+  ArgParser p("cmd arg1 arg2");
+  ArgParser pre(""), post("");
+
+  bool found = p.SplitAt(pre, post, "|");
+
+  BOOST_TEST(!found);
+  // Pre/Post remain untouched (or as initialized)
+  BOOST_TEST(pre.command.empty());
+  BOOST_TEST(post.command.empty());
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_SplitAt_CaseInsensitive_Default) {
+  ArgParser p("select * FROM table");
+  ArgParser pre(""), post("");
+
+  // Default is case_sensitive = false
+  bool found = p.SplitAt(pre, post, "from");
+
+  BOOST_TEST(found);
+  BOOST_TEST(pre.command == "select");
+  BOOST_TEST(pre.size() == 1);          // "*"
+  BOOST_TEST(post.command == "table");  // Token after FROM
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_SplitAt_CaseSensitive_Failure) {
+  ArgParser p("select * FROM table");
+  ArgParser pre(""), post("");
+
+  // Explicitly request case sensitive
+  bool found = p.SplitAt(pre, post, "from", true);
+
+  BOOST_TEST(!found);
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_SplitAt_CaseSensitive_Success) {
+  ArgParser p("select * FROM table");
+  ArgParser pre(""), post("");
+
+  bool found = p.SplitAt(pre, post, "FROM", true);
+
+  BOOST_TEST(found);
+  BOOST_TEST(post.command == "table");
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_SplitAt_DelimiterAtEnd) {
+  // "cmd arg |" -> Delimiter is last. Post should be empty.
+  ArgParser p("ls -al |");
+  ArgParser pre(""), post("");
+
+  bool found = p.SplitAt(pre, post, "|");
+
+  BOOST_TEST(found);
+
+  // Pre ok
+  BOOST_TEST(pre.command == "ls");
+  BOOST_TEST(pre.size() == 1);
+  BOOST_TEST(pre.arguments[0].value == "-al");
+
+  // Post empty
+  BOOST_TEST(post.command == "");
+  BOOST_TEST(post.empty());
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_SplitAt_DelimiterAtStart) {
+  // "cmd | arg" -> Delimiter is first arg.
+  // Note: "cmd" is the command, arguments are ["|", "arg"]
+  ArgParser p("cmd | arg");
+  ArgParser pre(""), post("");
+
+  bool found = p.SplitAt(pre, post, "|");
+
+  BOOST_TEST(found);
+
+  // Pre has command, but arguments stopped before index 0
+  BOOST_TEST(pre.command == "cmd");
+  BOOST_TEST(pre.empty());
+
+  // Post starts after index 0.
+  // Token at index 1 ("arg") becomes Post command.
+  BOOST_TEST(post.command == "arg");
+  BOOST_TEST(post.empty());
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Flatten_Basic) {
+  ArgParser p("cmd arg1 arg2");
+  BOOST_TEST(p.Flatten() == "cmd arg1 arg2");
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Flatten_Quoted) {
+  ArgParser p("echo \"hello world\"");
+  // Should wrap in quotes
+  BOOST_TEST(p.Flatten() == "echo \"hello world\"");
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Flatten_QuotedEscape) {
+  // Input: print "say \"hello\""
+  // Parsed value: say "hello"
+  // Flattened should escape internal quotes: print "say \"hello\""
+  ArgParser p("print \"say \\\"hello\\\"\"");
+  BOOST_TEST(p.Flatten() == "print \"say \\\"hello\\\"\"");
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Flatten_Parenthesized) {
+  ArgParser p("math (1 + 2)");
+  // Should wrap in parens
+  BOOST_TEST(p.Flatten() == "math (1 + 2)");
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Flatten_Mixed) {
+  // cmd "quote" basic (paren)
+  ArgParser p("cmd \"quote\" basic (paren)");
+  BOOST_TEST(p.Flatten() == "cmd \"quote\" basic (paren)");
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Flatten_EmptyArgs) {
+  ArgParser p("justcommand");
+  BOOST_TEST(p.Flatten() == "justcommand");
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Flatten_ExplicitEmptyCommand) {
+  ArgParser p("", std::vector<std::string>{"cmd", "arg1", "arg2"});
+  BOOST_TEST(p.Flatten() == "cmd arg1 arg2");
+}
+
 BOOST_AUTO_TEST_SUITE_END()

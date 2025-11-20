@@ -41,6 +41,7 @@ class DebuggerExpressionParser : public ExpressionParser {
     std::expected<uint32_t, std::string> ParseNumber();
     std::expected<uint32_t, std::string> ParseFactor();
     std::expected<uint32_t, std::string> ParseTerm();
+    std::expected<uint32_t, std::string> ParseAdditive();
     std::expected<uint32_t, std::string> ParseExpression();
 
    private:

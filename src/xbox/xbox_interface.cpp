@@ -33,6 +33,11 @@ void XBOXInterface::Stop() {
   }
 }
 
+void XBOXInterface::AwaitQuiescence() {
+  assert(select_thread_ && "May not be called when not running");
+  select_thread_->AwaitQuiescence();
+}
+
 bool XBOXInterface::ReconnectXBDM() {
   if (!xbdm_context_) {
     return false;

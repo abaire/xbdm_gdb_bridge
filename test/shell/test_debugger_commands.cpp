@@ -26,6 +26,7 @@ DEBUGGER_TEST_CASE(RunWithNoPathFails) {
   std::stringstream capture;
   DebuggerCommandRun cmd;
   BOOST_REQUIRE(cmd(*interface, empty_args, capture) == Command::HANDLED);
+  AwaitQuiescence();
 
   BOOST_CHECK_EQUAL(Trimmed(capture), "Missing required path argument.");
 }
@@ -41,6 +42,7 @@ DEBUGGER_TEST_CASE(RunWithInvalidPathFails) {
   DebuggerCommandRun cmd;
   ArgParser args("run", std::vector<std::string>{"e:\\test.xbe"});
   BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+  AwaitQuiescence();
 
   BOOST_CHECK_EQUAL(Trimmed(capture), "Failed to launch XBE");
 }
@@ -50,6 +52,7 @@ DEBUGGER_TEST_CASE(RunWithValidPathSucceeds) {
   DebuggerCommandRun cmd;
   ArgParser args("run", std::vector<std::string>{"e:\\test.xbe"});
   BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+  AwaitQuiescence();
 
   BOOST_CHECK_EQUAL(Trimmed(capture), "");
 }
@@ -64,6 +67,7 @@ DEBUGGER_TEST_CASE(LaunchWaitWithNoPathFails) {
   std::stringstream capture;
   DebuggerCommandLaunchWait cmd;
   BOOST_REQUIRE(cmd(*interface, empty_args, capture) == Command::HANDLED);
+  AwaitQuiescence();
 
   BOOST_CHECK_EQUAL(Trimmed(capture), "Missing required path argument.");
 }
@@ -79,6 +83,7 @@ DEBUGGER_TEST_CASE(LaunchWaitWithInvalidPathFails) {
   DebuggerCommandLaunchWait cmd;
   ArgParser args("/launchwait", std::vector<std::string>{"e:\\test.xbe"});
   BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+  AwaitQuiescence();
 
   BOOST_CHECK_EQUAL(Trimmed(capture), "Failed to launch XBE");
 }
@@ -101,6 +106,7 @@ DEBUGGER_TEST_CASE(LaunchWaitWithValidPathSucceeds) {
   DebuggerCommandLaunchWait cmd;
   ArgParser args("/launchwait", std::vector<std::string>{"e:\\test.xbe"});
   BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+  AwaitQuiescence();
 
   BOOST_CHECK_EQUAL(Trimmed(capture), "");
 }
