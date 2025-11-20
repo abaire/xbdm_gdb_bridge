@@ -43,7 +43,14 @@ struct CommandBreak : Command {
                 "Subcommands with [-] can be prefixed with '-' to disable a "
                 "previously set breakpoint.\n"
                 "    E.g., addr 0x12345   # sets a breakpoint at 0x12345\n"
-                "          -addr 0x12345  # clears the breakpoint") {}
+                "          -addr 0x12345  # clears the breakpoint\n"
+                "\n"
+                "addr/read/write/execute breakpoints may be conditionally "
+                "ignored by providing a trailing IF\n"
+                "condition. The condition may reference basic registers using "
+                "$reg syntax and perform simple\n"
+                "C-style comparisons.\n"
+                "    E.g., addr 0x12345 IF $eax == 0xFF00DD") {}
   Result operator()(XBOXInterface& interface, const ArgParser& args,
                     std::ostream& out) override;
 };

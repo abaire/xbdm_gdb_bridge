@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <functional>
+#include <future>
 #include <list>
 #include <map>
 #include <memory>
@@ -15,12 +16,18 @@
 class SelectThread {
  public:
   SelectThread() : SelectThread("") {};
-  explicit SelectThread(const std::string& debug_name);
+  explicit SelectThread(std::string debug_name);
 
   void Start();
   void Stop();
 
   [[nodiscard]] bool IsRunning() const { return running_; }
+
+  /**
+   * Blocks the calling thread until the SelectThread has processed all
+   * currently pending events and is quiescent.
+   */
+  void AwaitQuiescence();
 
   void AddConnection(const std::shared_ptr<SelectableBase>& conn);
   //! Registers the given connection along with a callback function to be
@@ -39,7 +46,7 @@ class SelectThread {
   std::atomic<bool> running_{false};
   std::thread thread_;
 
-  std::recursive_mutex selectables_lock_;
+  mutable std::recursive_mutex selectables_lock_;
   std::list<std::shared_ptr<SelectableBase>> selectables_;
 
   std::map<std::shared_ptr<SelectableBase>, std::function<void()>>
@@ -48,6 +55,9 @@ class SelectThread {
  private:
   std::string debug_name_;
   std::shared_ptr<TaskConnection> select_signaller_;
+
+  mutable std::mutex fence_mutex_;
+  std::vector<std::promise<void>> pending_fences_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SELECTTHREAD_H

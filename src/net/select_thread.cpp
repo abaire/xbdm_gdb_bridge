@@ -3,15 +3,19 @@
 #include <sys/socket.h>
 
 #include <chrono>
+#include <future>
 #include <unordered_set>
+#include <utility>
 
 #include "util/logging.h"
 #include "util/thread_debug_util.h"
 #include "util/timer.h"
 
-SelectThread::SelectThread(const std::string& debug_name)
+static constexpr int kQuiescenseTimeoutMicroseconds = 10000;
+
+SelectThread::SelectThread(std::string debug_name)
     : select_signaller_(std::make_shared<TaskConnection>("SelectSignaller")),
-      debug_name_(debug_name) {}
+      debug_name_(std::move(debug_name)) {}
 
 void SelectThread::ThreadMainBootstrap(SelectThread* instance) {
   debug::SetCurrentThreadName(instance->debug_name_);
@@ -85,7 +89,16 @@ void SelectThread::ThreadMain() {
     struct timeval timeout{0};
     struct timeval* timeout_ptr = nullptr;
 
-    if (soonest_scheduled) {
+    bool has_fences = false;
+    {
+      std::lock_guard lock(fence_mutex_);
+      has_fences = !pending_fences_.empty();
+    }
+
+    if (has_fences) {
+      timeout.tv_usec = kQuiescenseTimeoutMicroseconds;
+      timeout_ptr = &timeout;
+    } else if (soonest_scheduled) {
       FutureTimeToTimevalTimeout(timeout, *soonest_scheduled);
       timeout_ptr = &timeout;
     }
@@ -110,7 +123,26 @@ void SelectThread::ThreadMain() {
     ApplyAndEraseIf([&recv_fds, &send_fds, &except_fds](const auto& entry) {
       return !entry->Process(recv_fds, send_fds, except_fds);
     });
+
+    if (has_fences && !fds) {
+      std::lock_guard lock(fence_mutex_);
+      for (auto& fence : pending_fences_) {
+        fence.set_value();
+      }
+      pending_fences_.clear();
+    }
   }
+}
+
+void SelectThread::AwaitQuiescence() {
+  std::promise<void> fence;
+  auto future = fence.get_future();
+  {
+    std::lock_guard lock(fence_mutex_);
+    pending_fences_.push_back(std::move(fence));
+  }
+  select_signaller_->SignalProcessingNeeded();
+  future.wait();
 }
 
 void SelectThread::ApplyAndEraseIf(

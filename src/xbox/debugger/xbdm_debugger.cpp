@@ -1,5 +1,6 @@
 #include "xbdm_debugger.h"
 
+#include "debugger_expression_parser.h"
 #include "notification/xbdm_notification.h"
 #include "util/logging.h"
 #include "util/path.h"
@@ -542,6 +543,23 @@ void XBDMDebugger::OnBreakpoint(
     thread->Resume(*context_);
   }
 
+  auto condition =
+      FindBreakpointCondition(BreakpointType::BREAKPOINT, msg->address);
+
+  if (condition) {
+    thread->FetchContextSync(*context_);
+    if (thread->context.has_value()) {
+      DebuggerExpressionParser parser(*thread->context);
+      auto result = parser.Parse(*condition);
+      if (result.has_value() && result.value() == 0) {
+        LOG_DEBUGGER(info) << "Condition '" << *condition
+                           << "' false, continuing.";
+        ContinueThread(thread->thread_id);
+        return;
+      }
+    }
+  }
+
   PerformAfterStopActions(thread);
 }
 
@@ -563,6 +581,44 @@ void XBDMDebugger::OnWatchpoint(
   thread->last_known_address = msg->address;
   // TODO: Set the stop reason from the notification content.
   thread->FetchStopReasonSync(*context_);
+
+  std::optional<BreakpointType> breakpoint_type;
+  switch (msg->type) {
+    case NotificationWatchpoint::AT_READ:
+      breakpoint_type = BreakpointType::READ_WATCH;
+      break;
+
+    case NotificationWatchpoint::AT_WRITE:
+      breakpoint_type = BreakpointType::WRITE_WATCH;
+      break;
+
+    case NotificationWatchpoint::AT_EXECUTE:
+      breakpoint_type = BreakpointType::EXECUTE_WATCH;
+      break;
+
+    default:
+      LOG_DEBUGGER(warning)
+          << "Watchpoint notification received with invalid access type";
+      break;
+  }
+
+  if (breakpoint_type) {
+    auto condition =
+        FindBreakpointCondition(*breakpoint_type, msg->watched_address);
+    if (condition) {
+      thread->FetchContextSync(*context_);
+      if (thread->context.has_value()) {
+        DebuggerExpressionParser parser(*thread->context);
+        auto result = parser.Parse(*condition);
+        if (result.has_value() && result.value() == 0) {
+          LOG_DEBUGGER(info)
+              << "Condition '" << *condition << "' false, continuing.";
+          ContinueThread(thread->thread_id);
+          return;
+        }
+      }
+    }
+  }
 
   PerformAfterStopActions(thread);
 }
@@ -982,6 +1038,37 @@ bool XBDMDebugger::SetMemory(uint32_t address,
   auto request = std::make_shared<SetMem>(address, data);
   context_->SendCommandSync(request);
   return request->IsOK();
+}
+
+void XBDMDebugger::SetBreakpointCondition(BreakpointType breakpoint_type,
+                                          uint32_t address,
+                                          const std::string& condition) {
+  std::lock_guard lock(conditions_lock_);
+  auto key = std::make_pair(breakpoint_type, address);
+
+  if (condition.empty()) {
+    breakpoint_conditions_.erase(key);
+  } else {
+    breakpoint_conditions_[key] = condition;
+  }
+}
+
+void XBDMDebugger::RemoveBreakpointCondition(BreakpointType breakpoint_type,
+                                             uint32_t address) {
+  std::lock_guard lock(conditions_lock_);
+  breakpoint_conditions_.erase(std::make_pair(breakpoint_type, address));
+}
+
+std::optional<std::string> XBDMDebugger::FindBreakpointCondition(
+    BreakpointType breakpoint_type, uint32_t address) const {
+  std::lock_guard lock(conditions_lock_);
+  auto entry =
+      breakpoint_conditions_.find(std::make_pair(breakpoint_type, address));
+  if (entry == breakpoint_conditions_.end()) {
+    return std::nullopt;
+  }
+
+  return entry->second;
 }
 
 bool XBDMDebugger::AddBreakpoint(uint32_t address) {

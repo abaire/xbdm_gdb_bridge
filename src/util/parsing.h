@@ -85,13 +85,14 @@ struct ArgParser {
     explicit operator Enum() const { return val; }
   };
 
- private:
   struct Argument {
     std::string value;
     ArgType type;
   };
 
  public:
+  ArgParser() = default;
+
   explicit ArgParser(std::string_view raw_line) {
     std::vector<Argument> full_tokens = Tokenize(raw_line);
 
@@ -115,6 +116,11 @@ struct ArgParser {
     }
   }
 
+  ArgParser(std::string_view cmd, std::vector<Argument>&& args)
+      : command(cmd), arguments(std::move(args)) {
+    boost::algorithm::to_lower(command);
+  }
+
   [[nodiscard]] std::optional<ArgParser> ExtractSubcommand() const {
     if (arguments.empty()) {
       return std::nullopt;
@@ -128,6 +134,18 @@ struct ArgParser {
     return ArgParser(arguments[0].value, std::move(sub_args));
   }
 
+  /**
+   * Splits this ArgParser around the first instance of the given string.
+   * @param pre ArgParser to be populated with arguments before [delimiter]
+   * @param post ArgParser to be populated with arguments after [delimiter]
+   * @param delimiter The argument string to split around
+   * @param case_sensitive Whether the delimiter comparison should be case
+   *                       sensitive or not
+   * @return true if the delimiter was found
+   */
+  bool SplitAt(ArgParser& pre, ArgParser& post, const std::string& delimiter,
+               bool case_sensitive = false) const;
+
   [[nodiscard]] bool HasCommand() const { return !command.empty(); }
 
   [[nodiscard]] bool ShiftPrefixModifier(char modifier) {
@@ -137,6 +155,12 @@ struct ArgParser {
     command.erase(0, 1);
     return true;
   }
+
+  /**
+   * Generates a minimal command line string that will parse to this instance.
+   * @return Recomposed command line
+   */
+  std::string Flatten() const;
 
   template <typename T, typename... Ts>
   using are_same_type = std::conjunction<std::is_same<T, Ts>...>;
@@ -335,11 +359,6 @@ struct ArgParser {
   std::vector<Argument> arguments;
 
  private:
-  ArgParser(std::string_view cmd, std::vector<Argument>&& args)
-      : command(cmd), arguments(std::move(args)) {
-    boost::algorithm::to_lower(command);
-  }
-
   static std::vector<Argument> Tokenize(std::string_view input);
 };
 

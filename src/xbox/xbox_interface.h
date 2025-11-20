@@ -22,6 +22,11 @@ class XBOXInterface {
 
   void Start();
   void Stop();
+  /**
+   * Blocks the calling thread until the SelectThread has processed all
+   * currently pending events and is quiescent.
+   */
+  void AwaitQuiescence();
 
   bool ReconnectXBDM();
 

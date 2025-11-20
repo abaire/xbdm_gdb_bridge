@@ -101,6 +101,65 @@ std::vector<ArgParser::Argument> ArgParser::Tokenize(std::string_view input) {
   return args;
 }
 
+bool ArgParser::SplitAt(ArgParser& pre, ArgParser& post,
+                        const std::string& delimiter,
+                        bool case_sensitive) const {
+  auto it = std::find_if(arguments.begin(), arguments.end(),
+                         [&](const Argument& arg) {
+                           if (case_sensitive) {
+                             return arg.value == delimiter;
+                           }
+                           return boost::algorithm::to_lower_copy(arg.value) ==
+                                  boost::algorithm::to_lower_copy(delimiter);
+                         });
+
+  if (it == arguments.end()) {
+    return false;
+  }
+
+  std::vector pre_args(arguments.begin(), it);
+  pre = ArgParser(this->command, std::move(pre_args));
+
+  auto post_start = it + 1;
+  if (post_start != arguments.end()) {
+    std::string post_cmd = post_start->value;
+    std::vector<Argument> post_args;
+
+    if (post_start + 1 != arguments.end()) {
+      post_args.assign(post_start + 1, arguments.end());
+    }
+
+    post = ArgParser(post_cmd, std::move(post_args));
+  } else {
+    post = ArgParser("", std::vector<ArgParser::Argument>{});
+  }
+
+  return true;
+}
+
+std::string ArgParser::Flatten() const {
+  std::string out = command;
+  for (const auto& arg : arguments) {
+    if (!out.empty()) {
+      out += " ";
+    }
+    if (arg.type == ArgType::QUOTED) {
+      std::string escaped = arg.value;
+      size_t pos = 0;
+      while ((pos = escaped.find("\"", pos)) != std::string::npos) {
+        escaped.replace(pos, 1, "\\\"");
+        pos += 2;
+      }
+      out += "\"" + escaped + "\"";
+    } else if (arg.type == ArgType::PARENTHESIZED) {
+      out += "(" + arg.value + ")";
+    } else {
+      out += arg.value;
+    }
+  }
+  return out;
+}
+
 namespace command_line_command_tokenizer {
 std::vector<std::vector<std::string>> SplitCommands(
     const std::vector<std::string>& additional_commands) {

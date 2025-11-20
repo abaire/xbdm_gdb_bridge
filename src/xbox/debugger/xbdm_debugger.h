@@ -35,6 +35,13 @@ class XBDMDebugger {
   static constexpr uint32_t kDefaultHaltAllMaxWaitMilliseconds = 250;
   static constexpr uint32_t kAttachSafeStateMaxWaitMilliseconds = 250;
 
+  enum class BreakpointType {
+    BREAKPOINT,
+    READ_WATCH,
+    WRITE_WATCH,
+    EXECUTE_WATCH,
+  };
+
  public:
   explicit XBDMDebugger(std::shared_ptr<XBDMContext> context);
 
@@ -123,6 +130,13 @@ class XBDMDebugger {
     print_thread_info_on_break_ = enable;
   };
 
+  void SetBreakpointCondition(BreakpointType breakpoint_type, uint32_t address,
+                              const std::string& condition);
+  void RemoveBreakpointCondition(BreakpointType breakpoint_type,
+                                 uint32_t address);
+  std::optional<std::string> FindBreakpointCondition(
+      BreakpointType breakpoint_type, uint32_t address) const;
+
   bool AddBreakpoint(uint32_t address);
   bool AddReadWatch(uint32_t address, uint32_t length);
   bool AddWriteWatch(uint32_t address, uint32_t length);
@@ -179,25 +193,30 @@ class XBDMDebugger {
   bool is_attached_{false};
   std::shared_ptr<XBDMContext> context_;
 
-  std::mutex state_lock_;
+  mutable std::mutex state_lock_;
   std::condition_variable state_condition_variable_;
   ExecutionState state_{S_INVALID};
 
   int active_thread_id_{-1};
 
-  std::recursive_mutex threads_lock_;
+  mutable std::recursive_mutex threads_lock_;
   std::list<std::shared_ptr<Thread>> threads_;
 
-  std::recursive_mutex modules_lock_;
+  mutable std::recursive_mutex modules_lock_;
   std::list<std::shared_ptr<Module>> modules_;
 
-  std::recursive_mutex sections_lock_;
+  mutable std::recursive_mutex sections_lock_;
   std::list<std::shared_ptr<Section>> sections_;
 
-  std::recursive_mutex memory_regions_lock_;
+  mutable std::recursive_mutex memory_regions_lock_;
   std::list<std::shared_ptr<MemoryRegion>> memory_regions_;
 
   std::map<int, std::string> debugstr_accumulator_;
+
+  mutable std::recursive_mutex conditions_lock_;
+  // Maps <BreakpointType, Address> to strings defining IF conditions.
+  std::map<std::pair<BreakpointType, uint32_t>, std::string>
+      breakpoint_conditions_;
 
   bool target_not_debuggable_{false};
   int notification_handler_id_{0};

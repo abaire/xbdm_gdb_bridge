@@ -241,7 +241,7 @@ DebuggerExpressionParser::ParseState::ParseTerm() {
 }
 
 std::expected<uint32_t, std::string>
-DebuggerExpressionParser::ParseState::ParseExpression() {
+DebuggerExpressionParser::ParseState::ParseAdditive() {
   auto result = ParseTerm();
   if (!result.has_value()) {
     return result;
@@ -261,6 +261,63 @@ DebuggerExpressionParser::ParseState::ParseExpression() {
       value += term_result.value();
     } else {
       value -= term_result.value();
+    }
+    SkipWhitespace();
+  }
+
+  return value;
+}
+
+std::expected<uint32_t, std::string>
+DebuggerExpressionParser::ParseState::ParseExpression() {
+  auto result = ParseAdditive();
+  if (!result.has_value()) {
+    return result;
+  }
+
+  uint32_t value = result.value();
+  SkipWhitespace();
+
+  while (true) {
+    char c = Peek();
+    if (c != '=' && c != '!' && c != '<' && c != '>') {
+      break;
+    }
+
+    std::string op;
+    op += c;
+    if (pos + 1 < input_.size() && input_[pos + 1] == '=') {
+      op += '=';
+    }
+
+    if (op == "!" || op == "=") {
+      break;
+    }
+
+    if (op.length() == 2) {
+      Consume();
+      Consume();
+    } else {
+      Consume();
+    }
+
+    auto right = ParseAdditive();
+    if (!right.has_value()) {
+      return right;
+    }
+
+    if (op == "==") {
+      value = (value == right.value());
+    } else if (op == "!=") {
+      value = (value != right.value());
+    } else if (op == "<") {
+      value = (value < right.value());
+    } else if (op == ">") {
+      value = (value > right.value());
+    } else if (op == "<=") {
+      value = (value <= right.value());
+    } else if (op == ">=") {
+      value = (value >= right.value());
     }
     SkipWhitespace();
   }
