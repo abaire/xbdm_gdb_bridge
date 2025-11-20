@@ -66,7 +66,7 @@ set(ntrc_dyndxt_include_dir ${INSTALL_DIR}/include)
 ExternalProject_Add(
     replxx
     GIT_REPOSITORY https://github.com/AmokHuginnsson/replxx.git
-    GIT_TAG release-0.0.4
+    GIT_TAG 2b248467112cbbc16f63fde38230fd7c7ffc55f1
     CMAKE_ARGS -DREPLXX_BUILD_EXAMPLES=OFF -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     BUILD_BYPRODUCTS
         <INSTALL_DIR>/lib/libreplxx.a
@@ -78,9 +78,9 @@ set(replxx_include_dir ${INSTALL_DIR}/include)
 set(REPLXX_STATIC_LIB ${replxx_lib_dir}/libreplxx.a)
 
 
-if(POLICY CMP0167)
+if (POLICY CMP0167)
     cmake_policy(SET CMP0167 NEW)
-endif()
+endif ()
 find_package(
         Boost 1.70
         COMPONENTS
@@ -640,6 +640,7 @@ add_test(NAME rdcp_tests COMMAND rdcp_tests)
 # util_tests
 add_executable(
         util_tests
+        test/util/test_command_line_command_tokenizer.cpp
         test/util/test_main.cpp
         test/util/test_parsing.cpp
         test/util/test_path.cpp
@@ -738,9 +739,9 @@ add_test(NAME test_debugger_expression_parser_tests COMMAND test_debugger_expres
 add_executable(
         shell_tests
         test/shell/test_main.cpp
+        test/shell/test_commands.cpp
         test/shell/test_debugger_commands.cpp
         test/shell/test_dyndxt_commands.cpp
-        test/shell/test_shell.cpp
 )
 target_include_directories(
         shell_tests
@@ -783,3 +784,23 @@ target_link_libraries(
         test_util
 )
 add_test(NAME xbox_debugger_tests COMMAND xbox_debugger_tests)
+
+# mock_xbdm_server_tests
+add_executable(
+        mock_xbdm_server_tests
+        test/test_util/mock_xbdm_server/test_fetch_memory_region.cpp
+)
+target_include_directories(
+        mock_xbdm_server_tests
+        PRIVATE src
+        PRIVATE test
+)
+target_link_libraries(
+        mock_xbdm_server_tests
+        LINK_PRIVATE
+        Boost::log
+        Boost::unit_test_framework
+        mock_xbdm_server
+        test_util
+)
+add_test(NAME mock_xbdm_server_tests COMMAND mock_xbdm_server_tests)

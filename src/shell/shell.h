@@ -3,6 +3,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace replxx {
@@ -10,6 +11,7 @@ class Replxx;
 }
 
 #include "shell/command.h"
+#include "util/parsing.h"
 #include "xbox/xbox_interface.h"
 
 class Shell {
@@ -18,10 +20,10 @@ class Shell {
   ~Shell();
 
   void Run();
-  Command::Result ProcessCommand(const std::vector<std::string>& args);
+  Command::Result ProcessCommand(ArgParser parser);
 
-  inline void RegisterCommand(const std::string& command,
-                              std::shared_ptr<Command> processor) {
+  void RegisterCommand(const std::string& command,
+                       std::shared_ptr<Command> processor) {
     std::vector<std::string> empty;
     RegisterCommand(command, processor, empty);
   }
@@ -29,19 +31,17 @@ class Shell {
                        std::shared_ptr<Command> processor,
                        const std::vector<std::string>& aliases);
 
-  static std::vector<std::string> Tokenize(const std::string& line);
-
  private:
-  void PrintHelp(std::vector<std::string>& args) const;
+  void PrintHelp(const ArgParser& parser) const;
 
  private:
   std::shared_ptr<XBOXInterface> interface_;
   std::string prompt_;
   std::map<std::string, std::shared_ptr<Command>> commands_;
 
-  std::vector<std::string> last_command_;
 
   std::unique_ptr<replxx::Replxx> rx_;
+  std::optional<ArgParser> last_command_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SHELL_H

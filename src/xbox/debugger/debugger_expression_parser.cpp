@@ -1,16 +1,22 @@
 #include "debugger_expression_parser.h"
 
-std::expected<uint32_t, std::string> DebuggerExpressionParser::parse(
+std::expected<uint32_t, std::string> DebuggerExpressionParser::Parse(
     const std::string& expr) {
+  ParseState state(context_);
+  return state.Parse(expr);
+}
+
+std::expected<uint32_t, std::string>
+DebuggerExpressionParser::ParseState::Parse(const std::string& expr) {
   input_ = expr;
   pos = 0;
 
-  auto result = parse_expression();
+  auto result = ParseExpression();
   if (!result.has_value()) {
     return result;
   }
 
-  skip_whitespace();
+  SkipWhitespace();
   if (pos < input_.size()) {
     return std::unexpected("Unexpected character at position " +
                            std::to_string(pos));
@@ -20,7 +26,8 @@ std::expected<uint32_t, std::string> DebuggerExpressionParser::parse(
 }
 
 std::expected<uint32_t, std::string>
-DebuggerExpressionParser::resolve_reg_value(const std::string& reg) const {
+DebuggerExpressionParser::ParseState::ResolveRegisterValue(
+    const std::string& reg) const {
   std::string lower = reg;
   std::transform(lower.begin(), lower.end(), lower.begin(),
                  [](unsigned char c) { return std::tolower(c); });
@@ -52,51 +59,74 @@ DebuggerExpressionParser::resolve_reg_value(const std::string& reg) const {
   // 32-bit registers
   if (lower == "eax") {
     return resolve(context_.eax, "eax");
-  } else if (lower == "ebx") {
+  }
+  if (lower == "ebx") {
     return resolve(context_.ebx, "ebx");
-  } else if (lower == "ecx") {
+  }
+  if (lower == "ecx") {
     return resolve(context_.ecx, "ecx");
-  } else if (lower == "edx") {
+  }
+  if (lower == "edx") {
     return resolve(context_.edx, "edx");
-  } else if (lower == "esi") {
+  }
+  if (lower == "esi") {
     return resolve(context_.esi, "esi");
-  } else if (lower == "edi") {
+  }
+  if (lower == "edi") {
     return resolve(context_.edi, "edi");
-  } else if (lower == "ebp") {
+  }
+  if (lower == "ebp") {
     return resolve(context_.ebp, "ebp");
-  } else if (lower == "esp") {
+  }
+  if (lower == "esp") {
     return resolve(context_.esp, "esp");
-  } else if (lower == "eip") {
+  }
+  if (lower == "eip") {
     return resolve(context_.eip, "eip");
-  } else if (lower == "eflags") {
+  }
+  if (lower == "eflags") {
     return resolve(context_.eflags, "eflags");
-  } else if (lower == "ax") {
+  }
+  if (lower == "ax") {
     return resolve16(context_.eax, "ax");
-  } else if (lower == "bx") {
+  }
+  if (lower == "bx") {
     return resolve16(context_.ebx, "bx");
-  } else if (lower == "cx") {
+  }
+  if (lower == "cx") {
     return resolve16(context_.ecx, "cx");
-  } else if (lower == "dx") {
+  }
+  if (lower == "dx") {
     return resolve16(context_.edx, "dx");
-  } else if (lower == "si") {
+  }
+  if (lower == "si") {
     return resolve16(context_.esi, "si");
-  } else if (lower == "di") {
+  }
+  if (lower == "di") {
     return resolve16(context_.edi, "di");
-  } else if (lower == "ah") {
+  }
+  if (lower == "ah") {
     return resolve8(context_.eax, "eax", 8);
-  } else if (lower == "bh") {
+  }
+  if (lower == "bh") {
     return resolve8(context_.ebx, "ebx", 8);
-  } else if (lower == "ch") {
+  }
+  if (lower == "ch") {
     return resolve8(context_.ecx, "ecx", 8);
-  } else if (lower == "dh") {
+  }
+  if (lower == "dh") {
     return resolve8(context_.edx, "edx", 8);
-  } else if (lower == "al") {
+  }
+  if (lower == "al") {
     return resolve8(context_.eax, "ebx");
-  } else if (lower == "bl") {
+  }
+  if (lower == "bl") {
     return resolve8(context_.ebx, "ebx");
-  } else if (lower == "cl") {
+  }
+  if (lower == "cl") {
     return resolve8(context_.ecx, "ecx");
-  } else if (lower == "dl") {
+  }
+  if (lower == "dl") {
     return resolve8(context_.edx, "edx");
   }
 
@@ -104,17 +134,17 @@ DebuggerExpressionParser::resolve_reg_value(const std::string& reg) const {
 }
 
 std::expected<std::string, std::string>
-DebuggerExpressionParser::parse_register() {
-  skip_whitespace();
+DebuggerExpressionParser::ParseState::ParseRegister() {
+  SkipWhitespace();
 
-  if (peek() != '$') {
+  if (Peek() != '$') {
     return std::unexpected("Expected '$' for register");
   }
-  consume();
+  Consume();
 
   std::string reg_name;
-  while (pos < input_.size() && std::isalpha(peek())) {
-    reg_name += consume();
+  while (pos < input_.size() && std::isalpha(Peek())) {
+    reg_name += Consume();
   }
 
   if (reg_name.empty()) {
@@ -124,17 +154,18 @@ DebuggerExpressionParser::parse_register() {
   return reg_name;
 }
 
-std::expected<uint32_t, std::string> DebuggerExpressionParser::parse_number() {
-  skip_whitespace();
+std::expected<uint32_t, std::string>
+DebuggerExpressionParser::ParseState::ParseNumber() {
+  SkipWhitespace();
 
-  if (peek() == '0' && pos + 1 < input_.size() &&
+  if (Peek() == '0' && pos + 1 < input_.size() &&
       (input_[pos + 1] == 'x' || input_[pos + 1] == 'X')) {
     pos += 2;
 
     uint32_t value = 0;
     bool has_digits = false;
-    while (pos < input_.size() && std::isxdigit(peek())) {
-      char c = consume();
+    while (pos < input_.size() && std::isxdigit(Peek())) {
+      char c = Consume();
       has_digits = true;
       value =
           value * 16 + (std::isdigit(c) ? c - '0' : std::tolower(c) - 'a' + 10);
@@ -146,10 +177,10 @@ std::expected<uint32_t, std::string> DebuggerExpressionParser::parse_number() {
     return value;
   }
 
-  if (std::isdigit(peek())) {
+  if (std::isdigit(Peek())) {
     uint32_t value = 0;
-    while (pos < input_.size() && std::isdigit(peek())) {
-      value = value * 10 + (consume() - '0');
+    while (pos < input_.size() && std::isdigit(Peek())) {
+      value = value * 10 + (Consume() - '0');
     }
     return value;
   }
@@ -157,69 +188,71 @@ std::expected<uint32_t, std::string> DebuggerExpressionParser::parse_number() {
   return std::unexpected("Expected number at position " + std::to_string(pos));
 }
 
-std::expected<uint32_t, std::string> DebuggerExpressionParser::parse_factor() {
-  skip_whitespace();
+std::expected<uint32_t, std::string>
+DebuggerExpressionParser::ParseState::ParseFactor() {
+  SkipWhitespace();
 
-  if (peek() == '(') {
-    consume();
-    auto result = parse_expression();
+  if (Peek() == '(') {
+    Consume();
+    auto result = ParseExpression();
     if (!result.has_value()) {
       return result;
     }
-    skip_whitespace();
-    if (peek() != ')') {
+    SkipWhitespace();
+    if (Peek() != ')') {
       return std::unexpected("Expected ')'");
     }
-    consume();
+    Consume();
     return result;
   }
 
-  if (peek() == '$') {
-    auto reg = parse_register();
+  if (Peek() == '$') {
+    auto reg = ParseRegister();
     if (!reg.has_value()) {
       return std::unexpected(reg.error());
     }
-    return resolve_reg_value(reg.value());
+    return ResolveRegisterValue(reg.value());
   }
 
-  return parse_number();
+  return ParseNumber();
 }
 
-std::expected<uint32_t, std::string> DebuggerExpressionParser::parse_term() {
-  auto result = parse_factor();
+std::expected<uint32_t, std::string>
+DebuggerExpressionParser::ParseState::ParseTerm() {
+  auto result = ParseFactor();
   if (!result.has_value()) {
     return result;
   }
 
   uint32_t value = result.value();
-  skip_whitespace();
+  SkipWhitespace();
 
-  while (peek() == '*') {
-    consume();
-    auto factor_result = parse_factor();
+  while (Peek() == '*') {
+    Consume();
+    auto factor_result = ParseFactor();
     if (!factor_result.has_value()) {
       return factor_result;
     }
     value *= factor_result.value();
-    skip_whitespace();
+    SkipWhitespace();
   }
 
   return value;
 }
 
 std::expected<uint32_t, std::string>
-DebuggerExpressionParser::parse_expression() {
-  auto result = parse_term();
+DebuggerExpressionParser::ParseState::ParseExpression() {
+  auto result = ParseTerm();
   if (!result.has_value()) {
     return result;
   }
 
   uint32_t value = result.value();
-  skip_whitespace();
+  SkipWhitespace();
 
-  while (peek() == '+' || peek() == '-') {
-    char op = consume();
-    auto term_result = parse_term();
+  while (Peek() == '+' || Peek() == '-') {
+    char op = Consume();
+    auto term_result = ParseTerm();
     if (!term_result.has_value()) {
       return term_result;
     }
@@ -229,7 +262,7 @@ DebuggerExpressionParser::parse_expression() {
     } else {
       value -= term_result.value();
     }
-    skip_whitespace();
+    SkipWhitespace();
   }
 
   return value;

@@ -268,10 +268,15 @@ void MockXBDMServer::SendResponse(ClientTransport& transport, StatusCode code,
   transport.Send("\r\n");
 }
 
-void MockXBDMServer::SendString(
-    xbdm_gdb_bridge::testing::ClientTransport& transport,
-    const std::string& str) const {
+void MockXBDMServer::SendString(ClientTransport& transport,
+                                const std::string& str) const {
   transport.Send(str);
+}
+
+void MockXBDMServer::SendBinaryResponse(ClientTransport& transport,
+                                        const std::vector<uint8_t>& binary) {
+  SendResponse(transport, OK_BINARY_RESPONSE);
+  transport.Send(binary);
 }
 
 void MockXBDMServer::SendKeyValue(ClientTransport& transport,
@@ -363,6 +368,7 @@ bool MockXBDMServer::ProcessCommand(ClientTransport& client,
   HANDLE("bye", Bye)
   HANDLE("continue", Continue)
   HANDLE("debugger", Debugger)
+  HANDLE("getmem2", GetMem2)
   HANDLE("go", Go)
   HANDLE("isstopped", IsStopped)
   HANDLE("modules", Modules)
@@ -650,6 +656,34 @@ bool MockXBDMServer::HandleTitle(ClientTransport& client,
   ;
 
   SendResponse(client, OK);
+  return true;
+}
+
+bool MockXBDMServer::HandleGetMem2(ClientTransport& client,
+                                   const std::string& parameters) {
+  RDCPMapResponse params(parameters);
+
+  auto address = params.GetOptionalDWORD("addr");
+  if (!address.has_value()) {
+    SendResponse(client, ERR_UNEXPECTED, "Missing addr");
+    return true;
+  }
+
+  auto length = params.GetOptionalDWORD("length");
+  if (!length.has_value()) {
+    SendResponse(client, ERR_UNEXPECTED, "Missing length");
+    return true;
+  }
+
+  // TODO: Investigate behavior in actual XBDM when requesting regions with
+  //       gaps.
+
+  std::vector<uint8_t> data;
+
+  std::lock_guard lock(state_mutex_);
+  state_.ReadVirtualMemory(data, address.value(), length.value());
+
+  SendBinaryResponse(client, data);
   return true;
 }
 
@@ -999,6 +1033,14 @@ void MockXBDMServer::AddRegion(uint32_t base_address, uint32_t size,
 
   std::lock_guard lock(state_mutex_);
   state_.memory_regions[base_address] = region;
+}
+
+void MockXBDMServer::AddRegion(uint32_t base_address,
+                               const std::vector<uint8_t>& data,
+                               uint32_t protect) {
+  std::lock_guard lock(state_mutex_);
+  AddRegion(base_address, data.size(), protect);
+  state_.memory_regions[base_address].data = data;
 }
 
 void MockXBDMServer::RemoveRegion(uint32_t base_address) {

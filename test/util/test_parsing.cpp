@@ -1,6 +1,19 @@
 #include <boost/test/unit_test.hpp>
 
 #include "util/parsing.h"
+#include "xbox/debugger/debugger_expression_parser.h"
+
+struct MockExpressionParser : ExpressionParser {
+  std::expected<uint32_t, std::string> Parse(const std::string& expr) override {
+    if (expr == "1 + 2") {
+      return 3;
+    }
+    if (expr == "failure") {
+      return std::unexpected("Mock Syntax Error");
+    }
+    return 0;
+  }
+};
 
 BOOST_AUTO_TEST_SUITE(parsing_suite)
 
@@ -82,77 +95,379 @@ bool MaybeParseHexInt(T &ret, const std::vector<uint8_t> &data,
 bool MaybeParseHexInt(T &ret, const std::string &data) {
  */
 
-BOOST_AUTO_TEST_CASE(EmptyInputReturnsEmptyVector) {
-  std::vector<std::string> input = {};
-  auto result = command_line_command_tokenizer::SplitCommands(input);
+BOOST_AUTO_TEST_CASE(ArgParser_BasicCommandArgs) {
+  ArgParser p("process file1 file2");
 
-  BOOST_TEST(result.empty());
+  BOOST_TEST(p.HasCommand());
+  BOOST_TEST(p.command == "process");
+
+  std::string val;
+  // arg[0] -> file1
+  auto type0 = p.Parse(0, val);
+  BOOST_TEST((type0 == ArgParser::ArgType::BASIC));
+  BOOST_TEST(val == "file1");
+
+  // arg[1] -> file2
+  auto type1 = p.Parse(1, val);
+  BOOST_TEST((type1 == ArgParser::ArgType::BASIC));
+  BOOST_TEST(val == "file2");
 }
 
-BOOST_AUTO_TEST_CASE(NoDelimiterReturnsSingleVector) {
-  std::vector<std::string> input = {"ls", "-la", "/home"};
-  auto result = command_line_command_tokenizer::SplitCommands(input);
+BOOST_AUTO_TEST_CASE(ArgParser_ExtractSubcommand) {
+  ArgParser p("git commit -m message");
 
-  BOOST_TEST(result.size() == 1);
-  BOOST_TEST(result[0] == input);
+  BOOST_TEST(p.command == "git");
+
+  // Before extraction
+  BOOST_TEST(p.ArgExists("commit"));  // "commit" is currently arg[0]
+
+  // Extract
+  auto maybe_sub = p.ExtractSubcommand();
+  BOOST_REQUIRE(maybe_sub);
+
+  auto& sub = *maybe_sub;
+  BOOST_TEST(sub.IsCommand("commit"));
+
+  // Verify offsets shifted
+  // Old arg[1] "-m" should now be arg[0]
+  std::string val;
+  sub.Parse(0, val);
+  BOOST_TEST(val == "-m");
 }
 
-BOOST_AUTO_TEST_CASE(SimpleSplitOnDelimiter) {
-  std::vector<std::string> input = {"echo", "hello", "&&", "echo", "world"};
-  auto result = command_line_command_tokenizer::SplitCommands(input);
+BOOST_AUTO_TEST_CASE(ArgParser_QuotedStrings) {
+  // Tests preservation of spaces and stripping of quotes
+  ArgParser p("echo \"hello world\" \"quoted\"");
 
-  BOOST_TEST(result.size() == 2);
+  BOOST_TEST(p.command == "echo");
 
-  std::vector<std::string> expected_first = {"echo", "hello"};
-  std::vector<std::string> expected_second = {"echo", "world"};
+  std::string val;
+  auto type = p.Parse(0, val);
 
-  BOOST_TEST(result[0] == expected_first);
-  BOOST_TEST(result[1] == expected_second);
+  BOOST_TEST((type == ArgParser::ArgType::QUOTED));
+  BOOST_TEST(val == "hello world");
+
+  type = p.Parse(1, val);
+  BOOST_TEST((type == ArgParser::ArgType::QUOTED));
+  BOOST_TEST(val == "quoted");
 }
 
-BOOST_AUTO_TEST_CASE(MultipleDelimiters) {
-  std::vector<std::string> input = {"A", "&&", "B", "&&", "C"};
-  auto result = command_line_command_tokenizer::SplitCommands(input);
+BOOST_AUTO_TEST_CASE(ArgParser_QuotedEscapeSequences) {
+  // Tests \" becoming " inside a string
+  ArgParser p("print \"say \\\"hello\\\" now\"");
 
-  BOOST_TEST(result.size() == 3);
-  BOOST_TEST(result[0] == std::vector<std::string>{"A"});
-  BOOST_TEST(result[1] == std::vector<std::string>{"B"});
-  BOOST_TEST(result[2] == std::vector<std::string>{"C"});
+  std::string val;
+  auto type = p.Parse(0, val);
+
+  BOOST_TEST((type == ArgParser::ArgType::QUOTED));
+  BOOST_TEST(val == "say \"hello\" now");
 }
 
-BOOST_AUTO_TEST_CASE(LeadingDelimiterCreatesEmptyFirstCommand) {
-  // If "&&" is first, 'cmd' is empty.
-  std::vector<std::string> input = {"&&", "ls"};
-  auto result = command_line_command_tokenizer::SplitCommands(input);
+BOOST_AUTO_TEST_CASE(ArgParser_ParenthesizedGroups) {
+  // Tests ( ... ) grouping and stripping outer parens
+  ArgParser p("func (vec3 1 0 0) (scale 5)");
 
-  BOOST_TEST(result.size() == 2);
-  BOOST_TEST(result[0].empty(),
-             "First element should be empty because && was leading");
-  BOOST_TEST(result[1] == std::vector<std::string>{"ls"});
+  std::string val;
+  auto type = p.Parse(0, val);
+
+  BOOST_TEST((type == ArgParser::ArgType::PARENTHESIZED));
+  BOOST_TEST(val == "vec3 1 0 0");
+
+  type = p.Parse(1, val);
+  BOOST_TEST((type == ArgParser::ArgType::PARENTHESIZED));
+  BOOST_TEST(val == "scale 5");
 }
 
-BOOST_AUTO_TEST_CASE(TrailingDelimiterCreatesEmptyLastCommand) {
-  // Your code pushes the remaining 'cmd' after the loop.
-  // If "&&" is last, the loop clears 'cmd', and the final push adds an empty
-  // vector.
-  std::vector<std::string> input = {"ls", "&&"};
-  auto result = command_line_command_tokenizer::SplitCommands(input);
+BOOST_AUTO_TEST_CASE(ArgParser_NestedParentheses) {
+  // Tests that only the outermost parens are stripped
+  ArgParser p("math (calc (1 + 2))");
 
-  BOOST_TEST(result.size() == 2);
-  BOOST_TEST(result[0] == std::vector<std::string>{"ls"});
-  BOOST_TEST(result[1].empty(),
-             "Last element should be empty because && was trailing");
+  std::string val;
+  auto type = p.Parse(0, val);
+
+  BOOST_TEST((type == ArgParser::ArgType::PARENTHESIZED));
+  BOOST_TEST(val == "calc (1 + 2)");
 }
 
-BOOST_AUTO_TEST_CASE(ConsecutiveDelimitersCreateEmptyMiddleCommand) {
-  std::vector<std::string> input = {"A", "&&", "&&", "B"};
-  auto result = command_line_command_tokenizer::SplitCommands(input);
+BOOST_AUTO_TEST_CASE(ArgParser_ParsingPrimitives) {
+  ArgParser p("config 1024 true 0 yes");
 
-  BOOST_TEST(result.size() == 3);
-  BOOST_TEST(result[0] == std::vector<std::string>{"A"});
-  BOOST_TEST(result[1].empty(),
-             "Middle element should be empty due to double &&");
-  BOOST_TEST(result[2] == std::vector<std::string>{"B"});
+  int intVal;
+  bool boolVal;
+
+  // Parse Int
+  auto type = p.Parse(0, intVal);
+  BOOST_TEST((type == ArgParser::ArgType::BASIC));
+  BOOST_TEST(intVal == 1024);
+
+  // Parse Bool (true)
+  p.Parse(1, boolVal);
+  BOOST_TEST(boolVal);
+
+  // Parse Bool (0 -> false)
+  p.Parse(2, boolVal);
+  BOOST_TEST(!boolVal);
+
+  // Parse Bool (yes -> true)
+  p.Parse(3, boolVal);
+  BOOST_TEST(boolVal);
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_BoundsChecking) {
+  ArgParser p("cmd one");
+
+  std::string val;
+  auto type = p.Parse(1, val);  // Index 1 does not exist (size is 1)
+
+  BOOST_TEST((type == ArgParser::ArgType::NOT_FOUND));
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_ShiftPrefixModifier) {
+  ArgParser p("cmd @subcommand");
+
+  auto maybe_sub = p.ExtractSubcommand();
+  BOOST_REQUIRE(maybe_sub);
+
+  auto& sub = *maybe_sub;
+  BOOST_TEST(sub.IsCommand("@subcommand"));
+
+  bool shifted = sub.ShiftPrefixModifier('@');
+  BOOST_TEST(shifted);
+  BOOST_TEST(sub.IsCommand("subcommand"));
+
+  // Try shifting non-existent prefix
+  shifted = sub.ShiftPrefixModifier('!');
+  BOOST_TEST(!shifted);
+  BOOST_TEST(sub.IsCommand("subcommand"));
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_MixedSyntax) {
+  // cmd "quote" plain (paren)
+  ArgParser p("cmd \"quote\" plain (paren)");
+
+  std::string val;
+
+  auto t1 = p.Parse(0, val);
+  BOOST_TEST((t1 == ArgParser::ArgType::QUOTED));
+  BOOST_TEST(val == "quote");
+
+  auto t2 = p.Parse(1, val);
+  BOOST_TEST((t2 == ArgParser::ArgType::BASIC));
+  BOOST_TEST(val == "plain");
+
+  auto t3 = p.Parse(2, val);
+  BOOST_TEST((t3 == ArgParser::ArgType::PARENTHESIZED));
+  BOOST_TEST(val == "paren");
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_ParensInsideQuotes) {
+  // Ensure ( ... ) inside quotes are treated as literals
+  ArgParser p("cmd \"(literal parens)\"");
+
+  std::string val;
+  auto type = p.Parse(0, val);
+
+  BOOST_TEST((type == ArgParser::ArgType::QUOTED));
+  BOOST_TEST(val == "(literal parens)");
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Iterator_BasicIteration) {
+  ArgParser p("cmd one two three");
+  std::vector<std::string> expected = {"one", "two", "three"};
+  std::vector<std::string> actual;
+
+  for (auto it = p.begin(); it != p.end(); ++it) {
+    actual.push_back(*it);
+  }
+
+  BOOST_TEST(actual == expected);
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Iterator_RangeBasedFor) {
+  ArgParser p("concat A B C");
+  std::string result;
+
+  for (const auto& arg : p) {
+    result += arg;
+  }
+
+  BOOST_TEST(result == "ABC");
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Iterator_RandomAccess) {
+  ArgParser p("jump index0 index1 index2 index3");
+  auto it = p.begin();
+
+  // Test dereference at offset
+  BOOST_TEST(*(it + 2) == "index2");
+
+  // Test increment
+  it += 3;
+  BOOST_TEST(*it == "index3");
+
+  // Test decrement
+  it -= 2;
+  BOOST_TEST(*it == "index1");
+
+  // Test subtraction (distance)
+  BOOST_TEST((p.end() - p.begin()) == 4);
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Iterator_EmptyArgs) {
+  ArgParser p("command_only");
+
+  // Command is extracted, arguments should be empty
+  BOOST_TEST(p.HasCommand());
+  BOOST_TEST(p.empty());
+  BOOST_TEST((p.begin() == p.end()));
+
+  int count = 0;
+  for (const auto& arg : p) {
+    count++;
+  }
+  BOOST_TEST(count == 0);
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Iterator_WithSubcommandExtraction) {
+  ArgParser p("git commit -m message");
+
+  // Initial state: ["commit", "-m", "message"]
+  BOOST_TEST((p.end() - p.begin()) == 3);
+  BOOST_TEST(*p.begin() == "commit");
+
+  auto maybe_sub = p.ExtractSubcommand();
+  BOOST_REQUIRE(maybe_sub);
+  auto& sub = *maybe_sub;
+
+  // Post-extraction state: ["-m", "message"]
+  BOOST_TEST((sub.end() - sub.begin()) == 2);
+  BOOST_TEST(*sub.begin() == "-m");
+
+  std::vector<std::string> remaining;
+  for (const auto& arg : sub) {
+    remaining.push_back(arg);
+  }
+  BOOST_TEST(remaining.size() == 2);
+  BOOST_TEST(remaining[1] == "message");
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_ExplicitConstruction) {
+  std::vector<std::string> input_args = {"arg1", "ARG2"};
+
+  // Construct with explicit command and vector
+  ArgParser p("MyCommand", input_args);
+
+  // Check Command (should be lowercased)
+  BOOST_TEST(p.command == "mycommand");
+  BOOST_TEST(p.HasCommand());
+
+  // Check Args
+  BOOST_TEST(p.size() == 2);
+
+  std::string val;
+
+  // Verify arg1
+  auto type1 = p.Parse(0, val);
+  BOOST_TEST(val == "arg1");
+  BOOST_TEST((type1 == ArgParser::ArgType::BASIC));
+
+  // Verify arg2 (should preserve case of arguments, unlike command)
+  auto type2 = p.Parse(1, val);
+  BOOST_TEST(val == "ARG2");
+  BOOST_TEST((type2 == ArgParser::ArgType::BASIC));
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Expression_Success) {
+  // Input: cmd (1 + 2)
+  ArgParser p("cmd (1 + 2)");
+  MockExpressionParser mock;
+  uint32_t result = 0;
+
+  // Parse index 0 using the expression parser
+  auto type = p.Parse(0, result, mock);
+
+  BOOST_TEST((type == ArgParser::ArgType::PARENTHESIZED));
+  BOOST_TEST(result == 3);
+
+  // Verify the boolean operator works on the result type
+  BOOST_TEST(static_cast<bool>(type));
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Expression_SyntaxError) {
+  // Input: cmd (failure)
+  ArgParser p("cmd (failure)");
+  MockExpressionParser mock;
+  uint32_t result = 999;  // Sentinel value
+
+  auto type = p.Parse(0, result, mock);
+
+  // 1. Should return SYNTAX_ERROR
+  BOOST_TEST((type == ArgParser::ArgType::SYNTAX_ERROR));
+
+  // 2. Boolean conversion should be false
+  BOOST_TEST(!type);
+
+  // 3. Result should not be modified (or undefined, depending on
+  // implementation,
+  //    but strictly speaking the code doesn't write to ret on error)
+  BOOST_TEST(result == 999);
+
+  // 4. Error message should be propagated
+  BOOST_TEST(type.message == "Mock Syntax Error");
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Expression_FallbackToBasic) {
+  // Input: cmd 123
+  // This is NOT parenthesized, so ArgParser should skip the ExpressionParser
+  // and call ParseInt32 directly.
+  ArgParser p("cmd 123");
+  MockExpressionParser mock;
+  uint32_t result = 0;
+
+  // We assume ParseInt32("123") works in your environment
+  auto type = p.Parse(0, result, mock);
+
+  // Should return BASIC, not PARENTHESIZED
+  BOOST_TEST((type == ArgParser::ArgType::BASIC));
+  BOOST_TEST(result == 123);
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Expression_FallbackToQuoted) {
+  // Input: cmd "456"
+  ArgParser p("cmd \"456\"");
+  MockExpressionParser mock;
+  uint32_t result = 0;
+
+  auto type = p.Parse(0, result, mock);
+
+  // Should return QUOTED
+  BOOST_TEST((type == ArgParser::ArgType::QUOTED));
+  BOOST_TEST(result == 456);
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_Expression_OutOfBounds) {
+  ArgParser p("cmd");
+  MockExpressionParser mock;
+  uint32_t result = 0;
+
+  auto type = p.Parse(0, result,
+                      mock);  // Index 0 exists? No, size is 0 (cmd extracted)
+
+  BOOST_TEST((type == ArgParser::ArgType::NOT_FOUND));
+  BOOST_TEST(!type);
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_FrontAndBack) {
+  ArgParser p("cmd first middle last");
+
+  BOOST_TEST(!p.empty());
+  BOOST_TEST(p.size() == 3);
+
+  // Test front()
+  BOOST_TEST(p.front() == "first");
+
+  // Test back()
+  BOOST_TEST(p.back() == "last");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

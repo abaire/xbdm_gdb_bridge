@@ -4,9 +4,11 @@
 #include <future>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "net/ip_address.h"
 
+struct ExpressionParser;
 class DelegatingServer;
 class RDCPProcessedRequest;
 class SelectThread;
@@ -41,12 +43,21 @@ class XBOXInterface {
       const std::shared_ptr<RDCPProcessedRequest>& command,
       const std::string& dedicated_handler);
 
+  [[nodiscard]] std::shared_ptr<ExpressionParser> GetExpressionParser() const {
+    return expression_parser_;
+  }
+  void SetExpressionParser(std::shared_ptr<ExpressionParser> parser) {
+    expression_parser_ = std::move(parser);
+  }
+
  protected:
   std::string name_;
   IPAddress xbox_address_;
 
   std::shared_ptr<SelectThread> select_thread_;
   std::shared_ptr<XBDMContext> xbdm_context_;
+
+  std::shared_ptr<ExpressionParser> expression_parser_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_XBOX_XBOX_INTERFACE_H_

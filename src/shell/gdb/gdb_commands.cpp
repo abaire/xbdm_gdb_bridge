@@ -7,9 +7,9 @@ void RegisterGDBCommands(Shell& shell) {
   shell.RegisterCommand("gdb", std::make_shared<ShellCommandGDB>());
 }
 
-Command::Result ShellCommandGDB::operator()(
-    XBOXInterface& base_interface, const std::vector<std::string>& args,
-    std::ostream& out) {
+Command::Result ShellCommandGDB::operator()(XBOXInterface& base_interface,
+                                            const ArgParser& args,
+                                            std::ostream& out) {
   GET_GDBXBOXINTERFACE(base_interface, interface);
 
   std::vector<std::string> components;

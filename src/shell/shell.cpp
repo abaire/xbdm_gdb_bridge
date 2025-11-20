@@ -20,6 +20,8 @@
 #include "util/timer.h"
 #endif
 
+static constexpr char kRerunCommandHelp[] = "Re-runs the last shell command.";
+
 Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
     : interface_(interface),
       prompt_("> "),
@@ -194,9 +196,9 @@ void Shell::Run() {
 
     rx_->history_add(line);
 
-    std::vector<std::string> args = Tokenize(line);
+    auto args = ArgParser(line);
 
-    Command::Result result = ProcessCommand(args);
+    Command::Result result = ProcessCommand(std::move(args));
     if (result == Command::EXIT_REQUESTED) {
       break;
     }
@@ -208,68 +210,44 @@ void Shell::Run() {
   rx_->history_save(".xbdm_gdb_bridge_history");
 }
 
-std::vector<std::string> Shell::Tokenize(const std::string& line) {
-  std::vector<std::string> args;
-  boost::escaped_list_separator separator('~', ' ', '\"');
-  typedef boost::tokenizer<boost::escaped_list_separator<char>> SpaceTokenizer;
-  SpaceTokenizer keyvals(line, separator);
-  for (auto it = keyvals.begin(); it != keyvals.end(); ++it) {
-    const std::string& token = *it;
-    if (token[0] == '\"') {
-      // Insert the unescaped contents of the string.
-      std::string value = token.substr(1, token.size() - 1);
-      boost::replace_all(value, "\\\"", "\"");
-      args.push_back(value);
-    } else {
-      args.push_back(token);
-    }
-  }
-
-  return args;
-}
-
-Command::Result Shell::ProcessCommand(
-    const std::vector<std::string>& command_args) {
-  auto args = command_args;
-  std::string command = args.front();
-
-  if (command == "!") {
-    if (last_command_.empty()) {
+Command::Result Shell::ProcessCommand(ArgParser parser) {
+  if (parser.command == "!") {
+    if (!last_command_.has_value()) {
       std::cout << "No command to replay." << std::endl;
       return Command::HANDLED;
     }
-    for (auto& element : last_command_) {
-      std::cout << element << " ";
+
+    parser = *last_command_;
+
+    std::cout << parser.command;
+    for (const auto& arg : parser.arguments) {
+      std::cout << " " << arg.value;
     }
     std::cout << std::endl;
-
-    args = last_command_;
-    command = args.front();
   }
 
-  last_command_ = args;
+  last_command_ = parser;
 
-  boost::algorithm::to_lower(command);
-  args.erase(args.begin());
-
-  if (command == "help" || command == "?") {
-    PrintHelp(args);
+  if (parser.command == "help" || parser.command == "?") {
+    PrintHelp(parser);
     return Command::HANDLED;
   }
 
-  auto it = commands_.find(command);
+  // 4. Find and Execute
+  // parser.command is already lower-cased by the ArgParser constructor
+  auto it = commands_.find(parser.command);
   if (it != commands_.end()) {
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
-    LOG(trace) << "Processing shell command '" << command << "'";
+    LOG(trace) << "Processing shell command '" << parser.command << "'";
     auto timer = Timer();
     timer.Start();
 #endif
 
     Command& handler = *it->second;
-    auto ret = handler(*interface_, args);
+    auto ret = handler(*interface_, parser);
 
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
-    LOG(trace) << "... processed shell command '" << command << "'  in "
+    LOG(trace) << "... processed shell command '" << parser.command << "'  in "
                << timer.FractionalMillisecondsElapsed() << " ms";
 #endif
     return ret;
@@ -278,10 +256,8 @@ Command::Result Shell::ProcessCommand(
   return Command::UNHANDLED;
 }
 
-static char kRerunCommandHelp[] = "Re-runs the last shell command.";
-
-void Shell::PrintHelp(std::vector<std::string>& args) const {
-  if (args.empty()) {
+void Shell::PrintHelp(const ArgParser& parser) const {
+  if (parser.arguments.empty()) {
     std::cout << "Commands:" << std::endl;
 
     for (auto& it : commands_) {
@@ -301,7 +277,8 @@ void Shell::PrintHelp(std::vector<std::string>& args) const {
     return;
   }
 
-  std::string target = args.front();
+  std::string target;
+  parser.Parse(0, target);
   boost::algorithm::to_lower(target);
 
   if (target == "help" || target == "?") {

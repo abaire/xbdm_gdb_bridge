@@ -7,7 +7,7 @@
 
 struct ShellCommandQuit : Command {
   ShellCommandQuit() : Command("Terminate the connection and exit.") {}
-  Result operator()(XBOXInterface& interface, const std::vector<std::string>&,
+  Result operator()(XBOXInterface& interface, const ArgParser&,
                     std::ostream& out) override {
     return Result::EXIT_REQUESTED;
   }
@@ -16,7 +16,7 @@ struct ShellCommandQuit : Command {
 struct ShellCommandReconnect : Command {
   ShellCommandReconnect()
       : Command("Attempt to disconnect and reconnect from XBDM.") {}
-  Result operator()(XBOXInterface& interface, const std::vector<std::string>&,
+  Result operator()(XBOXInterface& interface, const ArgParser&,
                     std::ostream& out) override;
 };
 
@@ -45,8 +45,7 @@ struct ShellCommandTrace : Command {
                 "  pfb <on|off> - Enables or disables capture of the raw "
                 "PFB region. Default: off.") {}
 
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args,
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
                     std::ostream& out) override;
 };
 

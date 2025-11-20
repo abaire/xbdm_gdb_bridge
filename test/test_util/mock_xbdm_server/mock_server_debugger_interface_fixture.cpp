@@ -8,7 +8,8 @@
 
 namespace xbdm_gdb_bridge::testing {
 
-XBDMDebuggerInterfaceFixture::XBDMDebuggerInterfaceFixture() {
+XBDMDebuggerInterfaceFixture::XBDMDebuggerInterfaceFixture()
+    : empty_args("empty_args") {
   server = std::make_unique<MockXBDMServer>(TEST_MOCK_XBDM_PORT);
   BOOST_REQUIRE(server->Start());
 

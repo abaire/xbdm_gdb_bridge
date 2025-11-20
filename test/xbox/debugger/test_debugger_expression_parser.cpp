@@ -8,7 +8,7 @@
 static std::expected<uint32_t, std::string> evaluate(const std::string& expr,
                                                      const ThreadContext& ctx) {
   DebuggerExpressionParser parser(ctx);
-  return parser.parse(expr);
+  return parser.Parse(expr);
 }
 
 BOOST_AUTO_TEST_SUITE(BasicArithmeticTests)
@@ -414,6 +414,34 @@ BOOST_AUTO_TEST_CASE(test_overflow_behavior) {
   BOOST_REQUIRE(result.has_value());
   // This will overflow, checking it wraps around
   BOOST_CHECK_EQUAL(result.value(), 0);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(parsing_suite)
+
+BOOST_AUTO_TEST_CASE(ArgParser_SimpleArithmeticExpression) {
+  ArgParser p("cmd (1+2)");
+
+  BOOST_TEST(p.size() == 1);
+
+  uint32_t value{0};
+  BOOST_TEST(static_cast<bool>(
+      p.Parse(0, value, std::make_shared<DebuggerExpressionParser>())));
+  BOOST_TEST(value == 3);
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_RegisterArithmeticExpression) {
+  ArgParser p("cmd ($eax + 1 * 2)");
+
+  BOOST_TEST(p.size() == 1);
+
+  ThreadContext ctx;
+  ctx.eax = 100;
+  uint32_t value{0};
+  BOOST_TEST(static_cast<bool>(
+      p.Parse(0, value, std::make_shared<DebuggerExpressionParser>(ctx))));
+  BOOST_TEST(value == 102);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

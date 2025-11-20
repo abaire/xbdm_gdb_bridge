@@ -9,14 +9,14 @@ class XBOXInterface;
 
 struct DynDXTCommandLoadBootstrap : Command {
   DynDXTCommandLoadBootstrap() : Command("Load the XBDM handler injector.") {}
-  Result operator()(XBOXInterface& interface, const std::vector<std::string>&,
+  Result operator()(XBOXInterface& interface, const ArgParser&,
                     std::ostream& out) override;
 };
 
 struct DynDXTCommandHello : Command {
   DynDXTCommandHello()
       : Command("Verify that the XBDM handler injector is available.") {}
-  Result operator()(XBOXInterface& interface, const std::vector<std::string>&,
+  Result operator()(XBOXInterface& interface, const ArgParser&,
                     std::ostream& out) override;
 };
 
@@ -28,8 +28,7 @@ struct DynDXTCommandInvokeSimple : Command {
             "\n"
             "Invokes an arbitrary debug command processor with the given "
             "arguments.") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args,
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
                     std::ostream& out) override;
 };
 
@@ -41,8 +40,7 @@ struct DynDXTCommandInvokeMultiline : Command {
             "\n"
             "Invoke an arbitrary debug command processor with the given "
             "arguments, expecting a multiline response.") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args,
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
                     std::ostream& out) override;
 };
 
@@ -54,8 +52,7 @@ struct DynDXTCommandInvokeSendBinary : Command {
                 "Invoke an arbitrary debug command processor with the given "
                 "arguments, sending the contents of `binary_path` as a binary "
                 "attachment.") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args,
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
                     std::ostream& out) override;
 };
 
@@ -69,8 +66,7 @@ struct DynDXTCommandInvokeReceiveSizePrefixedBinary : Command {
             "arguments, expecting a binary response which is prefixed with a "
             "4-byte length, which will be saved into a file at the given "
             "path.") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args,
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
                     std::ostream& out) override;
 };
 
@@ -85,8 +81,7 @@ struct DynDXTCommandInvokeReceiveKnownSizedBinary : Command {
             "arguments, expecting a binary response that is `size_in_bytes` "
             "bytes in length, which will be saved into a file at the given "
             "path.") {}
-  Result operator()(XBOXInterface& interface,
-                    const std::vector<std::string>& args,
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
                     std::ostream& out) override;
 };
 
@@ -96,7 +91,7 @@ struct DynDXTCommandLoad : Command {
                 "<dll_path>\n"
                 "\n"
                 "Load the given DXT DLL.") {}
-  Result operator()(XBOXInterface& interface, const std::vector<std::string>&,
+  Result operator()(XBOXInterface& interface, const ArgParser&,
                     std::ostream& out) override;
 };
 
