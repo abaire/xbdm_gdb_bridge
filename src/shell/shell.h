@@ -5,12 +5,17 @@
 #include <memory>
 #include <string>
 
+namespace replxx {
+class Replxx;
+}
+
 #include "shell/command.h"
 #include "xbox/xbox_interface.h"
 
 class Shell {
  public:
   explicit Shell(std::shared_ptr<XBOXInterface>& interface);
+  ~Shell();
 
   void Run();
   Command::Result ProcessCommand(const std::vector<std::string>& args);
@@ -35,6 +40,8 @@ class Shell {
   std::map<std::string, std::shared_ptr<Command>> commands_;
 
   std::vector<std::string> last_command_;
+
+  std::unique_ptr<replxx::Replxx> rx_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SHELL_H
