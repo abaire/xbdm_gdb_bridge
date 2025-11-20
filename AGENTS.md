@@ -6,6 +6,7 @@ To build this project successfully you must follow the instructions in this sect
 
  ```bash
  # Clone nxdk and checkout the correct commit
+ cd <someplace_outside_of_this_repository>
  git clone --recursive https://github.com/XboxDev/nxdk.git && \
  cd nxdk && \
  git checkout 3b24b559124aba8fcb94fddff1d2dc9ef32de461 && \
@@ -44,3 +45,4 @@ To build this project successfully you must follow the instructions in this sect
 
 * You must format any code changes with `clang-format`.
 * You must make sure that all automated tests pass before proposing changes.
+* You must NOT commit the nxdk directory or add it as a submodule unless explicitly asked to do so by the user.
