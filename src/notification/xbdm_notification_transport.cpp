@@ -4,7 +4,6 @@
 #include <cstring>
 #include <utility>
 
-#include "configure.h"
 #include "util/logging.h"
 
 #define LOG_NOTIF(lvl) LOG_TAGGED(lvl, ::logging::kLoggingTagXBDMNotification)

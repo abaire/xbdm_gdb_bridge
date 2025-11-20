@@ -137,6 +137,8 @@ The CMake target can be configured to set the `NXDK_DIR` env var via the propert
 On macOS you may also have to modify PATH such that a homebrew version of LLVM
 is preferred over Xcode's (to supply `dlltool`).
 
+Note that you will also need to enable terminal emulation to use the shell commands when running/debugging.
+
 # Design
 
 * `Shell` performs interactive command processing.

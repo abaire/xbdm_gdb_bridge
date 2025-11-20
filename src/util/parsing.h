@@ -88,6 +88,8 @@ struct ArgParser {
   struct Argument {
     std::string value;
     ArgType type;
+
+    bool operator==(const Argument& other) const = default;
   };
 
  public:
@@ -120,6 +122,8 @@ struct ArgParser {
       : command(cmd), arguments(std::move(args)) {
     boost::algorithm::to_lower(command);
   }
+
+  bool operator==(const ArgParser& other) const = default;
 
   [[nodiscard]] std::optional<ArgParser> ExtractSubcommand() const {
     if (arguments.empty()) {
@@ -160,7 +164,7 @@ struct ArgParser {
    * Generates a minimal command line string that will parse to this instance.
    * @return Recomposed command line
    */
-  std::string Flatten() const;
+  [[nodiscard]] std::string Flatten() const;
 
   template <typename T, typename... Ts>
   using are_same_type = std::conjunction<std::is_same<T, Ts>...>;

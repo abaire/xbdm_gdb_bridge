@@ -488,7 +488,7 @@ BOOST_AUTO_TEST_CASE(ArgParser_SplitAt_FoundBasic) {
   // Verify POST: "pipeTo" [program2, argC]
   // Note: "pipeTo" is the token *after* the pipe, so it becomes the command
   BOOST_TEST(post.command == "pipeto");  // Commands are auto-lowercased in ctor
-  BOOST_TEST(post.size() == 2);
+  BOOST_REQUIRE(post.size() == 2);
   BOOST_TEST(post.arguments[0].value == "program2");
   BOOST_TEST(post.arguments[1].value == "argC");
 }
@@ -500,8 +500,7 @@ BOOST_AUTO_TEST_CASE(ArgParser_SplitAt_NotFound) {
   bool found = p.SplitAt(pre, post, "|");
 
   BOOST_TEST(!found);
-  // Pre/Post remain untouched (or as initialized)
-  BOOST_TEST(pre.command.empty());
+  BOOST_TEST(pre == p);
   BOOST_TEST(post.command.empty());
 }
 

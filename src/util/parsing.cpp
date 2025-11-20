@@ -104,21 +104,23 @@ std::vector<ArgParser::Argument> ArgParser::Tokenize(std::string_view input) {
 bool ArgParser::SplitAt(ArgParser& pre, ArgParser& post,
                         const std::string& delimiter,
                         bool case_sensitive) const {
+  auto delimiter_insensitive = boost::algorithm::to_lower_copy(delimiter);
+
   auto it = std::find_if(arguments.begin(), arguments.end(),
                          [&](const Argument& arg) {
                            if (case_sensitive) {
                              return arg.value == delimiter;
                            }
                            return boost::algorithm::to_lower_copy(arg.value) ==
-                                  boost::algorithm::to_lower_copy(delimiter);
+                                  delimiter_insensitive;
                          });
-
-  if (it == arguments.end()) {
-    return false;
-  }
 
   std::vector pre_args(arguments.begin(), it);
   pre = ArgParser(this->command, std::move(pre_args));
+  if (it == arguments.end()) {
+    post = ArgParser("", std::vector<ArgParser::Argument>{});
+    return false;
+  }
 
   auto post_start = it + 1;
   if (post_start != arguments.end()) {
