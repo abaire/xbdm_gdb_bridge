@@ -160,6 +160,10 @@ DEBUGGER_TEST_CASE(BreakConditionalTrue) {
   AwaitQuiescence();
 
   BOOST_CHECK(!continued);
+  auto thread = dbg_iface->Debugger()->GetThread(tid);
+  BOOST_REQUIRE(thread);
+  BOOST_REQUIRE(thread->last_stop_reason);
+  BOOST_CHECK_EQUAL(thread->last_stop_reason->type, SRT_BREAKPOINT);
 }
 
 DEBUGGER_TEST_CASE(BreakConditionalFalse) {
@@ -366,6 +370,69 @@ DEBUGGER_TEST_CASE(BreakConditionalExecuteFalse) {
                                  [&](const std::string&) { continued = true; });
 
   server->SimulateExecuteWatchpoint(0x8000, tid);
+  AwaitQuiescence();
+
+  int retries = 20;
+  while (!continued && retries-- > 0) {
+    std::this_thread::sleep_for(50ms);
+  }
+  BOOST_CHECK(continued);
+}
+
+DEBUGGER_TEST_CASE(BreakConditionalTIDTrue) {
+  uint32_t tid = server->AddThread("main");
+
+  auto dbg_iface = std::dynamic_pointer_cast<DebuggerXBOXInterface>(interface);
+  BOOST_REQUIRE(dbg_iface);
+  BOOST_REQUIRE(dbg_iface->AttachDebugger());
+  BOOST_REQUIRE(dbg_iface->Debugger()->FetchThreads());
+  dbg_iface->Debugger()->SetActiveThread(tid);
+
+  std::stringstream capture;
+  CommandBreak cmd;
+  std::string cmd_str = "break addr 0x9000 IF tid == " + std::to_string(tid);
+  ArgParser args(cmd_str);
+
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+  BOOST_CHECK(server->HasBreakpoint(0x9000));
+
+  bool continued = false;
+  server->SetAfterCommandHandler("continue",
+                                 [&](const std::string&) { continued = true; });
+
+  server->SimulateExecutionBreakpoint(0x9000, tid);
+  AwaitQuiescence();
+
+  BOOST_CHECK(!continued);
+  auto thread = dbg_iface->Debugger()->GetThread(tid);
+  BOOST_REQUIRE(thread);
+  BOOST_REQUIRE(thread->last_stop_reason);
+  BOOST_CHECK_EQUAL(thread->last_stop_reason->type, SRT_BREAKPOINT);
+}
+
+DEBUGGER_TEST_CASE(BreakConditionalTIDFalse) {
+  uint32_t tid = server->AddThread("main");
+
+  auto dbg_iface = std::dynamic_pointer_cast<DebuggerXBOXInterface>(interface);
+  BOOST_REQUIRE(dbg_iface);
+  BOOST_REQUIRE(dbg_iface->AttachDebugger());
+  BOOST_REQUIRE(dbg_iface->Debugger()->FetchThreads());
+  dbg_iface->Debugger()->SetActiveThread(tid);
+
+  std::stringstream capture;
+  CommandBreak cmd;
+  std::string cmd_str =
+      "break addr 0xA000 IF tid == " + std::to_string(tid + 1);
+  ArgParser args(cmd_str);
+
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+  BOOST_CHECK(server->HasBreakpoint(0xA000));
+
+  bool continued = false;
+  server->SetAfterCommandHandler("continue",
+                                 [&](const std::string&) { continued = true; });
+
+  server->SimulateExecutionBreakpoint(0xA000, tid);
   AwaitQuiescence();
 
   int retries = 20;

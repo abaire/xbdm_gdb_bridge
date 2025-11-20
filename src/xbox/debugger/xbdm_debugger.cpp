@@ -549,7 +549,7 @@ void XBDMDebugger::OnBreakpoint(
   if (condition) {
     thread->FetchContextSync(*context_);
     if (thread->context.has_value()) {
-      DebuggerExpressionParser parser(*thread->context);
+      DebuggerExpressionParser parser(*thread->context, thread->thread_id);
       auto result = parser.Parse(*condition);
       if (result.has_value() && result.value() == 0) {
         LOG_DEBUGGER(info) << "Condition '" << *condition
@@ -608,7 +608,7 @@ void XBDMDebugger::OnWatchpoint(
     if (condition) {
       thread->FetchContextSync(*context_);
       if (thread->context.has_value()) {
-        DebuggerExpressionParser parser(*thread->context);
+        DebuggerExpressionParser parser(*thread->context, thread->thread_id);
         auto result = parser.Parse(*condition);
         if (result.has_value() && result.value() == 0) {
           LOG_DEBUGGER(info)

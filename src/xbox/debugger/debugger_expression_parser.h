@@ -12,14 +12,16 @@
 class DebuggerExpressionParser : public ExpressionParser {
  public:
   DebuggerExpressionParser() = default;
-  explicit DebuggerExpressionParser(const ThreadContext& context)
-      : context_(context) {}
+  explicit DebuggerExpressionParser(const ThreadContext& context,
+                                    int32_t thread_id = -1)
+      : context_(context), thread_id_(thread_id) {}
 
   std::expected<uint32_t, std::string> Parse(const std::string& expr) override;
 
  private:
   struct ParseState {
-    ParseState(const ThreadContext& context) : context_(context) {}
+    ParseState(const ThreadContext& context, int32_t thread_id)
+        : context_(context), thread_id_(thread_id) {}
 
     std::expected<uint32_t, std::string> Parse(const std::string& expr);
 
@@ -46,12 +48,14 @@ class DebuggerExpressionParser : public ExpressionParser {
 
    private:
     const ThreadContext& context_;
+    int32_t thread_id_;
     std::string input_;
     size_t pos{0};
   };
 
  protected:
   ThreadContext context_;
+  int32_t thread_id_{-1};
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_XBOX_DEBUGGER_EXPRESSION_PARSER_H_
