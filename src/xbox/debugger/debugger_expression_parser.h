@@ -11,41 +11,46 @@
  */
 class DebuggerExpressionParser : public ExpressionParser {
  public:
+  DebuggerExpressionParser() = default;
   explicit DebuggerExpressionParser(const ThreadContext& context)
-      : context_(context), pos(0) {}
+      : context_(context) {}
 
-  /**
-   * Attempts to evaluate the given string as an expression.
-   * @param expr - The expression to evaluate
-   * @return The final value or a string indicating an error.
-   */
-  std::expected<uint32_t, std::string> Parse(const std::string& expr);
+  std::expected<uint32_t, std::string> Parse(const std::string& expr) override;
 
  private:
-  [[nodiscard]] char Peek() const {
-    return pos < input_.size() ? input_[pos] : 0;
-  }
+  struct ParseState {
+    ParseState(const ThreadContext& context) : context_(context) {}
 
-  char Consume() { return pos < input_.size() ? input_[pos++] : 0; }
+    std::expected<uint32_t, std::string> Parse(const std::string& expr);
 
-  void SkipWhitespace() {
-    while (pos < input_.size() && std::isspace(input_[pos])) {
-      pos++;
+    [[nodiscard]] char Peek() const {
+      return pos < input_.size() ? input_[pos] : 0;
     }
-  }
 
-  [[nodiscard]] std::expected<uint32_t, std::string> ResolveRegisterValue(
-      const std::string& reg) const;
-  std::expected<std::string, std::string> ParseRegister();
-  std::expected<uint32_t, std::string> ParseNumber();
-  std::expected<uint32_t, std::string> ParseFactor();
-  std::expected<uint32_t, std::string> ParseTerm();
-  std::expected<uint32_t, std::string> ParseExpression();
+    char Consume() { return pos < input_.size() ? input_[pos++] : 0; }
 
- private:
-  const ThreadContext& context_;
-  std::string input_;
-  size_t pos;
+    void SkipWhitespace() {
+      while (pos < input_.size() && std::isspace(input_[pos])) {
+        pos++;
+      }
+    }
+
+    [[nodiscard]] std::expected<uint32_t, std::string> ResolveRegisterValue(
+        const std::string& reg) const;
+    std::expected<std::string, std::string> ParseRegister();
+    std::expected<uint32_t, std::string> ParseNumber();
+    std::expected<uint32_t, std::string> ParseFactor();
+    std::expected<uint32_t, std::string> ParseTerm();
+    std::expected<uint32_t, std::string> ParseExpression();
+
+   private:
+    const ThreadContext& context_;
+    std::string input_;
+    size_t pos{0};
+  };
+
+ protected:
+  ThreadContext context_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_XBOX_DEBUGGER_EXPRESSION_PARSER_H_

@@ -1,6 +1,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include "util/parsing.h"
+#include "xbox/debugger/debugger_expression_parser.h"
 
 struct MockExpressionParser : ExpressionParser {
   std::expected<uint32_t, std::string> Parse(const std::string& expr) override {

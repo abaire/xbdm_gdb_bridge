@@ -22,6 +22,20 @@ struct ThreadContext {
   std::optional<int32_t> esi;
   std::optional<int32_t> cr0_npx_state;
 
+  void Reset() {
+    ebp.reset();
+    esp.reset();
+    eip.reset();
+    eflags.reset();
+    eax.reset();
+    ebx.reset();
+    ecx.reset();
+    edx.reset();
+    edi.reset();
+    esi.reset();
+    cr0_npx_state.reset();
+  }
+
   void Parse(const RDCPMapResponse& parsed) {
     ebp = parsed.GetOptionalDWORD("Ebp");
     esp = parsed.GetOptionalDWORD("Esp");

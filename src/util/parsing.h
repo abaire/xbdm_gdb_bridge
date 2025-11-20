@@ -235,6 +235,17 @@ struct ArgParser {
     return arg.type;
   }
 
+  template <
+      typename T,
+      std::enable_if_t<std::is_integral<T>::value && sizeof(T) == 4, int> = 0>
+  ArgType Parse(int arg_index, T& ret,
+                const std::shared_ptr<ExpressionParser>& expr_parser) const {
+    if (expr_parser) {
+      return Parse(arg_index, ret, *expr_parser);
+    }
+    return Parse(arg_index, ret);
+  }
+
   /**
    * Iterator over parsed arguments.
    */

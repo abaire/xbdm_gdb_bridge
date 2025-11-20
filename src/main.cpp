@@ -9,6 +9,7 @@
 #include "util/logging.h"
 #include "util/parsing.h"
 #include "xbox/bridge/gdb_xbox_interface.h"
+#include "xbox/debugger/debugger_expression_parser.h"
 #include "xbox/xbox_interface.h"
 
 #define DEFAULT_PORT 731
@@ -32,6 +33,9 @@ int main_(const IPAddress& xbox_addr,
   LOG(trace) << "Startup - XBDM @ " << xbox_addr;
   std::shared_ptr<XBOXInterface> interface =
       std::make_shared<GDBXBOXInterface>("XBOX", xbox_addr);
+
+  interface->SetExpressionParser(std::make_shared<DebuggerExpressionParser>());
+
   interface->Start();
 
   auto shell = Shell(interface);
