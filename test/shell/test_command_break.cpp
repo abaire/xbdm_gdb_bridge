@@ -198,6 +198,121 @@ DEBUGGER_TEST_CASE(BreakConditionalFalse) {
   BOOST_CHECK(go_called);
 }
 
+DEBUGGER_TEST_CASE(BreakConditionalComplexTrue) {
+  uint32_t tid = server->AddThread("main");
+  server->SetThreadRegister(tid, "eax", 2);
+  server->SetThreadRegister(tid, "ecx", 10);
+  server->SetThreadRegister(tid, "edx", 20);
+  server->SetThreadRegister(tid, "esi", 5);
+
+  auto dbg_iface = std::dynamic_pointer_cast<DebuggerXBOXInterface>(interface);
+  BOOST_REQUIRE(dbg_iface);
+  BOOST_REQUIRE(dbg_iface->AttachDebugger());
+  BOOST_REQUIRE(dbg_iface->Debugger()->FetchThreads());
+  dbg_iface->Debugger()->SetActiveThread(tid);
+
+  std::stringstream capture;
+  CommandBreak cmd;
+  // (2 < 3 AND (10 * 20) > 100) OR 5 == 3
+  // (True AND 200 > 100) OR False
+  // (True AND True) OR False
+  // True OR False
+  // True -> Should break
+  ArgParser args(
+      "break addr 0xB000 IF ($eax < 3 AND ($ecx * $edx) > 100) OR $esi == 3");
+
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+  BOOST_CHECK(server->HasBreakpoint(0xB000));
+
+  bool continued = false;
+  server->SetAfterCommandHandler("continue",
+                                 [&](const std::string&) { continued = true; });
+
+  server->SimulateExecutionBreakpoint(0xB000, tid);
+  AwaitQuiescence();
+
+  BOOST_CHECK(!continued);
+  auto thread = dbg_iface->Debugger()->GetThread(tid);
+  BOOST_REQUIRE(thread);
+  BOOST_REQUIRE(thread->last_stop_reason);
+  BOOST_CHECK_EQUAL(thread->last_stop_reason->type, SRT_BREAKPOINT);
+}
+
+DEBUGGER_TEST_CASE(BreakConditionalComplexDoubleFalse) {
+  uint32_t tid = server->AddThread("main");
+  server->SetThreadRegister(tid, "eax", 3);
+  server->SetThreadRegister(tid, "ecx", 10);
+  server->SetThreadRegister(tid, "edx", 20);
+  server->SetThreadRegister(tid, "esi", 5);  // False
+
+  auto dbg_iface = std::dynamic_pointer_cast<DebuggerXBOXInterface>(interface);
+  BOOST_REQUIRE(dbg_iface);
+  BOOST_REQUIRE(dbg_iface->AttachDebugger());
+  BOOST_REQUIRE(dbg_iface->Debugger()->FetchThreads());
+  dbg_iface->Debugger()->SetActiveThread(tid);
+
+  std::stringstream capture;
+  CommandBreak cmd;
+  // (5 < 3 AND (10 * 20) > 100) OR 5 == 3
+  ArgParser args(
+      "break addr 0xC000 IF ($eax < 3 AND ($ecx * $edx) > 100) OR $esi == 3");
+
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+  BOOST_CHECK(server->HasBreakpoint(0xC000));
+
+  bool continued = false;
+  server->SetAfterCommandHandler("continue",
+                                 [&](const std::string&) { continued = true; });
+  bool go_called = false;
+  server->SetAfterCommandHandler("go",
+                                 [&](const std::string&) { go_called = true; });
+
+  server->SimulateExecutionBreakpoint(0xC000, tid);
+  AwaitQuiescence();
+
+  BOOST_CHECK(continued);
+  BOOST_CHECK(go_called);
+}
+
+DEBUGGER_TEST_CASE(BreakConditionalComplexOrTrue) {
+  uint32_t tid = server->AddThread("main");
+  server->SetThreadRegister(tid, "eax", 4);
+  server->SetThreadRegister(tid, "ecx", 10);
+  server->SetThreadRegister(tid, "edx", 20);
+  server->SetThreadRegister(tid, "esi", 3);
+
+  auto dbg_iface = std::dynamic_pointer_cast<DebuggerXBOXInterface>(interface);
+  BOOST_REQUIRE(dbg_iface);
+  BOOST_REQUIRE(dbg_iface->AttachDebugger());
+  BOOST_REQUIRE(dbg_iface->Debugger()->FetchThreads());
+  dbg_iface->Debugger()->SetActiveThread(tid);
+
+  std::stringstream capture;
+  CommandBreak cmd;
+  // (5 < 3 AND (10 * 20) > 100) OR 5 == 3
+  ArgParser args(
+      "break addr 0xC000 IF ($eax < 3 AND ($ecx * $edx) > 100) OR $esi == 3");
+
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+  BOOST_CHECK(server->HasBreakpoint(0xC000));
+
+  bool continued = false;
+  server->SetAfterCommandHandler("continue",
+                                 [&](const std::string&) { continued = true; });
+  bool go_called = false;
+  server->SetAfterCommandHandler("go",
+                                 [&](const std::string&) { go_called = true; });
+
+  server->SimulateExecutionBreakpoint(0xC000, tid);
+  AwaitQuiescence();
+
+  BOOST_CHECK(!continued);
+  auto thread = dbg_iface->Debugger()->GetThread(tid);
+  BOOST_REQUIRE(thread);
+  BOOST_REQUIRE(thread->last_stop_reason);
+  BOOST_CHECK_EQUAL(thread->last_stop_reason->type, SRT_BREAKPOINT);
+}
+
 DEBUGGER_TEST_CASE(BreakConditionalReadTrue) {
   uint32_t tid = server->AddThread("main");
   server->SetThreadRegister(tid, "ebx", 10);

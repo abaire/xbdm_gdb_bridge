@@ -277,7 +277,7 @@ DebuggerExpressionParser::ParseState::ParseAdditive() {
 }
 
 std::expected<uint32_t, std::string>
-DebuggerExpressionParser::ParseState::ParseExpression() {
+DebuggerExpressionParser::ParseState::ParseRelational() {
   auto result = ParseAdditive();
   if (!result.has_value()) {
     return result;
@@ -288,7 +288,7 @@ DebuggerExpressionParser::ParseState::ParseExpression() {
 
   while (true) {
     char c = Peek();
-    if (c != '=' && c != '!' && c != '<' && c != '>') {
+    if (c != '<' && c != '>') {
       break;
     }
 
@@ -296,10 +296,6 @@ DebuggerExpressionParser::ParseState::ParseExpression() {
     op += c;
     if (pos + 1 < input_.size() && input_[pos + 1] == '=') {
       op += '=';
-    }
-
-    if (op == "!" || op == "=") {
-      break;
     }
 
     if (op.length() == 2) {
@@ -314,11 +310,7 @@ DebuggerExpressionParser::ParseState::ParseExpression() {
       return right;
     }
 
-    if (op == "==") {
-      value = (value == right.value());
-    } else if (op == "!=") {
-      value = (value != right.value());
-    } else if (op == "<") {
+    if (op == "<") {
       value = (value < right.value());
     } else if (op == ">") {
       value = (value > right.value());
@@ -331,4 +323,129 @@ DebuggerExpressionParser::ParseState::ParseExpression() {
   }
 
   return value;
+}
+
+std::expected<uint32_t, std::string>
+DebuggerExpressionParser::ParseState::ParseEquality() {
+  auto result = ParseRelational();
+  if (!result.has_value()) {
+    return result;
+  }
+
+  uint32_t value = result.value();
+  SkipWhitespace();
+
+  while (true) {
+    char c = Peek();
+    if (c != '=' && c != '!') {
+      break;
+    }
+
+    std::string op;
+    op += c;
+    if (pos + 1 < input_.size() && input_[pos + 1] == '=') {
+      op += '=';
+    }
+
+    if (op != "==" && op != "!=") {
+      break;
+    }
+
+    Consume();
+    Consume();
+
+    auto right = ParseRelational();
+    if (!right.has_value()) {
+      return right;
+    }
+
+    if (op == "==") {
+      value = (value == right.value());
+    } else if (op == "!=") {
+      value = (value != right.value());
+    }
+    SkipWhitespace();
+  }
+  return value;
+}
+
+std::expected<uint32_t, std::string>
+DebuggerExpressionParser::ParseState::ParseLogicalAnd() {
+  auto result = ParseEquality();
+  if (!result.has_value()) {
+    return result;
+  }
+
+  uint32_t value = result.value();
+  SkipWhitespace();
+
+  while (true) {
+    bool match = false;
+    if (Peek() == '&' && pos + 1 < input_.size() && input_[pos + 1] == '&') {
+      match = true;
+      pos += 2;
+    } else if (input_.size() - pos >= 3) {
+      std::string sub = input_.substr(pos, 3);
+      if (boost::algorithm::iequals(sub, "AND")) {
+        match = true;
+        pos += 3;
+      }
+    }
+
+    if (!match) {
+      break;
+    }
+
+    auto right = ParseEquality();
+    if (!right.has_value()) {
+      return right;
+    }
+
+    value = (value != 0) && (right.value() != 0);
+    SkipWhitespace();
+  }
+  return value;
+}
+
+std::expected<uint32_t, std::string>
+DebuggerExpressionParser::ParseState::ParseLogicalOr() {
+  auto result = ParseLogicalAnd();
+  if (!result.has_value()) {
+    return result;
+  }
+
+  uint32_t value = result.value();
+  SkipWhitespace();
+
+  while (true) {
+    bool match = false;
+    if (Peek() == '|' && pos + 1 < input_.size() && input_[pos + 1] == '|') {
+      match = true;
+      pos += 2;
+    } else if (input_.size() - pos >= 2) {
+      std::string sub = input_.substr(pos, 2);
+      if (boost::algorithm::iequals(sub, "OR")) {
+        match = true;
+        pos += 2;
+      }
+    }
+
+    if (!match) {
+      break;
+    }
+
+    auto right = ParseLogicalAnd();
+    if (!right.has_value()) {
+      return right;
+    }
+
+    value = (value != 0) || (right.value() != 0);
+    SkipWhitespace();
+  }
+  return value;
+}
+
+std::expected<uint32_t, std::string>
+DebuggerExpressionParser::ParseState::ParseExpression() {
+  return ParseLogicalOr();
 }

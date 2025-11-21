@@ -555,7 +555,9 @@ void XBDMDebugger::OnBreakpoint(
         LOG_DEBUGGER(info) << "Condition '" << *condition
                            << "' false, continuing.";
         ContinueThread(thread->thread_id);
-        Go();
+        if (!Go()) {
+          LOG_DEBUGGER(warning) << "Failed to go after ignroed breakpoint";
+        }
         return;
       }
     }
@@ -615,7 +617,9 @@ void XBDMDebugger::OnWatchpoint(
           LOG_DEBUGGER(info)
               << "Condition '" << *condition << "' false, continuing.";
           ContinueThread(thread->thread_id);
-          Go();
+          if (!Go()) {
+            LOG_DEBUGGER(warning) << "Failed to go after ignroed breakpoint";
+          }
           return;
         }
       }
