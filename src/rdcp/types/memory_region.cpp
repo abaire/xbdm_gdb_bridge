@@ -19,7 +19,7 @@ MemoryRegion::MemoryRegion(const RDCPMapResponse& parsed) {
 }
 
 bool MemoryRegion::Contains(uint32_t address, uint32_t length) const {
-  return address >= start && (address + length) < end;
+  return address >= start && (address + length) <= end;
 }
 
 bool MemoryRegion::IsWritable() const {

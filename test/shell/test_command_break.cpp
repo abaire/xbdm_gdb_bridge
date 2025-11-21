@@ -582,4 +582,108 @@ DEBUGGER_TEST_CASE(BreakConditionalTIDFalse) {
   BOOST_CHECK(go_called);
 }
 
+DEBUGGER_TEST_CASE(BreakConditionalMemoryTrue) {
+  uint32_t tid = server->AddThread("main");
+  // 0xDEADBEEF in little endian
+  std::vector<uint8_t> data = {0xEF, 0xBE, 0xAD, 0xDE};
+  server->SetMemoryRegion(0x2000, data);
+
+  auto dbg_iface = std::dynamic_pointer_cast<DebuggerXBOXInterface>(interface);
+  BOOST_REQUIRE(dbg_iface);
+  BOOST_REQUIRE(dbg_iface->AttachDebugger());
+  BOOST_REQUIRE(dbg_iface->Debugger()->FetchThreads());
+  dbg_iface->Debugger()->SetActiveThread(tid);
+
+  std::stringstream capture;
+  CommandBreak cmd;
+  ArgParser args("break addr 0x1000 IF @0x2000 == 0xDEADBEEF");
+
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+  BOOST_CHECK(server->HasBreakpoint(0x1000));
+
+  bool continued = false;
+  server->SetAfterCommandHandler("continue",
+                                 [&](const std::string&) { continued = true; });
+
+  server->SimulateExecutionBreakpoint(0x1000, tid);
+  AwaitQuiescence();
+
+  BOOST_CHECK(!continued);
+  auto thread = dbg_iface->Debugger()->GetThread(tid);
+  BOOST_REQUIRE(thread);
+  BOOST_REQUIRE(thread->last_stop_reason);
+  BOOST_CHECK_EQUAL(thread->last_stop_reason->type, SRT_BREAKPOINT);
+}
+
+DEBUGGER_TEST_CASE(BreakConditionalMemoryFalse) {
+  uint32_t tid = server->AddThread("main");
+  // 0xCAFEBABE in little endian
+  std::vector<uint8_t> data = {0xBE, 0xBA, 0xFE, 0xCA};
+  server->SetMemoryRegion(0x2000, data);
+
+  auto dbg_iface = std::dynamic_pointer_cast<DebuggerXBOXInterface>(interface);
+  BOOST_REQUIRE(dbg_iface);
+  BOOST_REQUIRE(dbg_iface->AttachDebugger());
+  BOOST_REQUIRE(dbg_iface->Debugger()->FetchThreads());
+  dbg_iface->Debugger()->SetActiveThread(tid);
+
+  std::stringstream capture;
+  CommandBreak cmd;
+  ArgParser args("break addr 0x1000 IF @0x2000 == 0xDEADBEEF");
+
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+  BOOST_CHECK(server->HasBreakpoint(0x1000));
+
+  bool continued = false;
+  server->SetAfterCommandHandler("continue",
+                                 [&](const std::string&) { continued = true; });
+  bool go_called = false;
+  server->SetAfterCommandHandler("go",
+                                 [&](const std::string&) { go_called = true; });
+
+  server->SimulateExecutionBreakpoint(0x1000, tid);
+  AwaitQuiescence();
+
+  int retries = 20;
+  while (!continued && retries-- > 0) {
+    std::this_thread::sleep_for(50ms);
+  }
+  BOOST_CHECK(continued);
+  BOOST_CHECK(go_called);
+}
+
+DEBUGGER_TEST_CASE(BreakConditionalRegisterMemory) {
+  uint32_t tid = server->AddThread("main");
+  server->SetThreadRegister(tid, "eax", 0x2000);
+  // 0x12345678 in little endian
+  std::vector<uint8_t> data = {0x78, 0x56, 0x34, 0x12};
+  server->SetMemoryRegion(0x2000, data);
+
+  auto dbg_iface = std::dynamic_pointer_cast<DebuggerXBOXInterface>(interface);
+  BOOST_REQUIRE(dbg_iface);
+  BOOST_REQUIRE(dbg_iface->AttachDebugger());
+  BOOST_REQUIRE(dbg_iface->Debugger()->FetchThreads());
+  dbg_iface->Debugger()->SetActiveThread(tid);
+
+  std::stringstream capture;
+  CommandBreak cmd;
+  ArgParser args("break addr 0x1000 IF @($eax) == 0x12345678");
+
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+  BOOST_CHECK(server->HasBreakpoint(0x1000));
+
+  bool continued = false;
+  server->SetAfterCommandHandler("continue",
+                                 [&](const std::string&) { continued = true; });
+
+  server->SimulateExecutionBreakpoint(0x1000, tid);
+  AwaitQuiescence();
+
+  BOOST_CHECK(!continued);
+  auto thread = dbg_iface->Debugger()->GetThread(tid);
+  BOOST_REQUIRE(thread);
+  BOOST_REQUIRE(thread->last_stop_reason);
+  BOOST_CHECK_EQUAL(thread->last_stop_reason->type, SRT_BREAKPOINT);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

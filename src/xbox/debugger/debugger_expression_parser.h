@@ -2,6 +2,7 @@
 #define XBDM_GDB_BRIDGE_SRC_XBOX_DEBUGGER_EXPRESSION_PARSER_H_
 
 #include <expected>
+#include <functional>
 
 #include "rdcp/types/thread_context.h"
 #include "util/parsing.h"
@@ -11,17 +12,27 @@
  */
 class DebuggerExpressionParser : public ExpressionParser {
  public:
+  using MemoryReader =
+      std::function<std::expected<std::vector<uint8_t>, std::string>(
+          uint32_t address, uint32_t size)>;
+
   DebuggerExpressionParser() = default;
   explicit DebuggerExpressionParser(const ThreadContext& context,
-                                    int32_t thread_id = -1)
-      : context_(context), thread_id_(thread_id) {}
+                                    int32_t thread_id = -1,
+                                    MemoryReader memory_reader = nullptr)
+      : context_(context),
+        thread_id_(thread_id),
+        memory_reader_(std::move(memory_reader)) {}
 
   std::expected<uint32_t, std::string> Parse(const std::string& expr) override;
 
  private:
   struct ParseState {
-    ParseState(const ThreadContext& context, int32_t thread_id)
-        : context_(context), thread_id_(thread_id) {}
+    ParseState(const ThreadContext& context, int32_t thread_id,
+               MemoryReader memory_reader)
+        : context_(context),
+          thread_id_(thread_id),
+          memory_reader_(std::move(memory_reader)) {}
 
     std::expected<uint32_t, std::string> Parse(const std::string& expr);
 
@@ -41,6 +52,7 @@ class DebuggerExpressionParser : public ExpressionParser {
         const std::string& reg) const;
     std::expected<std::string, std::string> ParseRegister();
     std::expected<uint32_t, std::string> ParseNumber();
+    std::expected<uint32_t, std::string> ParseMemory();
     std::expected<uint32_t, std::string> ParseFactor();
     std::expected<uint32_t, std::string> ParseTerm();
     std::expected<uint32_t, std::string> ParseAdditive();
@@ -53,6 +65,7 @@ class DebuggerExpressionParser : public ExpressionParser {
    private:
     const ThreadContext& context_;
     int32_t thread_id_;
+    MemoryReader memory_reader_;
     std::string input_;
     size_t pos{0};
   };
@@ -60,6 +73,7 @@ class DebuggerExpressionParser : public ExpressionParser {
  protected:
   ThreadContext context_;
   int32_t thread_id_{-1};
+  MemoryReader memory_reader_;
 };
 
 #endif  // XBDM_GDB_BRIDGE_SRC_XBOX_DEBUGGER_EXPRESSION_PARSER_H_

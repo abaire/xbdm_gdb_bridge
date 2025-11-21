@@ -2,7 +2,7 @@
 
 std::expected<uint32_t, std::string> DebuggerExpressionParser::Parse(
     const std::string& expr) {
-  ParseState state(context_, thread_id_);
+  ParseState state(context_, thread_id_, memory_reader_);
   return state.Parse(expr);
 }
 
@@ -189,6 +189,71 @@ DebuggerExpressionParser::ParseState::ParseNumber() {
 }
 
 std::expected<uint32_t, std::string>
+DebuggerExpressionParser::ParseState::ParseMemory() {
+  if (Peek() != '@') {
+    return std::unexpected("Expected '@' for memory access");
+  }
+  Consume();
+
+  uint32_t size = 4;
+  std::expected<uint32_t, std::string> address_result;
+
+  if (Peek() == '(') {
+    Consume();
+    address_result = ParseExpression();
+    if (!address_result.has_value()) {
+      return address_result;
+    }
+
+    SkipWhitespace();
+    if (Peek() == ',') {
+      Consume();
+      auto size_result = ParseExpression();
+      if (!size_result.has_value()) {
+        return size_result;
+      }
+      size = size_result.value();
+    }
+
+    if (Peek() != ')') {
+      return std::unexpected("Expected ')'");
+    }
+    Consume();
+  } else {
+    address_result = ParseFactor();
+  }
+
+  if (!address_result.has_value()) {
+    return address_result;
+  }
+
+  if (!memory_reader_) {
+    return std::unexpected("Memory reader not available");
+  }
+
+  if (size > 4) {
+    return std::unexpected("Memory read size too large (max 4 bytes)");
+  }
+
+  auto data_result = memory_reader_(address_result.value(), size);
+  if (!data_result.has_value()) {
+    return std::unexpected(data_result.error());
+  }
+
+  const auto& data = data_result.value();
+  if (data.size() != size) {
+    return std::unexpected("Failed to read requested memory size");
+  }
+
+  uint64_t value = 0;
+  for (size_t i = 0; i < data.size(); ++i) {
+    value |= static_cast<uint64_t>(data[i]) << (i * 8);
+  }
+
+  return static_cast<uint32_t>(value);
+}
+
+std::expected<uint32_t, std::string>
 DebuggerExpressionParser::ParseState::ParseFactor() {
   SkipWhitespace();
 
@@ -212,6 +277,10 @@ DebuggerExpressionParser::ParseState::ParseFactor() {
       return std::unexpected(reg.error());
     }
     return ResolveRegisterValue(reg.value());
+  }
+
+  if (Peek() == '@') {
+    return ParseMemory();
   }
 
   if (input_.substr(pos, 3) == "tid") {

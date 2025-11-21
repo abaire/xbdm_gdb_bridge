@@ -545,6 +545,138 @@ BOOST_AUTO_TEST_CASE(test_tid_not_available) {
 
 BOOST_AUTO_TEST_SUITE_END()
 
+BOOST_AUTO_TEST_SUITE(MemoryAccessTests)
+
+static std::expected<std::vector<uint8_t>, std::string> MockMemoryReader(
+    uint32_t address, uint32_t size) {
+  if (address == 0x1000) {
+    std::vector<uint8_t> data(size);
+    for (uint32_t i = 0; i < size; ++i) {
+      data[i] = static_cast<uint8_t>(i + 1);
+    }
+    return data;
+  }
+  if (address == 0x2000) {
+    std::vector<uint8_t> data = {0x10, 0x20, 0x30, 0x40,
+                                 0x50, 0x60, 0x70, 0x80};
+    if (size > data.size()) {
+      return std::unexpected("Read size too large");
+    }
+    data.resize(size);
+    return data;
+  }
+  return std::unexpected("Memory read failed");
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_simple) {
+  ThreadContext ctx;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  auto result = parser.Parse("@0x1000");
+  BOOST_REQUIRE(result.has_value());
+  // Default size is 4 bytes: 0x04030201 (little endian)
+  BOOST_CHECK_EQUAL(result.value(), 0x04030201);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_with_parens) {
+  ThreadContext ctx;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  auto result = parser.Parse("@(0x1000)");
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0x04030201);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_1_byte) {
+  ThreadContext ctx;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  auto result = parser.Parse("@(0x1000, 1)");
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0x01);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_2_bytes) {
+  ThreadContext ctx;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  auto result = parser.Parse("@(0x1000, 2)");
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0x0201);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_register_address) {
+  ThreadContext ctx;
+  ctx.eax = 0x1000;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  auto result = parser.Parse("@($eax)");
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0x04030201);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_complex_address) {
+  ThreadContext ctx;
+  ctx.eax = 0x1000;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  auto result = parser.Parse("@($eax + 0x1000)");  // 0x2000
+  BOOST_REQUIRE(result.has_value());
+  auto val = result.value();
+  BOOST_CHECK_EQUAL(val, 0x40302010);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_invalid_address) {
+  ThreadContext ctx;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  auto result = parser.Parse("@0x3000");
+  BOOST_REQUIRE(!result.has_value());
+  BOOST_CHECK(result.error().find("Memory read failed") != std::string::npos);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_no_reader) {
+  ThreadContext ctx;
+  DebuggerExpressionParser parser(ctx);
+  auto result = parser.Parse("@0x1000");
+  BOOST_REQUIRE(!result.has_value());
+  BOOST_CHECK(result.error().find("Memory reader not available") !=
+              std::string::npos);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_invalid_size) {
+  ThreadContext ctx;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  auto result = parser.Parse("@(0x1000, 5)");
+  BOOST_REQUIRE(!result.has_value());
+  BOOST_CHECK(result.error().find("size too large") != std::string::npos);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_precedence_vs_equality) {
+  ThreadContext ctx;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  // @0x2000 reads 0x40302010.
+  // Previously, this parsed as @(0x2000 == 0x40302010) -> @0 -> Error
+  auto result = parser.Parse("@0x2000 == 0x40302010");
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 1);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_precedence_vs_arithmetic) {
+  ThreadContext ctx;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  // @0x1000 reads 0x04030201.
+  // This should parse as (@0x1000) + 1, not @(0x1000 + 1).
+  auto result = parser.Parse("@0x1000 + 1");
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0x04030201 + 1);
+}
+
+BOOST_AUTO_TEST_CASE(test_explicit_parens_override_precedence) {
+  ThreadContext ctx;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  // Here we explicitly want the addition to happen before the address lookup.
+  // 0x1000 + 0x1000 = 0x2000. @0x2000 = 0x40302010.
+  auto result = parser.Parse("@(0x1000 + 0x1000)");
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0x40302010);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
 BOOST_AUTO_TEST_SUITE(parsing_suite)
 
 BOOST_AUTO_TEST_CASE(ArgParser_SimpleArithmeticExpression) {
