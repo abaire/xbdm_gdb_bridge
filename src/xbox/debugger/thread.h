@@ -14,7 +14,7 @@ class XBDMContext;
 struct Thread {
   static constexpr uint32_t kTrapFlag = 0x100;
 
-  explicit Thread(int thread_id) : thread_id(thread_id) {}
+  explicit Thread(uint32_t thread_id) : thread_id(thread_id) {}
 
   bool FetchInfoSync(XBDMContext& ctx);
   bool FetchContextSync(XBDMContext& ctx);
@@ -44,7 +44,7 @@ struct Thread {
   friend std::ostream& operator<<(std::ostream& os, const Thread& t);
 
  public:
-  int thread_id;
+  uint32_t thread_id;
   std::optional<int32_t> suspend_count;
   std::optional<int32_t> priority;
   std::optional<uint32_t> tls_base;

@@ -339,7 +339,8 @@ void GDBBridge::HandleReadGeneralRegisters(const GDBPacket& packet) {
   }
 
   if (!thread_id) {
-    thread_id = debugger_->AnyThreadID();
+    auto id = debugger_->AnyThreadID();
+    thread_id = id ? static_cast<int32_t>(*id) : -1;
   }
   auto thread = debugger_->GetThread(thread_id);
   if (!thread) {
@@ -490,7 +491,8 @@ void GDBBridge::HandleReadRegister(const GDBPacket& packet) {
   }
 
   if (!thread_id) {
-    thread_id = debugger_->AnyThreadID();
+    auto id = debugger_->AnyThreadID();
+    thread_id = id ? static_cast<int32_t>(*id) : -1;
   }
   auto thread = debugger_->GetThread(thread_id);
   if (!thread) {
@@ -555,7 +557,8 @@ void GDBBridge::HandleWriteRegister(const GDBPacket& packet) {
   }
 
   if (!thread_id) {
-    thread_id = debugger_->AnyThreadID();
+    auto id = debugger_->AnyThreadID();
+    thread_id = id ? static_cast<int32_t>(*id) : -1;
   }
   auto thread = debugger_->GetThread(thread_id);
   if (!thread) {
@@ -1173,7 +1176,10 @@ void GDBBridge::HandleThreadInfoStart() {
     return;
   }
 
-  thread_info_buffer_ = debugger_->GetThreadIDs();
+  thread_info_buffer_.clear();
+  for (auto id : debugger_->GetThreadIDs()) {
+    thread_info_buffer_.push_back(static_cast<int32_t>(id));
+  }
   SendThreadInfoBuffer(false);
 }
 
@@ -1211,12 +1217,15 @@ void GDBBridge::SendThreadInfoBuffer(bool send_all) {
 void GDBBridge::HandleQueryTraceStatus() { SendEmpty(); }
 
 void GDBBridge::HandleQueryCurrentThreadID() {
-  int32_t thread_id = debugger_->AnyThreadID();
-  if (thread_id >= 0) {
-    char buffer[32] = {0};
-    snprintf(buffer, 31, "QC%x", thread_id);
-    gdb_->Send(GDBPacket(buffer));
-    return;
+  auto maybe_id = debugger_->AnyThreadID();
+  if (maybe_id) {
+    auto thread_id = static_cast<int32_t>(*maybe_id);
+    if (thread_id >= 0) {
+      char buffer[32] = {0};
+      snprintf(buffer, 31, "QC%x", thread_id);
+      gdb_->Send(GDBPacket(buffer));
+      return;
+    }
   }
 
   SendEmpty();

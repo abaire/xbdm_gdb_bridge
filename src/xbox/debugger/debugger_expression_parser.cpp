@@ -320,10 +320,10 @@ std::expected<uint32_t, std::string> DebuggerExpressionParser::ParsePrefix(
 
     case TokenType::IDENTIFIER:
       if (token.literal == "tid") {
-        if (thread_id_ == -1) {
+        if (!thread_id_) {
           return std::unexpected("Thread ID not available in this context");
         }
-        return thread_id_;
+        return *thread_id_;
       }
       return std::unexpected("Unknown identifier: " + token.literal);
 

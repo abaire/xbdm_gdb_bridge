@@ -102,8 +102,8 @@ Command::Result DebuggerCommandSetActiveThread::operator()(
     return HANDLED;
   }
 
-  ArgParser parser(args);
-  int thread_id;
+  const ArgParser& parser(args);
+  uint32_t thread_id;
   if (!parser.Parse(0, thread_id)) {
     out << "Missing required thread_id argument." << std::endl;
     PrintUsage();
@@ -151,7 +151,7 @@ Command::Result DebuggerCommandGetThreads::operator()(
 
   auto active_thread_id = debugger->ActiveThreadID();
   for (auto& thread : debugger->Threads()) {
-    if (thread->thread_id == active_thread_id) {
+    if (active_thread_id && thread->thread_id == *active_thread_id) {
       out << "[Active thread]" << std::endl;
     }
     out << *thread << std::endl;

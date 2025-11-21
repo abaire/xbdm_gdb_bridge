@@ -61,6 +61,21 @@ struct ExpressionParser {
       const std::string& expr) = 0;
 };
 
+namespace detail {
+template <typename T, typename = void>
+struct ParseHelper;
+
+template <typename T>
+struct ParseHelper<T, std::enable_if_t<std::is_signed<T>::value>> {
+  static T Parse(const std::string& s) { return ParseInt32(s); }
+};
+
+template <typename T>
+struct ParseHelper<T, std::enable_if_t<std::is_unsigned<T>::value>> {
+  static T Parse(const std::string& s) { return ParseUint32(s); }
+};
+}  // namespace detail
+
 /**
  * Parses shell command strings.
  */
@@ -71,7 +86,7 @@ struct ArgParser {
     Enum val;
     std::string message;  // Stores error details if val == SYNTAX_ERROR
 
-    ArgType(Enum v = NOT_FOUND) : val(v) {}
+    explicit ArgType(Enum v = NOT_FOUND) : val(v) {}
     ArgType(Enum v, std::string msg) : val(v), message(std::move(msg)) {}
 
     explicit operator bool() const {
@@ -114,7 +129,7 @@ struct ArgParser {
 
     arguments.reserve(args.size());
     for (const auto& s : args) {
-      arguments.emplace_back(s, ArgType::BASIC);
+      arguments.emplace_back(s, ArgType{ArgType::BASIC});
     }
   }
 
@@ -204,16 +219,16 @@ struct ArgParser {
       std::enable_if_t<std::is_integral<T>::value && sizeof(T) == 4, int> = 0>
   ArgType Parse(int arg_index, T& ret) const {
     if (arg_index < 0 || arg_index >= static_cast<int>(arguments.size())) {
-      return ArgType::NOT_FOUND;
+      return ArgType{ArgType::NOT_FOUND};
     }
 
-    ret = ParseInt32(arguments[arg_index].value);
+    ret = detail::ParseHelper<T>::Parse(arguments[arg_index].value);
     return arguments[arg_index].type;
   }
 
   ArgType Parse(int arg_index, bool& ret) const {
     if (arg_index < 0 || arg_index >= static_cast<int>(arguments.size())) {
-      return ArgType::NOT_FOUND;
+      return ArgType{ArgType::NOT_FOUND};
     }
 
     std::string param = arguments[arg_index].value;
@@ -227,7 +242,7 @@ struct ArgParser {
 
   ArgType Parse(int arg_index, std::string& ret) const {
     if (arg_index < 0 || arg_index >= static_cast<int>(arguments.size())) {
-      return ArgType::NOT_FOUND;
+      return ArgType{ArgType::NOT_FOUND};
     }
 
     ret = arguments[arg_index].value;
@@ -244,7 +259,7 @@ struct ArgParser {
       std::enable_if_t<std::is_integral<T>::value && sizeof(T) == 4, int> = 0>
   ArgType Parse(int arg_index, T& ret, ExpressionParser& expr_parser) const {
     if (arg_index < 0 || arg_index >= static_cast<int>(arguments.size())) {
-      return ArgType::NOT_FOUND;
+      return ArgType{ArgType::NOT_FOUND};
     }
 
     const auto& arg = arguments[arg_index];
@@ -259,7 +274,7 @@ struct ArgParser {
       return {ArgType::SYNTAX_ERROR, result.error()};
     }
 
-    ret = ParseInt32(arg.value);
+    ret = detail::ParseHelper<T>::Parse(arg.value);
     return arg.type;
   }
 
