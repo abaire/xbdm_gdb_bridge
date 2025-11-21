@@ -549,16 +549,22 @@ void XBDMDebugger::OnBreakpoint(
   if (condition) {
     thread->FetchContextSync(*context_);
     if (thread->context.has_value()) {
-      DebuggerExpressionParser parser(*thread->context, thread->thread_id);
+      DebuggerExpressionParser parser(*thread->context, thread->thread_id,
+                                      CreateMemoryReader());
       auto result = parser.Parse(*condition);
-      if (result.has_value() && result.value() == 0) {
-        LOG_DEBUGGER(info) << "Condition '" << *condition
-                           << "' false, continuing.";
-        ContinueThread(thread->thread_id);
-        if (!Go()) {
-          LOG_DEBUGGER(warning) << "Failed to go after ignroed breakpoint";
+      if (result.has_value()) {
+        if (*result == 0) {
+          LOG_DEBUGGER(info)
+              << "Condition '" << *condition << "' false, continuing.";
+          ContinueThread(thread->thread_id);
+          if (!Go()) {
+            LOG_DEBUGGER(warning) << "Failed to go after ignored breakpoint";
+          }
+          return;
         }
-        return;
+      } else {
+        LOG_DEBUGGER(warning) << "Failed to parse condition '" << *condition
+                              << "': '" << result.error() << "'";
       }
     }
   }
@@ -611,16 +617,22 @@ void XBDMDebugger::OnWatchpoint(
     if (condition) {
       thread->FetchContextSync(*context_);
       if (thread->context.has_value()) {
-        DebuggerExpressionParser parser(*thread->context, thread->thread_id);
+        DebuggerExpressionParser parser(*thread->context, thread->thread_id,
+                                        CreateMemoryReader());
         auto result = parser.Parse(*condition);
-        if (result.has_value() && result.value() == 0) {
-          LOG_DEBUGGER(info)
-              << "Condition '" << *condition << "' false, continuing.";
-          ContinueThread(thread->thread_id);
-          if (!Go()) {
-            LOG_DEBUGGER(warning) << "Failed to go after ignroed breakpoint";
+        if (result.has_value()) {
+          if (*result == 0) {
+            LOG_DEBUGGER(info)
+                << "Condition '" << *condition << "' false, continuing.";
+            ContinueThread(thread->thread_id);
+            if (!Go()) {
+              LOG_DEBUGGER(warning) << "Failed to go after ignored breakpoint";
+            }
+            return;
           }
-          return;
+        } else {
+          LOG_DEBUGGER(warning) << "Failed to parse condition '" << *condition
+                                << "': '" << result.error() << "'";
         }
       }
     }
@@ -1009,6 +1021,18 @@ bool XBDMDebugger::Halt() {
   return thread->Halt(*context_);
 }
 
+DebuggerExpressionParser::MemoryReader XBDMDebugger::CreateMemoryReader() {
+  return [this](uint32_t address, uint32_t size)
+             -> std::expected<std::vector<uint8_t>, std::string> {
+    auto mem = GetMemory(address, size);
+    if (!mem.has_value()) {
+      return std::unexpected("Failed to read memory at " +
+                             std::to_string(address));
+    }
+    return mem.value();
+  };
+}
+
 std::optional<std::vector<uint8_t>> XBDMDebugger::GetMemory(uint32_t address,
                                                             uint32_t length) {
   if (!ValidateMemoryAccess(address, length)) {
@@ -1115,6 +1139,7 @@ bool XBDMDebugger::RemoveWriteWatch(uint32_t address, uint32_t length) {
 
 bool XBDMDebugger::ValidateMemoryAccess(uint32_t address, uint32_t length,
                                         bool is_write) {
+  assert(length && "Zero sized memory access");
   std::lock_guard lock(memory_regions_lock_);
   if (memory_regions_.empty()) {
     LOG_DEBUGGER(warning) << "No memory regions mapped, assuming access is OK.";
@@ -1122,7 +1147,7 @@ bool XBDMDebugger::ValidateMemoryAccess(uint32_t address, uint32_t length,
   }
 
   uint32_t start = address;
-  uint32_t end = address + length;
+  uint32_t end = address + length - 1;
   for (auto& region : memory_regions_) {
     if (region->Contains(start)) {
       if (region->Contains(end)) {

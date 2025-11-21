@@ -8,6 +8,7 @@
 #include <mutex>
 #include <string>
 
+#include "debugger_expression_parser.h"
 #include "rdcp/types/execution_state.h"
 #include "rdcp/types/memory_region.h"
 #include "rdcp/types/module.h"
@@ -163,6 +164,8 @@ class XBDMDebugger {
   [[nodiscard]] bool BreakAtStart() const;
   bool SetDebugger(bool enabled);
   bool RestartAndReconnect(uint32_t reboot_flags);
+
+  DebuggerExpressionParser::MemoryReader CreateMemoryReader();
 
   //! Waits up to max_wait_milliseconds for the target to enter the given
   //! ExecutionState.
