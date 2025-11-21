@@ -545,8 +545,6 @@ BOOST_AUTO_TEST_CASE(test_tid_not_available) {
 
 BOOST_AUTO_TEST_SUITE_END()
 
-BOOST_AUTO_TEST_SUITE(MemoryAccessTests)
-
 static std::expected<std::vector<uint8_t>, std::string> MockMemoryReader(
     uint32_t address, uint32_t size) {
   if (address == 0x123) {
@@ -558,10 +556,11 @@ static std::expected<std::vector<uint8_t>, std::string> MockMemoryReader(
     return data;
   }
 
-  if (address == 0x1000) {
+  if (address >= 0x1000 && address < 0x1100) {
+    uint32_t offset = address - 0x1000;
     std::vector<uint8_t> data(size);
     for (uint32_t i = 0; i < size; ++i) {
-      data[i] = static_cast<uint8_t>(i + 1);
+      data[i] = static_cast<uint8_t>(offset + i + 1);
     }
     return data;
   }
@@ -577,6 +576,8 @@ static std::expected<std::vector<uint8_t>, std::string> MockMemoryReader(
   }
   return std::unexpected("Memory read failed");
 }
+
+BOOST_AUTO_TEST_SUITE(MemoryAccessTests)
 
 BOOST_AUTO_TEST_CASE(test_memory_read_simple) {
   ThreadContext ctx;
@@ -701,6 +702,115 @@ BOOST_AUTO_TEST_CASE(test_nested_dereference_raw) {
   auto result = parser.Parse("@@0x123");
   BOOST_REQUIRE(result.has_value());
   BOOST_CHECK_EQUAL(result.value(), 0x40302010);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(BracketOffsetTests)
+
+BOOST_AUTO_TEST_CASE(test_memory_read_bracket_offset_simple) {
+  ThreadContext ctx;
+  ctx.eax = 0x1000;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  // @$eax is @0x1000 -> 0x04030201
+  // We want @0x1004 -> ?
+  // MockMemoryReader(0x1000, size) returns bytes [1, 2, 3, ...]
+  // So @0x1000 = 0x04030201
+  // @0x1004 = 0x08070605
+
+  // We'll test @$eax[4], which should access 0x1004.
+  // 0x1004 in MockReader -> 5, 6, 7, 8 -> 0x08070605
+  auto result = parser.Parse("@$eax[4]");
+
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0x08070605);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_bracket_offset_hex) {
+  ThreadContext ctx;
+  ctx.eax = 0x1000;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  // @$eax[0x4] -> @0x1004 -> 0x08070605
+  auto result = parser.Parse("@$eax[0x4]");
+
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0x08070605);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_bracket_offset_arithmetic) {
+  ThreadContext ctx;
+  ctx.eax = 0x1000;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  // @$eax[2+2] -> @0x1004
+  auto result = parser.Parse("@$eax[2+2]");
+
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0x08070605);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_bracket_offset_register) {
+  ThreadContext ctx;
+  ctx.eax = 0x1000;
+  ctx.ebx = 4;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  // @$eax[$ebx] -> @0x1004
+  auto result = parser.Parse("@$eax[$ebx]");
+
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0x08070605);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_bracket_offset_nested) {
+  ThreadContext ctx;
+  ctx.eax = 0x1000;
+  ctx.ebx = 2;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  // @$eax[($ebx * 2)] -> @0x1004
+  auto result = parser.Parse("@$eax[($ebx * 2)]");
+
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0x08070605);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_bracket_offset_zero) {
+  ThreadContext ctx;
+  ctx.eax = 0x1000;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  // @$eax[0] -> @0x1000
+  auto result = parser.Parse("@$eax[0]");
+
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0x04030201);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_bracket_missing_closing) {
+  ThreadContext ctx;
+  ctx.eax = 0x1000;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  auto result = parser.Parse("@$eax[4");
+
+  BOOST_REQUIRE(!result.has_value());
+  BOOST_CHECK(result.error().find("Expected ']'") != std::string::npos);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_bracket_empty) {
+  ThreadContext ctx;
+  ctx.eax = 0x1000;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  auto result = parser.Parse("@$eax[]");
+
+  BOOST_REQUIRE(!result.has_value());
+  BOOST_CHECK(result.error().find("Unexpected token") != std::string::npos);
+}
+
+BOOST_AUTO_TEST_CASE(test_memory_read_bracket_on_immediate) {
+  ThreadContext ctx;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+  // @0x1000[4] -> @0x1004
+  auto result = parser.Parse("@0x1000[4]");
+
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0x08070605);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
