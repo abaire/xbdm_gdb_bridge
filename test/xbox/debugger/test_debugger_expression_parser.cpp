@@ -549,6 +549,15 @@ BOOST_AUTO_TEST_SUITE(MemoryAccessTests)
 
 static std::expected<std::vector<uint8_t>, std::string> MockMemoryReader(
     uint32_t address, uint32_t size) {
+  if (address == 0x123) {
+    std::vector<uint8_t> data = {0x00, 0x20, 0x00, 0x00};
+    if (size > data.size()) {
+      return std::unexpected("Read size too large");
+    }
+    data.resize(size);
+    return data;
+  }
+
   if (address == 0x1000) {
     std::vector<uint8_t> data(size);
     for (uint32_t i = 0; i < size; ++i) {
@@ -556,6 +565,7 @@ static std::expected<std::vector<uint8_t>, std::string> MockMemoryReader(
     }
     return data;
   }
+
   if (address == 0x2000) {
     std::vector<uint8_t> data = {0x10, 0x20, 0x30, 0x40,
                                  0x50, 0x60, 0x70, 0x80};
@@ -671,6 +681,24 @@ BOOST_AUTO_TEST_CASE(test_explicit_parens_override_precedence) {
   // Here we explicitly want the addition to happen before the address lookup.
   // 0x1000 + 0x1000 = 0x2000. @0x2000 = 0x40302010.
   auto result = parser.Parse("@(0x1000 + 0x1000)");
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0x40302010);
+}
+
+BOOST_AUTO_TEST_CASE(test_nested_dereference) {
+  ThreadContext ctx;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+
+  auto result = parser.Parse("@(@0x123)");
+  BOOST_REQUIRE(result.has_value());
+  BOOST_CHECK_EQUAL(result.value(), 0x40302010);
+}
+
+BOOST_AUTO_TEST_CASE(test_nested_dereference_raw) {
+  ThreadContext ctx;
+  DebuggerExpressionParser parser(ctx, -1, MockMemoryReader);
+
+  auto result = parser.Parse("@@0x123");
   BOOST_REQUIRE(result.has_value());
   BOOST_CHECK_EQUAL(result.value(), 0x40302010);
 }
