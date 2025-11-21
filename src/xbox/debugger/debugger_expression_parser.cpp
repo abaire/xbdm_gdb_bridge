@@ -198,6 +198,16 @@ std::expected<void, std::string> DebuggerExpressionParser::Tokenize(
         ++i;
         break;
 
+      case '[':
+        tokens_.push_back({TokenType::LBRACKET, "[", 0, start});
+        ++i;
+        break;
+
+      case ']':
+        tokens_.push_back({TokenType::RBRACKET, "]", 0, start});
+        ++i;
+        break;
+
       case ',':
         tokens_.push_back({TokenType::COMMA, ",", 0, start});
         ++i;
@@ -392,7 +402,24 @@ std::expected<uint32_t, std::string> DebuggerExpressionParser::ParsePrefix(
       if (!addr_res) {
         return addr_res;
       }
-      return perform_read(*addr_res, 4);
+
+      uint32_t addr = *addr_res;
+
+      // Check for optional bracket offset: [expression]
+      if (Peek().type == TokenType::LBRACKET) {
+        Consume();
+        auto offset_res = ParseExpression(Precedence::LOWEST);
+        if (!offset_res) {
+          return offset_res;
+        }
+        if (Peek().type != TokenType::RBRACKET) {
+          return std::unexpected("Expected ']'");
+        }
+        Consume();
+        addr += *offset_res;
+      }
+
+      return perform_read(addr, 4);
     }
 
     default:

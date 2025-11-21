@@ -47,9 +47,11 @@ enum class TokenType {
   AND,  // &&, AND
   OR,   // ||, OR
 
-  LPAREN,  // (
-  RPAREN,  // )
-  COMMA    // ,
+  LPAREN,    // (
+  RPAREN,    // )
+  COMMA,     // ,
+  LBRACKET,  // [
+  RBRACKET   // ]
 };
 
 struct Token {
