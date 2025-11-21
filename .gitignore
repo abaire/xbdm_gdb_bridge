@@ -14,3 +14,6 @@ bin/
 __pycache__/
 build/
 cmake-build*/
+
+# Prevent AI agents from including the nxdk when they ignore the AGENTS.md instruction
+nxdk/
