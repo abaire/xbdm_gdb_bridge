@@ -227,56 +227,80 @@ bool XBDMDebugger::DebugXBE(const std::string& path,
 }
 
 std::list<std::shared_ptr<Thread>> XBDMDebugger::Threads() {
-  std::unique_lock<std::recursive_mutex> lock(threads_lock_);
+  std::unique_lock lock(threads_lock_);
   return threads_;
 }
 
 std::list<std::shared_ptr<Module>> XBDMDebugger::Modules() {
-  std::unique_lock<std::recursive_mutex> lock(modules_lock_);
+  std::unique_lock lock(modules_lock_);
   return modules_;
 }
 std::list<std::shared_ptr<Section>> XBDMDebugger::Sections() {
-  std::unique_lock<std::recursive_mutex> lock(sections_lock_);
+  std::unique_lock lock(sections_lock_);
   return sections_;
 }
 
-std::vector<int32_t> XBDMDebugger::GetThreadIDs() {
-  std::unique_lock<std::recursive_mutex> lock(threads_lock_);
-  std::vector<int32_t> ret;
+std::vector<uint32_t> XBDMDebugger::GetThreadIDs() {
+  std::unique_lock lock(threads_lock_);
+  std::vector<uint32_t> ret;
   if (threads_.empty()) {
     return {};
   }
   ret.reserve(threads_.size());
 
-  int32_t active_thread_id = ActiveThreadID();
-  if (active_thread_id > 0) {
-    ret.push_back(active_thread_id);
+  if (active_thread_id_) {
+    ret.push_back(*active_thread_id_);
   }
 
   for (auto& thread : threads_) {
-    if (thread->thread_id == active_thread_id) {
+    if (active_thread_id_ && thread->thread_id == *active_thread_id_) {
       continue;
     }
     ret.push_back(thread->thread_id);
   }
-  return std::move(ret);
+  return ret;
+}
+
+std::optional<uint32_t> XBDMDebugger::ActiveThreadID() {
+  auto thread = ActiveThread();
+  if (thread) {
+    return thread->thread_id;
+  }
+  return std::nullopt;
 }
 
 std::shared_ptr<Thread> XBDMDebugger::ActiveThread() {
-  return GetThread(active_thread_id_);
+  const std::lock_guard lock(threads_lock_);
+  if (!active_thread_id_) {
+    return nullptr;
+  }
+  return GetThread(*active_thread_id_);
+}
+
+std::optional<uint32_t> XBDMDebugger::AnyThreadID() {
+  const std::lock_guard lock(threads_lock_);
+  if (threads_.empty()) {
+    return std::nullopt;
+  }
+
+  if (active_thread_id_) {
+    return active_thread_id_;
+  }
+
+  return threads_.front()->thread_id;
 }
 
 std::shared_ptr<Thread> XBDMDebugger::GetAnyThread() {
-  return GetThread(AnyThreadID());
-}
-
-std::shared_ptr<Thread> XBDMDebugger::GetThread(int thread_id) {
-  if (thread_id < 0) {
+  auto thread_id = AnyThreadID();
+  if (!thread_id) {
     return nullptr;
   }
+  return GetThread(*thread_id);
+}
 
+std::shared_ptr<Thread> XBDMDebugger::GetThread(uint32_t thread_id) {
   const std::lock_guard lock(threads_lock_);
-  for (auto thread : threads_) {
+  for (auto& thread : threads_) {
     if (thread->thread_id == thread_id) {
       return thread;
     }
@@ -287,7 +311,7 @@ std::shared_ptr<Thread> XBDMDebugger::GetThread(int thread_id) {
 std::shared_ptr<Thread> XBDMDebugger::GetFirstStoppedThread() {
   LOG_DEBUGGER(trace) << "Looking for first stopped thread";
   std::list<std::shared_ptr<Thread>> threads;
-  int active_thread_id;
+  std::optional<uint32_t> active_thread_id;
   {
     const std::lock_guard lock(threads_lock_);
     if (threads_.empty()) {
@@ -305,8 +329,8 @@ std::shared_ptr<Thread> XBDMDebugger::GetFirstStoppedThread() {
     return active_thread;
   }
 
-  for (auto thread : threads) {
-    if (thread->thread_id == active_thread_id) {
+  for (auto& thread : threads) {
+    if (active_thread_id && thread->thread_id == *active_thread_id) {
       continue;
     }
     if (thread->FetchStopReasonSync(*context_) && thread->stopped) {
@@ -318,16 +342,16 @@ std::shared_ptr<Thread> XBDMDebugger::GetFirstStoppedThread() {
   return nullptr;
 }
 
-bool XBDMDebugger::SetActiveThread(int thread_id) {
+bool XBDMDebugger::SetActiveThread(uint32_t thread_id) {
   const std::lock_guard lock(threads_lock_);
-  for (auto thread : threads_) {
+  for (auto& thread : threads_) {
     if (thread->thread_id == thread_id) {
       active_thread_id_ = thread_id;
       return true;
     }
   }
 
-  active_thread_id_ = -1;
+  active_thread_id_ = std::nullopt;
   return false;
 }
 
@@ -438,21 +462,21 @@ void XBDMDebugger::OnDebugStr(
 void XBDMDebugger::OnModuleLoaded(
     const std::shared_ptr<NotificationModuleLoaded>& msg) {
   LOG_DEBUGGER(info) << "Module loaded";
-  std::unique_lock<std::recursive_mutex> lock(modules_lock_);
+  std::unique_lock lock(modules_lock_);
   modules_.push_back(std::make_shared<Module>(msg->module));
   FetchMemoryMap();
 }
 
 void XBDMDebugger::OnSectionLoaded(
     const std::shared_ptr<NotificationSectionLoaded>& msg) {
-  std::unique_lock<std::recursive_mutex> lock(sections_lock_);
+  std::unique_lock lock(sections_lock_);
   sections_.push_back(std::make_shared<Section>(msg->section));
   FetchMemoryMap();
 }
 
 void XBDMDebugger::OnSectionUnloaded(
     const std::shared_ptr<NotificationSectionUnloaded>& msg) {
-  std::unique_lock<std::recursive_mutex> lock(sections_lock_);
+  std::unique_lock lock(sections_lock_);
   auto& section = msg->section;
   sections_.remove_if([&section](const std::shared_ptr<Section>& other) {
     if (!other) {
@@ -468,7 +492,7 @@ void XBDMDebugger::OnThreadCreated(
     const std::shared_ptr<NotificationThreadCreated>& msg) {
   LOG_DEBUGGER(info) << "Thread created: " << msg->thread_id;
   const std::lock_guard lock(threads_lock_);
-  for (auto thread : threads_) {
+  for (auto& thread : threads_) {
     if (thread->thread_id == msg->thread_id) {
       LOG_DEBUGGER(warning)
           << "Ignoring duplicate thread creation for " << msg->thread_id;
@@ -486,8 +510,8 @@ void XBDMDebugger::OnThreadTerminated(
   for (auto it = threads_.begin(); it != threads_.end(); ++it) {
     auto& thread = *it;
     if (thread->thread_id == msg->thread_id) {
-      if (thread->thread_id == active_thread_id_) {
-        active_thread_id_ = -1;
+      if (active_thread_id_ && thread->thread_id == *active_thread_id_) {
+        active_thread_id_ = std::nullopt;
       }
       threads_.erase(it);
       return;
@@ -918,8 +942,8 @@ bool XBDMDebugger::StepInstruction() {
 }
 
 bool XBDMDebugger::StepFunction() {
-  int thread_id = ActiveThreadID();
-  if (thread_id < 0) {
+  auto thread_id = ActiveThreadID();
+  if (!thread_id) {
     return false;
   }
 
@@ -928,7 +952,7 @@ bool XBDMDebugger::StepFunction() {
   }
 
   bool ret = true;
-  auto request = std::make_shared<::FuncCall>(thread_id);
+  auto request = std::make_shared<::FuncCall>(*thread_id);
   context_->SendCommandSync(request);
   ret = request->IsOK();
   return Go() && ret;
@@ -946,7 +970,8 @@ bool XBDMDebugger::ContinueAll(bool no_break_on_exception) {
   return ret;
 }
 
-bool XBDMDebugger::ContinueThread(int thread_id, bool no_break_on_exception) {
+bool XBDMDebugger::ContinueThread(uint32_t thread_id,
+                                  bool no_break_on_exception) {
   auto thread = GetThread(thread_id);
   if (!thread) {
     LOG_DEBUGGER(error) << "Failed to continue unknown thread " << thread_id;

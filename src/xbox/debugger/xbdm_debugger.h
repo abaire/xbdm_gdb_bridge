@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 
 #include "debugger_expression_parser.h"
@@ -62,39 +63,22 @@ class XBDMDebugger {
   [[nodiscard]] std::shared_ptr<Module> GetModule(
       const std::string& module_name) const;
 
-  std::vector<int32_t> GetThreadIDs();
+  std::vector<uint32_t> GetThreadIDs();
 
-  [[nodiscard]] int ActiveThreadID() {
-    std::shared_ptr<Thread> thread = ActiveThread();
-    if (thread) {
-      return thread->thread_id;
-    }
-    return -1;
-  }
+  [[nodiscard]] std::optional<uint32_t> ActiveThreadID();
 
   [[nodiscard]] std::shared_ptr<Thread> ActiveThread();
 
   //! Returns an arbitrary thread ID, preferring the active thread.
-  [[nodiscard]] int AnyThreadID() {
-    if (threads_.empty()) {
-      return -1;
-    }
-
-    auto active_thread = ActiveThread();
-    if (active_thread) {
-      return active_thread->thread_id;
-    }
-
-    return threads_.front()->thread_id;
-  }
+  [[nodiscard]] std::optional<uint32_t> AnyThreadID();
 
   [[nodiscard]] std::shared_ptr<Thread> GetAnyThread();
 
-  [[nodiscard]] std::shared_ptr<Thread> GetThread(int thread_id);
+  [[nodiscard]] std::shared_ptr<Thread> GetThread(uint32_t thread_id);
 
   [[nodiscard]] std::shared_ptr<Thread> GetFirstStoppedThread();
 
-  bool SetActiveThread(int thread_id);
+  bool SetActiveThread(uint32_t thread_id);
 
   [[nodiscard]] const std::list<std::shared_ptr<Module>>& Modules() const {
     return modules_;
@@ -105,7 +89,7 @@ class XBDMDebugger {
   }
 
   bool ContinueAll(bool no_break_on_exception = false);
-  bool ContinueThread(int thread_id, bool no_break_on_exception = false);
+  bool ContinueThread(uint32_t thread_id, bool no_break_on_exception = false);
   bool HaltAll(
       uint32_t optimistic_max_wait = kDefaultHaltAllMaxWaitMilliseconds);
   //! Halts the active thread.
@@ -200,7 +184,7 @@ class XBDMDebugger {
   std::condition_variable state_condition_variable_;
   ExecutionState state_{S_INVALID};
 
-  int active_thread_id_{-1};
+  std::optional<uint32_t> active_thread_id_;
 
   mutable std::recursive_mutex threads_lock_;
   std::list<std::shared_ptr<Thread>> threads_;

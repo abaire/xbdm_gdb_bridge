@@ -47,14 +47,14 @@ std::vector<ArgParser::Argument> ArgParser::Tokenize(std::string_view input) {
   bool in_quote = false;
   int paren_depth = 0;
   bool token_dirty = false;
-  ArgType current_type = ArgType::BASIC;
+  ArgType current_type = ArgType{ArgType::BASIC};
 
   auto flush_token = [&]() {
     if (token_dirty) {
       args.push_back({current_token, current_type});
       current_token.clear();
       token_dirty = false;
-      current_type = ArgType::BASIC;
+      current_type = ArgType{ArgType::BASIC};
     }
   };
 
@@ -86,11 +86,11 @@ std::vector<ArgParser::Argument> ArgParser::Tokenize(std::string_view input) {
       } else if (c == '"') {
         in_quote = true;
         token_dirty = true;
-        current_type = ArgType::QUOTED;
+        current_type = ArgType{ArgType::QUOTED};
       } else if (c == '(') {
         paren_depth = 1;
         token_dirty = true;
-        current_type = ArgType::PARENTHESIZED;
+        current_type = ArgType{ArgType::PARENTHESIZED};
       } else {
         current_token += c;
         token_dirty = true;

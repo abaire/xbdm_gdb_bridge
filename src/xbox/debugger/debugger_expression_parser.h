@@ -71,9 +71,10 @@ class DebuggerExpressionParser : public ExpressionParser {
           uint32_t address, uint32_t size)>;
 
   DebuggerExpressionParser() = default;
-  explicit DebuggerExpressionParser(const ThreadContext& context,
-                                    int32_t thread_id = -1,
-                                    MemoryReader memory_reader = nullptr)
+  explicit DebuggerExpressionParser(
+      const ThreadContext& context,
+      std::optional<uint32_t> thread_id = std::nullopt,
+      MemoryReader memory_reader = nullptr)
       : context_(context),
         thread_id_(thread_id),
         memory_reader_(std::move(memory_reader)) {}
@@ -82,7 +83,7 @@ class DebuggerExpressionParser : public ExpressionParser {
 
  protected:
   ThreadContext context_;
-  int32_t thread_id_{-1};
+  std::optional<uint32_t> thread_id_;
   MemoryReader memory_reader_;
 
  private:
