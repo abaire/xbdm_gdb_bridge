@@ -523,13 +523,25 @@ Command::Result CommandGetMem::operator()(XBOXInterface& interface,
                                           std::ostream& out) {
   uint32_t address;
   uint32_t size;
-  if (!parser.Parse(0, address, interface.GetExpressionParser())) {
-    out << "Missing required address argument." << std::endl;
+
+  auto result = parser.Parse(0, address, interface.GetExpressionParser());
+  if (!result) {
+    if (result == ArgParser::ArgType::SYNTAX_ERROR) {
+      out << "Syntax error " << result.message << std::endl;
+    } else {
+      out << "Missing required address argument." << std::endl;
+    }
     PrintUsage();
     return HANDLED;
   }
-  if (!parser.Parse(1, size, interface.GetExpressionParser())) {
-    out << "Missing required size argument." << std::endl;
+
+  result = parser.Parse(1, size, interface.GetExpressionParser());
+  if (!result) {
+    if (result == ArgParser::ArgType::SYNTAX_ERROR) {
+      out << "Syntax error " << result.message << std::endl;
+    } else {
+      out << "Missing required size argument." << std::endl;
+    }
     PrintUsage();
     return HANDLED;
   }

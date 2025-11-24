@@ -2,6 +2,19 @@
 
 static constexpr char kCommandDelimiter[] = "&&";
 
+namespace {
+
+int GetIntegerBase(const std::string& value) {
+  int base = 10;
+  if (value.size() > 2 && value[0] == '0' &&
+      (value[1] == 'x' || value[1] == 'X')) {
+    base = 16;
+  }
+  return base;
+}
+
+}  // namespace
+
 int32_t ParseInt32(const std::vector<uint8_t>& data) {
   std::string value(reinterpret_cast<const char*>(data.data()), data.size());
   return ParseInt32(value);
@@ -13,12 +26,20 @@ int32_t ParseInt32(const std::vector<char>& data) {
 }
 
 int32_t ParseInt32(const std::string& value) {
-  int base = 10;
-  if (value.size() > 2 && (value[1] == 'x' || value[1] == 'X')) {
-    base = 16;
+  int base = GetIntegerBase(value);
+  return static_cast<int32_t>(strtol(value.c_str(), nullptr, base));
+}
+
+std::optional<int32_t> MaybeParseInt32(const std::string& value) {
+  int base = GetIntegerBase(value);
+
+  char* end = nullptr;
+  auto ret = strtol(value.c_str(), &end, base);
+  if (end == value.c_str() || *end != '\0') {
+    return std::nullopt;
   }
 
-  return static_cast<int32_t>(strtol(value.c_str(), nullptr, base));
+  return static_cast<int32_t>(ret);
 }
 
 uint32_t ParseUint32(const std::vector<uint8_t>& data) {
@@ -32,12 +53,21 @@ uint32_t ParseUint32(const std::vector<char>& data) {
 }
 
 uint32_t ParseUint32(const std::string& value) {
-  int base = 10;
-  if (value.size() > 2 && (value[1] == 'x' || value[1] == 'X')) {
-    base = 16;
-  }
+  int base = GetIntegerBase(value);
 
   return static_cast<uint32_t>(strtoul(value.c_str(), nullptr, base));
+}
+
+std::optional<uint32_t> MaybeParseUint32(const std::string& value) {
+  int base = GetIntegerBase(value);
+
+  char* end = nullptr;
+  auto ret = strtoul(value.c_str(), &end, base);
+  if (end == value.c_str() || *end != '\0') {
+    return std::nullopt;
+  }
+
+  return static_cast<uint32_t>(ret);
 }
 
 std::vector<ArgParser::Argument> ArgParser::Tokenize(std::string_view input) {
