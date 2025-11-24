@@ -169,7 +169,8 @@ bool Thread::StepInstruction(XBDMContext& ctx) {
     auto request = std::make_shared<::SetContext>(thread_id, new_context);
     ctx.SendCommandSync(request);
     if (!request->IsOK()) {
-      LOG_DEBUGGER(error) << "Failed to set trap flag in StepInstruction";
+      LOG_DEBUGGER(error) << "Failed to set trap flag in StepInstruction"
+                          << *request;
       return false;
     }
   }
