@@ -10,7 +10,11 @@
 
 struct ContextAwareExpressionParser : DebuggerExpressionParser {
   explicit ContextAwareExpressionParser(std::shared_ptr<XBDMDebugger> debugger)
-      : debugger_(std::move(debugger)) {}
+      : debugger_(std::move(debugger)) {
+    if (debugger_) {
+      memory_reader_ = debugger_->CreateMemoryReader();
+    }
+  }
 
   std::expected<uint32_t, std::string> Parse(const std::string& expr) override {
     if (debugger_) {
