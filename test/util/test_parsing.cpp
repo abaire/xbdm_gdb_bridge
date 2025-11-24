@@ -10,7 +10,7 @@ struct MockExpressionParser : ExpressionParser {
     if (expr == "failure") {
       return std::unexpected("Mock Syntax Error");
     }
-    return 0;
+    return std::unexpected("Unknown expression");
   }
 };
 
