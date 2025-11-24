@@ -106,7 +106,7 @@ Command::Result CommandBreak::operator()(XBOXInterface& interface,
       PrintUsage();
       return HANDLED;
     }
-    int32_t size = 1;
+    int32_t size = 4;
     parser.Parse(1, size);
     UpdateCondition(XBDMDebugger::BreakpointType::READ_WATCH, address, clear);
     SendAndPrintMessage(
@@ -121,7 +121,7 @@ Command::Result CommandBreak::operator()(XBOXInterface& interface,
       PrintUsage();
       return HANDLED;
     }
-    int32_t size = 1;
+    int32_t size = 4;
     parser.Parse(1, size);
     UpdateCondition(XBDMDebugger::BreakpointType::WRITE_WATCH, address, clear);
     SendAndPrintMessage(
