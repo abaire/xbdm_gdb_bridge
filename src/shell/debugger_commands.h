@@ -81,9 +81,7 @@ struct DebuggerCommandSetActiveThread : Command {
 
 struct DebuggerCommandStepInstruction : Command {
   DebuggerCommandStepInstruction()
-      : Command(
-            "\n"
-            "Step one instruction in the current thread.") {}
+      : Command("Step one instruction in the current thread.") {}
   Result operator()(XBOXInterface& interface, const ArgParser&,
                     std::ostream& out) override;
 };
