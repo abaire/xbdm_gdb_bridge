@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <expected>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -284,6 +285,7 @@ struct ArgParser {
 
     const auto& arg = arguments[arg_index];
 
+    std::string caused_by;
     if (arg.type == ArgType::PARENTHESIZED || arg.type == ArgType::BASIC) {
       auto result = expr_parser.Parse(arg.value);
 
@@ -295,11 +297,20 @@ struct ArgParser {
       if (arg.type == ArgType::PARENTHESIZED) {
         return {ArgType::SYNTAX_ERROR, result.error()};
       }
+
+      caused_by = result.error();
     }
 
     auto result = detail::ParseHelper<T>::Parse(arg.value);
     if (!result) {
-      return {ArgType::SYNTAX_ERROR, result.error()};
+      if (caused_by.empty()) {
+        caused_by = result.error();
+      } else {
+        std::stringstream full_error;
+        full_error << result.error() << " caused by " << caused_by;
+        caused_by = full_error.str();
+      }
+      return {ArgType::SYNTAX_ERROR, caused_by};
     }
     ret = *result;
     return arg.type;
