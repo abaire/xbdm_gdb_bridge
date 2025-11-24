@@ -91,6 +91,10 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
   REGISTER("/continueallgo", DebuggerCommandContinueAllAndGo);
   ALIAS("/continueallgo", "/cag");
 
+  REGISTER("/disassemble", DebuggerCommandDisassemble);
+  ALIAS("/disassemble", "/disasm");
+  ALIAS("/disassemble", "/u");
+
   REGISTER("/continue", DebuggerCommandContinue);
   REGISTER("/suspend", DebuggerCommandSuspend);
   REGISTER("/resume", DebuggerCommandResume);

@@ -86,6 +86,26 @@ add_library(libreplxx STATIC IMPORTED GLOBAL)
 set_target_properties(libreplxx PROPERTIES IMPORTED_LOCATION "${REPLXX_STATIC_LIB}")
 add_dependencies(libreplxx replxx)
 
+ExternalProject_Add(
+        capstone
+        GIT_REPOSITORY https://github.com/capstone-engine/capstone.git
+        GIT_TAG 5.0.6
+        CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCAPSTONE_BUILD_CSTOOL=OFF
+        -DCAPSTONE_ARCHITECTURE_DEFAULT=OFF
+        -DCAPSTONE_X86_SUPPORT=ON
+        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+        BUILD_BYPRODUCTS
+        <INSTALL_DIR>/lib/libcapstone.a
+        <INSTALL_DIR>/include/capstone/capstone.h
+)
+ExternalProject_Get_Property(capstone INSTALL_DIR)
+set(capstone_include_dir ${INSTALL_DIR}/include)
+add_library(libcapstone STATIC IMPORTED GLOBAL)
+set_target_properties(libcapstone PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/lib/libcapstone.a")
+add_dependencies(libcapstone capstone)
+
 
 if (POLICY CMP0167)
     cmake_policy(SET CMP0167 NEW)
@@ -500,6 +520,7 @@ target_include_directories(
         src
         PUBLIC
         ${replxx_include_dir}
+        ${capstone_include_dir}
 )
 target_link_libraries(
         xbdm_gdb_bridge_shell
@@ -517,6 +538,7 @@ target_link_libraries(
         xbdm_gdb_bridge_xbox_interface
         LINK_PRIVATE
         libreplxx
+        libcapstone
 )
 
 add_library(
@@ -753,6 +775,7 @@ add_executable(
         test/shell/test_main.cpp
         test/shell/test_commands.cpp
         test/shell/test_debugger_commands.cpp
+        test/shell/test_disassemble.cpp
         test/shell/test_dyndxt_commands.cpp
         test/shell/test_command_break.cpp
 )
