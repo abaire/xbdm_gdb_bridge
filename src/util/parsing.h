@@ -2,7 +2,7 @@
 #define XBDM_GDB_BRIDGE_PARSING_H
 
 #include <boost/algorithm/string.hpp>
-#include <cinttypes>
+#include <cstdint>
 #include <expected>
 #include <string>
 #include <vector>
@@ -264,14 +264,17 @@ struct ArgParser {
 
     const auto& arg = arguments[arg_index];
 
-    if (arg.type == ArgType::PARENTHESIZED) {
+    if (arg.type == ArgType::PARENTHESIZED || arg.type == ArgType::BASIC) {
       auto result = expr_parser.Parse(arg.value);
 
       if (result) {
         ret = *result;
         return arg.type;
       }
-      return {ArgType::SYNTAX_ERROR, result.error()};
+
+      if (arg.type == ArgType::PARENTHESIZED) {
+        return {ArgType::SYNTAX_ERROR, result.error()};
+      }
     }
 
     ret = detail::ParseHelper<T>::Parse(arg.value);

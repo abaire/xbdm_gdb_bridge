@@ -89,7 +89,27 @@ DEBUGGER_TEST_CASE(GetMemSupportsSimpleExpressionsInAddress) {
                     "ff ee 44 11 22 33 88 99 01 02 03 04 a0 a1 a2 a3 ");
 }
 
-DEBUGGER_TEST_CASE(GetMemSupportsRegisterDereferencingExpressionsInAddress) {
+DEBUGGER_TEST_CASE(GetMemSupportsTrivialRegisterExpressionsInAddress) {
+  std::vector<uint8_t> data{
+      0xFF, 0xEE, 0x44, 0x11, 0x22, 0x33, 0x88, 0x99,
+      0x01, 0x02, 0x03, 0x04, 0xA0, 0xA1, 0xA2, 0xA3,
+  };
+  server->AddRegion(0x12345, data);
+  std::stringstream capture;
+  CommandGetMem cmd;
+  ArgParser args("getmem $eax 16");
+  ThreadContext thread_context;
+  thread_context.eax = 0x12345;
+  interface->SetExpressionParser(
+      std::make_shared<DebuggerExpressionParser>(thread_context));
+
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+
+  BOOST_CHECK_EQUAL(Trimmed(capture),
+                    "ff ee 44 11 22 33 88 99 01 02 03 04 a0 a1 a2 a3 ");
+}
+
+DEBUGGER_TEST_CASE(GetMemSupportsArithmeticRegisterExpressionsInAddress) {
   std::vector<uint8_t> data{
       0xFF, 0xEE, 0x44, 0x11, 0x22, 0x33, 0x88, 0x99,
       0x01, 0x02, 0x03, 0x04, 0xA0, 0xA1, 0xA2, 0xA3,
@@ -102,6 +122,40 @@ DEBUGGER_TEST_CASE(GetMemSupportsRegisterDereferencingExpressionsInAddress) {
   thread_context.eax = 0x12300;
   interface->SetExpressionParser(
       std::make_shared<DebuggerExpressionParser>(thread_context));
+
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+
+  BOOST_CHECK_EQUAL(Trimmed(capture),
+                    "ff ee 44 11 22 33 88 99 01 02 03 04 a0 a1 a2 a3 ");
+}
+
+DEBUGGER_TEST_CASE(GetMemSupportsDereferencingRegisterExpressionsInAddress) {
+  std::vector<uint8_t> pointer_data{
+      0x45,
+      0x23,
+      0x01,
+      0x00,
+  };
+
+  std::vector<uint8_t> data{
+      0xFF, 0xEE, 0x44, 0x11, 0x22, 0x33, 0x88, 0x99,
+      0x01, 0x02, 0x03, 0x04, 0xA0, 0xA1, 0xA2, 0xA3,
+  };
+  server->AddRegion(0x20000, pointer_data);
+  server->AddRegion(0x12345, data);
+  std::stringstream capture;
+  CommandGetMem cmd;
+  ArgParser args("getmem @$eax 16");
+  ThreadContext thread_context;
+  thread_context.eax = 0x20000;
+  auto memory_reader =
+      [&](uint32_t addr,
+          uint32_t size) -> std::expected<std::vector<uint8_t>, std::string> {
+    return server->GetMemoryRegion(addr, size);
+  };
+
+  interface->SetExpressionParser(std::make_shared<DebuggerExpressionParser>(
+      thread_context, std::nullopt, memory_reader));
 
   BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
 
