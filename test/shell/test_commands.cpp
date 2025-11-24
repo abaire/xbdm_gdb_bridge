@@ -69,7 +69,7 @@ DEBUGGER_TEST_CASE(GetMemWithoutExpressionParserFailsOnExpressions) {
   BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
 
   BOOST_CHECK_EQUAL(Trimmed(capture),
-                    "cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc ");
+                    "Syntax error Value 0x12300 + 0x45 is not numeric");
 }
 
 DEBUGGER_TEST_CASE(GetMemSupportsSimpleExpressionsInAddress) {

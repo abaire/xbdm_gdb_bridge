@@ -79,18 +79,14 @@ struct DebuggerCommandSetActiveThread : Command {
                     std::ostream& out) override;
 };
 
-// struct DebuggerCommandStepInstruction : Command {
-//   DebuggerCommandStepInstruction()
-//       : Command(
-//             "\n"
-//             "Step one instruction in the current thread.") {}
-//   Result operator()(XBOXInterface &interface,
-//                     const std::vector<std::string> &, std::ostream& out)
-//                     override {
-//     // TODO: Implement me.
-//     return HANDLED;
-//   }
-// };
+struct DebuggerCommandStepInstruction : Command {
+  DebuggerCommandStepInstruction()
+      : Command(
+            "\n"
+            "Step one instruction in the current thread.") {}
+  Result operator()(XBOXInterface& interface, const ArgParser&,
+                    std::ostream& out) override;
+};
 
 struct DebuggerCommandStepFunction : Command {
   DebuggerCommandStepFunction()

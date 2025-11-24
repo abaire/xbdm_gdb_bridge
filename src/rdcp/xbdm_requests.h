@@ -1143,6 +1143,7 @@ struct ModLongName : public RDCPProcessedRequest {
   }
 
   // TODO: Parse response.
+  // Response will be "200- TheFullPath\r\n"
 };
 
 struct ModSections : public RDCPProcessedRequest {

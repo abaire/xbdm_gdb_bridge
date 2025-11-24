@@ -84,7 +84,6 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
   REGISTER("/infowithcontext", DebuggerCommandGetThreadInfoAndContext);
   ALIAS("/infowithcontext", "/ic");
   REGISTER("/autoinfo", DebuggerCommandSetAutoInfo);
-  //  REGISTER("/stepi", DebuggerCommandStepInstruction);
   REGISTER("/info", DebuggerCommandGetThreadInfo);
   REGISTER("/haltall", DebuggerCommandHaltAll);
   REGISTER("/halt", DebuggerCommandHalt);
@@ -97,6 +96,8 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
   REGISTER("/resume", DebuggerCommandResume);
   REGISTER("/modules", DebuggerCommandGetModules);
   REGISTER("/sections", DebuggerCommandGetSections);
+  REGISTER("/stepi", DebuggerCommandStepInstruction);
+  ALIAS("/stepi", "/si");
   REGISTER("/stepfun", DebuggerCommandStepFunction);
   ALIAS("/stepfun", "/stepf");
 

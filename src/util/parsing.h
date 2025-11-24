@@ -3,7 +3,9 @@
 
 #include <boost/algorithm/string.hpp>
 #include <cstdint>
+#include <cstdlib>
 #include <expected>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -11,9 +13,11 @@ class DebuggerExpressionParser;
 int32_t ParseInt32(const std::vector<uint8_t>& value);
 int32_t ParseInt32(const std::vector<char>& data);
 int32_t ParseInt32(const std::string& value);
+std::optional<int32_t> MaybeParseInt32(const std::string& value);
 uint32_t ParseUint32(const std::vector<uint8_t>& value);
 uint32_t ParseUint32(const std::vector<char>& data);
 uint32_t ParseUint32(const std::string& value);
+std::optional<uint32_t> MaybeParseUint32(const std::string& value);
 
 namespace command_line_command_tokenizer {
 
@@ -67,12 +71,24 @@ struct ParseHelper;
 
 template <typename T>
 struct ParseHelper<T, std::enable_if_t<std::is_signed<T>::value>> {
-  static T Parse(const std::string& s) { return ParseInt32(s); }
+  static std::expected<T, std::string> Parse(const std::string& s) {
+    auto result = MaybeParseInt32(s);
+    if (!result) {
+      return std::unexpected("Value " + s + " is not numeric");
+    }
+    return *result;
+  }
 };
 
 template <typename T>
 struct ParseHelper<T, std::enable_if_t<std::is_unsigned<T>::value>> {
-  static T Parse(const std::string& s) { return ParseUint32(s); }
+  static std::expected<T, std::string> Parse(const std::string& s) {
+    auto result = MaybeParseUint32(s);
+    if (!result) {
+      return std::unexpected("Value " + s + " is not numeric");
+    }
+    return *result;
+  }
 };
 }  // namespace detail
 
@@ -222,7 +238,11 @@ struct ArgParser {
       return ArgType{ArgType::NOT_FOUND};
     }
 
-    ret = detail::ParseHelper<T>::Parse(arguments[arg_index].value);
+    auto result = detail::ParseHelper<T>::Parse(arguments[arg_index].value);
+    if (!result) {
+      return {ArgType::SYNTAX_ERROR, result.error()};
+    }
+    ret = *result;
     return arguments[arg_index].type;
   }
 
@@ -277,7 +297,11 @@ struct ArgParser {
       }
     }
 
-    ret = detail::ParseHelper<T>::Parse(arg.value);
+    auto result = detail::ParseHelper<T>::Parse(arg.value);
+    if (!result) {
+      return {ArgType::SYNTAX_ERROR, result.error()};
+    }
+    ret = *result;
     return arg.type;
   }
 

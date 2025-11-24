@@ -705,14 +705,12 @@ void XBDMDebugger::OnException(
 void XBDMDebugger::PerformAfterStopActions(
     const std::shared_ptr<Thread>& active_thread) {
   if (print_thread_info_on_break_) {
-    auto request = std::make_shared<GetContext>(active_thread->thread_id, true,
-                                                true, true);
-    context_->SendCommandSync(request);
     std::stringstream context_info;
-    if (request->IsOK()) {
-      context_info << request->context;
+
+    if (active_thread->FetchContextSync(*context_)) {
+      context_info << *active_thread->context;
     } else {
-      context_info << "[Failed to fetch context " << *request << "]";
+      context_info << "[Failed to fetch active thread context]";
     }
 
     LOG_DEBUGGER(info) << "Active thread:" << std::endl

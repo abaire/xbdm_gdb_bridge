@@ -118,6 +118,23 @@ Command::Result DebuggerCommandSetActiveThread::operator()(
   return HANDLED;
 }
 
+Command::Result DebuggerCommandStepInstruction::operator()(
+    XBOXInterface& base_interface, const ArgParser&, std::ostream& out) {
+  GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
+  auto debugger = interface.Debugger();
+  if (!debugger) {
+    out << "Debugger not attached." << std::endl;
+    return HANDLED;
+  }
+
+  if (!debugger->StepInstruction()) {
+    out << "Failed to step instruction" << std::endl;
+    return HANDLED;
+  }
+
+  return HANDLED;
+}
+
 Command::Result DebuggerCommandStepFunction::operator()(
     XBOXInterface& base_interface, const ArgParser&, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
