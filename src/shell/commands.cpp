@@ -560,7 +560,7 @@ Command::Result CommandGetMem::operator()(XBOXInterface& interface,
       }
       ++count;
     }
-    if (((count - 1) % 32) != 0) {
+    if (((count - 1) % 32) != 0 || count == 1) {
       out << std::endl;
     }
   }
