@@ -447,7 +447,9 @@ struct CommandSetMem : Command {
                 "<address> <hex_string>\n"
                 "\n"
                 "Set the content of memory starting at `address` to the given "
-                "`hex_string`.") {}
+                "`hex_string`.\n"
+                "The hex string is a series of hexadecimal digits without any "
+                "prefix. E.g., 9090 would be 0x90 0x90.") {}
   Result operator()(XBOXInterface& interface, const ArgParser& args,
                     std::ostream& out) override;
 };

@@ -1009,7 +1009,7 @@ Command::Result CommandScreenshot::operator()(XBOXInterface& interface,
 Command::Result CommandSetMem::operator()(XBOXInterface& interface,
                                           const ArgParser& args,
                                           std::ostream& out) {
-  ArgParser parser(args);
+  const ArgParser& parser(args);
   uint32_t address;
   if (!parser.Parse(0, address)) {
     out << "Missing required Address argument." << std::endl;
