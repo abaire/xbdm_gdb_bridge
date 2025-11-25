@@ -218,4 +218,17 @@ struct DebuggerCommandContinueAllAndGo : Command {
                     std::ostream& out) override;
 };
 
+struct DebuggerCommandDisassemble : Command {
+  DebuggerCommandDisassemble()
+      : Command(
+            "Disassemble memory.",
+            "[address]\n"
+            "\n"
+            "Disassemble instructions starting at [address].\n"
+            "\n"
+            "If [address] is omitted, the EIP of the active thread is used.") {}
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
+                    std::ostream& out) override;
+};
+
 #endif  // XBDM_GDB_BRIDGE_DEBUGGER_COMMANDS_H

@@ -1,11 +1,20 @@
 #include "debugger_commands.h"
 
+#include <capstone/capstone.h>
+
+#include <iomanip>
+
 #include "commands.h"
 #include "rdcp/xbdm_requests.h"
 #include "shell/file_util.h"
 #include "util/parsing.h"
 #include "xbox/debugger/debugger_xbox_interface.h"
 #include "xbox/debugger/xbdm_debugger.h"
+
+//! Maximum number of bytes in an i386 instruction.
+static constexpr auto kMaxInstructionBytes = 15;
+//! The number of instructions to disassemble in the disassembly command.
+static constexpr uint32_t kDisassemblyOpCount = 16;
 
 static bool DebugXBE(XBOXInterface& base_interface, const ArgParser& args,
                      bool wait_forever, bool break_at_start,
@@ -89,6 +98,87 @@ Command::Result DebuggerCommandRestart::operator()(
   }
 
   debugger->RestartAndAttach();
+
+  return HANDLED;
+}
+
+Command::Result DebuggerCommandDisassemble::operator()(
+    XBOXInterface& base_interface, const ArgParser& args, std::ostream& out) {
+  GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
+  auto debugger = interface.Debugger();
+  if (!debugger) {
+    out << "Debugger not attached." << std::endl;
+    return HANDLED;
+  }
+
+  const ArgParser& parser(args);
+  uint32_t address = 0;
+
+  bool use_eip = true;
+  if (parser.Parse(0, address)) {
+    use_eip = false;
+  }
+
+  if (use_eip) {
+    auto thread = debugger->ActiveThread();
+    if (!thread) {
+      out << "No address provided and no active thread." << std::endl;
+      return HANDLED;
+    }
+
+    auto context = interface.Context();
+    if (!thread->FetchContextSync(*context)) {
+      out << "Failed to fetch thread context." << std::endl;
+      return HANDLED;
+    }
+
+    if (!thread->context || !thread->context->eip.has_value()) {
+      out << "Thread context incomplete (missing EIP)." << std::endl;
+      return HANDLED;
+    }
+    address = static_cast<uint32_t>(thread->context->eip.value());
+  }
+
+  uint32_t bytes_to_read = kDisassemblyOpCount * kMaxInstructionBytes;
+  auto memory = debugger->GetMemory(address, bytes_to_read);
+
+  if (!memory) {
+    out << "Failed to read memory at 0x" << std::hex << address << std::dec
+        << std::endl;
+    return HANDLED;
+  }
+
+  csh handle;
+  if (cs_open(CS_ARCH_X86, CS_MODE_32, &handle) != CS_ERR_OK) {
+    out << "Failed to initialize Capstone." << std::endl;
+    return HANDLED;
+  }
+
+  struct CapstoneGuard {
+    csh h;
+    ~CapstoneGuard() { cs_close(&h); }
+  } guard{handle};
+
+  cs_insn* insn;
+  size_t count_dis = cs_disasm(handle, memory->data(), memory->size(), address,
+                               kDisassemblyOpCount, &insn);
+
+  if (count_dis > 0) {
+    for (size_t i = 0; i < count_dis; i++) {
+      out << "0x" << std::hex << insn[i].address << ": ";
+      for (int j = 0; j < insn[i].size; ++j) {
+        out << std::setw(2) << std::setfill('0') << (int)insn[i].bytes[j]
+            << " ";
+      }
+      for (int j = insn[i].size; j < kMaxInstructionBytes; ++j) {
+        out << "   ";
+      }
+      out << insn[i].mnemonic << " " << insn[i].op_str << std::dec << std::endl;
+    }
+    cs_free(insn, count_dis);
+  } else {
+    out << "Failed to disassemble." << std::endl;
+  }
 
   return HANDLED;
 }
