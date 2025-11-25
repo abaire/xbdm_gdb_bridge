@@ -283,7 +283,7 @@ bool Loader::InstallDynDXT(XBOXInterface& interface,
 static uint32_t L2BootstrapAllocate(XBOXInterface& interface,
                                     uint32_t image_size) {
   char args[32];
-  snprintf(args, 32, " s=0x%x", image_size);
+  snprintf(args, 32, "s=0x%x", image_size);
   auto request = std::make_shared<DynDXTLoader::InvokeSimple>("ldxt!a", args);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
