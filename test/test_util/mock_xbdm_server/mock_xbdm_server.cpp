@@ -379,6 +379,7 @@ bool MockXBDMServer::ProcessCommand(ClientTransport& client,
   HANDLE("debugger", Debugger)
   HANDLE("getcontext", GetContext)
   HANDLE("getmem2", GetMem2)
+  HANDLE("setmem", SetMem)
   HANDLE("go", Go)
   HANDLE("isstopped", IsStopped)
   HANDLE("modules", Modules)
@@ -749,6 +750,30 @@ bool MockXBDMServer::HandleGetMem2(ClientTransport& client,
   return true;
 }
 
+bool MockXBDMServer::HandleSetMem(ClientTransport& client,
+                                  const std::string& parameters) {
+  LOG_SERVER(trace) << "SetMem with parameters: " << parameters;
+  RDCPMapResponse params(parameters);
+
+  auto address = params.GetOptionalDWORD("addr");
+  if (!address.has_value()) {
+    SendResponse(client, ERR_UNEXPECTED, "Missing addr");
+    return true;
+  }
+
+  auto value = params.GetString("data");
+  if (value.empty()) {
+    SendResponse(client, ERR_UNEXPECTED, "Missing value");
+    return true;
+  }
+
+  auto data = HexToBytes(value);
+  state_.WriteVirtualMemory(address.value(), data);
+
+  SendResponse(client, OK);
+  return true;
+}
+
 bool MockXBDMServer::HandleGo(ClientTransport& client, const std::string&) {
   auto previous_state = SetExecutionState(S_STARTED);
   if (previous_state == S_STARTED) {
@@ -973,6 +998,7 @@ void MockXBDMServer::ClearMemoryRegion(uint32_t address) {
 std::vector<uint8_t> MockXBDMServer::GetMemoryRegion(uint32_t address,
                                                      size_t length) {
   // Find the memory region containing this address
+  // TODO: Support access bridging regions.
   for (const auto& [base, region] : state_.memory_regions) {
     if (address >= base && address + length <= base + region.data.size()) {
       size_t offset = address - base;
