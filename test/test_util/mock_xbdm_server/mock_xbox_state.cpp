@@ -149,4 +149,38 @@ bool MockXboxState::ReadVirtualMemory(std::vector<uint8_t>& buffer,
   return (current_cursor == request_end);
 }
 
+bool MockXboxState::WriteVirtualMemory(uint32_t address,
+                                       const std::vector<uint8_t>& data) {
+  auto bytes_remaining = data.size();
+  if (!bytes_remaining) {
+    return true;
+  }
+  auto start = data.begin();
+
+  auto it = memory_regions.upper_bound(address);
+  if (it != memory_regions.begin()) {
+    --it;
+  }
+
+  for (; it != memory_regions.end(); ++it) {
+    auto& region = it->second;
+    if (address >= region.base_address &&
+        address < region.base_address + region.size) {
+      uint32_t offset = address - region.base_address;
+      uint32_t bytes_to_write = std::min(static_cast<uint32_t>(bytes_remaining),
+                                         region.size - offset);
+      std::copy_n(start, bytes_to_write, region.data.begin() + offset);
+      bytes_remaining -= bytes_to_write;
+      if (!bytes_remaining) {
+        break;
+      }
+
+      start += bytes_to_write;
+      address += bytes_to_write;
+    }
+  }
+
+  return !bytes_remaining;
+}
+
 }  // namespace xbdm_gdb_bridge::testing

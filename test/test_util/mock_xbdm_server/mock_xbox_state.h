@@ -164,6 +164,18 @@ struct MockXboxState {
   bool ReadVirtualMemory(std::vector<uint8_t>& buffer, uint32_t address,
                          uint32_t length, uint8_t fill = 0xCC);
 
+  /**
+   * Writes a block of memory to the simulated Xbox state.
+   *
+   * If the requested range overlaps with unmapped memory, any initial portion
+   * will be written and then false will be returned.
+   *
+   * @param address Address to write to
+   * @param data Data to be written
+   * @return false if the full buffer was not written
+   */
+  bool WriteVirtualMemory(uint32_t address, const std::vector<uint8_t>& data);
+
   std::string xbox_name = "XBOX-TEST";
   std::string xbox_version = "1.0.5838.1";
 

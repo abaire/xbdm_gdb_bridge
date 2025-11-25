@@ -1011,13 +1011,19 @@ Command::Result CommandSetMem::operator()(XBOXInterface& interface,
                                           std::ostream& out) {
   const ArgParser& parser(args);
   uint32_t address;
-  if (!parser.Parse(0, address)) {
-    out << "Missing required Address argument." << std::endl;
+  auto result = parser.Parse(0, address, interface.GetExpressionParser());
+  if (!result) {
+    if (result == ArgParser::ArgType::SYNTAX_ERROR) {
+      out << "Syntax error " << result.message << std::endl;
+    } else {
+      out << "Missing required address argument." << std::endl;
+    }
     PrintUsage();
     return HANDLED;
   }
+
   if (args.size() < 2) {
-    out << "Missing required value string." << std::endl;
+    out << "Missing required data string." << std::endl;
     PrintUsage();
     return HANDLED;
   }
