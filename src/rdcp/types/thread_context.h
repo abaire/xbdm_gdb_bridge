@@ -127,7 +127,7 @@ struct ThreadContext {
     PRINTREG(cr0_npx_state, " ");
 
 #undef PRINTREG
-    return os;
+    return os << std::dec;
   }
 };
 

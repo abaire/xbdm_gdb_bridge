@@ -84,7 +84,6 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
   REGISTER("/infowithcontext", DebuggerCommandGetThreadInfoAndContext);
   ALIAS("/infowithcontext", "/ic");
   REGISTER("/autoinfo", DebuggerCommandSetAutoInfo);
-  REGISTER("/info", DebuggerCommandGetThreadInfo);
   REGISTER("/haltall", DebuggerCommandHaltAll);
   REGISTER("/halt", DebuggerCommandHalt);
   REGISTER("/continueall", DebuggerCommandContinueAll);

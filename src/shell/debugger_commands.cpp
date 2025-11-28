@@ -20,14 +20,13 @@ static bool DebugXBE(XBOXInterface& base_interface, const ArgParser& args,
                      bool wait_forever, bool break_at_start,
                      std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
-  ArgParser parser(args);
   std::string path;
-  if (!parser.Parse(0, path)) {
+  if (!args.Parse(0, path)) {
     out << "Missing required path argument." << std::endl;
     return false;
   }
   std::string command_line_args;
-  parser.Parse(1, command_line_args);
+  args.Parse(1, command_line_args);
 
   if (!interface.AttachDebugger()) {
     out << "Failed to attach debugger." << std::endl;
@@ -111,11 +110,10 @@ Command::Result DebuggerCommandDisassemble::operator()(
     return HANDLED;
   }
 
-  const ArgParser& parser(args);
   uint32_t address = 0;
 
   bool use_eip = true;
-  if (parser.Parse(0, address)) {
+  if (args.Parse(0, address)) {
     use_eip = false;
   }
 
@@ -192,9 +190,8 @@ Command::Result DebuggerCommandSetActiveThread::operator()(
     return HANDLED;
   }
 
-  const ArgParser& parser(args);
   uint32_t thread_id;
-  if (!parser.Parse(0, thread_id)) {
+  if (!args.Parse(0, thread_id)) {
     out << "Missing required thread_id argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -242,8 +239,24 @@ Command::Result DebuggerCommandStepFunction::operator()(
   return HANDLED;
 }
 
+namespace {
+
+Command::Result PrintThreadContext(const std::shared_ptr<Thread>& thread,
+                                   DebuggerXBOXInterface& interface,
+                                   const ArgParser& args, std::ostream& out) {
+  std::vector<std::string> augmented_args;
+  augmented_args.push_back(std::to_string(thread->thread_id));
+  augmented_args.insert(augmented_args.end(), args.begin(), args.end());
+
+  ArgParser delegate_args("getcontext", augmented_args);
+  auto context_command = CommandGetContext();
+  return context_command(interface, delegate_args, out);
+}
+
+}  // namespace
+
 Command::Result DebuggerCommandGetThreads::operator()(
-    XBOXInterface& base_interface, const ArgParser&, std::ostream& out) {
+    XBOXInterface& base_interface, const ArgParser& args, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
@@ -256,12 +269,18 @@ Command::Result DebuggerCommandGetThreads::operator()(
     return HANDLED;
   }
 
+  bool print_context = args.ArgExists("context", "ctx", "c");
+
   auto active_thread_id = debugger->ActiveThreadID();
   for (auto& thread : debugger->Threads()) {
     if (active_thread_id && thread->thread_id == *active_thread_id) {
       out << "[Active thread]" << std::endl;
     }
     out << *thread << std::endl;
+
+    if (print_context) {
+      PrintThreadContext(thread, interface, args, out);
+    }
   }
 
   return HANDLED;
@@ -313,13 +332,7 @@ Command::Result DebuggerCommandGetThreadInfoAndContext::operator()(
 
   out << *thread << std::endl;
 
-  std::vector<std::string> augmented_args;
-  augmented_args.push_back(std::to_string(thread->thread_id));
-  augmented_args.insert(augmented_args.end(), args.begin(), args.end());
-
-  ArgParser delegate_args("getcontext", augmented_args);
-  auto context_command = CommandGetContext();
-  return context_command(interface, delegate_args, out);
+  return PrintThreadContext(thread, interface, args, out);
 }
 
 Command::Result DebuggerCommandSetAutoInfo::operator()(
@@ -331,8 +344,7 @@ Command::Result DebuggerCommandSetAutoInfo::operator()(
     return HANDLED;
   }
 
-  ArgParser parser(args);
-  bool disable = parser.ArgExists("d", "disable", "off");
+  bool disable = args.ArgExists("d", "disable", "off");
 
   debugger->SetDisplayExpandedBreakpointOutput(!disable);
 
@@ -381,9 +393,8 @@ Command::Result DebuggerCommandHalt::operator()(XBOXInterface& base_interface,
 Command::Result DebuggerCommandContinueAll::operator()(
     XBOXInterface& base_interface, const ArgParser& args, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
-  ArgParser parser(args);
   bool no_break_on_exception =
-      parser.ArgExists("nobreak", "n", "false", "no", "no_break_on_exception");
+      args.ArgExists("nobreak", "n", "false", "no", "no_break_on_exception");
 
   auto debugger = interface.Debugger();
   if (!debugger) {
@@ -399,8 +410,7 @@ Command::Result DebuggerCommandContinueAll::operator()(
 Command::Result DebuggerCommandContinue::operator()(
     XBOXInterface& base_interface, const ArgParser& args, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
-  ArgParser parser(args);
-  bool no_break_on_exception = parser.ArgExists("nobreak", "n", "false", "no");
+  bool no_break_on_exception = args.ArgExists("nobreak", "n", "false", "no");
 
   auto debugger = interface.Debugger();
   if (!debugger) {
