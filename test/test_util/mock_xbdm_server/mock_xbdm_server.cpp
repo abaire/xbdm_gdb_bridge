@@ -1009,7 +1009,8 @@ std::vector<uint8_t> MockXBDMServer::GetMemoryRegion(uint32_t address,
   return {};
 }
 
-uint32_t MockXBDMServer::AddThread(const std::string& name, uint32_t eip) {
+uint32_t MockXBDMServer::AddThread(const std::string& name, uint32_t eip,
+                                   uint32_t base, uint32_t start) {
   std::lock_guard lock(state_mutex_);
   uint32_t thread_id = state_.next_thread_id++;
 
@@ -1017,6 +1018,8 @@ uint32_t MockXBDMServer::AddThread(const std::string& name, uint32_t eip) {
   thread.id = thread_id;
   thread.eip = eip;
   thread.eflags = 0x202;
+  thread.base = base;
+  thread.start = start;
 
   state_.threads[thread_id] = thread;
 

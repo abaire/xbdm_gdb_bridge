@@ -95,7 +95,11 @@ struct DebuggerCommandStepFunction : Command {
 
 struct DebuggerCommandGetThreads : Command {
   DebuggerCommandGetThreads()
-      : Command("Print basic information about all threads.") {}
+      : Command("Print basic information about all threads.",
+                "[<context|ctx|c> [getcontext_args]]\n"
+                "\n"
+                "Prints basic thread information, optionally calling "
+                "getcontext on each thread.") {}
   Result operator()(XBOXInterface& interface, const ArgParser&,
                     std::ostream& out) override;
 };
