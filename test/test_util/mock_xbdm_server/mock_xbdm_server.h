@@ -78,6 +78,7 @@ class MockXBDMServer {
                          uint32_t value);
   void SuspendThread(uint32_t thread_id);
   void ResumeThread(uint32_t thread_id);
+  void SetThreadStopped(uint32_t thread_id, bool stopped);
 
   void AddBreakpoint(uint32_t address,
                      Breakpoint::Type type = Breakpoint::Type::EXECUTE);
