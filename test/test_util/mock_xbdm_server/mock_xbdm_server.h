@@ -115,6 +115,11 @@ class MockXBDMServer {
    */
   ExecutionState SetExecutionState(ExecutionState state);
 
+  ExecutionState GetExecutionState() const {
+    const std::lock_guard lock(state_mutex_);
+    return state_.execution_state;
+  }
+
   /**
    * Registers a custom command handler. This will replace any built in handler
    * for the given command.
@@ -131,7 +136,7 @@ class MockXBDMServer {
    *
    * @returns An opaque token to be used with RemoveExecutionStateCallback.
    */
-  int SetExecutionStateCallback(ExecutionState state,
+  int AddExecutionStateCallback(ExecutionState state,
                                 ExecutionStateHandler handler);
   void RemoveExecutionStateCallback(int token);
 
@@ -257,6 +262,13 @@ class MockXBDMServer {
    */
   bool SimulateExecuteWatchpoint(uint32_t address, uint32_t thread_id = 0,
                                  bool stop = true);
+
+  /**
+   * Performs a fake dashboard bootup
+   */
+  void SimulateBootToDashboard();
+
+  void SimulateReboot() { PerformReboot(); }
 
  private:
   bool ProcessCommand(ClientTransport& client, const std::string& command,

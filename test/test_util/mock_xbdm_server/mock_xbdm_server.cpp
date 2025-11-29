@@ -664,7 +664,6 @@ bool MockXBDMServer::HandleTitle(ClientTransport& client,
   info.path = path;
   info.command_line = params.GetString("cmdline");
   info.persistent = params.HasKey("persist");
-  ;
 
   SendResponse(client, OK);
   return true;
@@ -1160,7 +1159,7 @@ ExecutionState MockXBDMServer::SetExecutionState(ExecutionState state) {
   return ret;
 }
 
-int MockXBDMServer::SetExecutionStateCallback(ExecutionState state,
+int MockXBDMServer::AddExecutionStateCallback(ExecutionState state,
                                               ExecutionStateHandler handler) {
   std::lock_guard lock(execution_state_handlers_mutex_);
   execution_state_handlers_.emplace(next_execution_state_handler_id_,
@@ -1232,6 +1231,17 @@ void MockXBDMServer::PerformReboot() {
       AdvancePhase();
     });
   });
+}
+
+void MockXBDMServer::SimulateBootToDashboard() {
+  std::lock_guard lock(state_mutex_);
+  auto& info = state_.load_on_boot_info;
+  info.name = "default.xbe";
+  info.path = "//DashboardDrive/";
+  info.command_line = "";
+  info.persistent = false;
+
+  PerformReboot();
 }
 
 void MockXBDMServer::AdvancePhase() {

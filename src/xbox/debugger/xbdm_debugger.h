@@ -7,6 +7,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <string>
 
 #include "debugger_expression_parser.h"
@@ -132,6 +133,10 @@ class XBDMDebugger {
   bool ValidateMemoryAccess(uint32_t address, uint32_t length,
                             bool is_write = false);
 
+  //! Waits up to max_wait_milliseconds for the target to enter the given
+  //! ExecutionState.
+  bool WaitForState(ExecutionState s, uint32_t max_wait_milliseconds);
+
   //! Waits up to max_wait_milliseconds for the target to be in one of the given
   //! ExecutionStates.
   bool WaitForStateIn(const std::set<ExecutionState>& target_states,
@@ -150,10 +155,6 @@ class XBDMDebugger {
   [[nodiscard]] bool BreakAtStart() const;
   bool SetDebugger(bool enabled);
   bool RestartAndReconnect(uint32_t reboot_flags);
-
-  //! Waits up to max_wait_milliseconds for the target to enter the given
-  //! ExecutionState.
-  bool WaitForState(ExecutionState s, uint32_t max_wait_milliseconds);
 
   void OnNotification(const std::shared_ptr<XBDMNotification>&);
 
@@ -204,6 +205,9 @@ class XBDMDebugger {
   // Maps <BreakpointType, Address> to strings defining IF conditions.
   std::map<std::pair<BreakpointType, uint32_t>, std::string>
       breakpoint_conditions_;
+
+  mutable std::mutex breakpoints_lock_;
+  std::set<uint32_t> breakpoints_;
 
   bool target_not_debuggable_{false};
   int notification_handler_id_{0};

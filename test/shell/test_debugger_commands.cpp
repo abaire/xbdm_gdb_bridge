@@ -94,7 +94,7 @@ DEBUGGER_TEST_CASE(LaunchWaitWithValidPathSucceeds) {
   server->AddRegion(0x00010000, 0x00001000, 0x00000004);
   server->AddRegion(0x80000000, 0x10000, 2);
 
-  server->SetExecutionStateCallback(S_STARTED, [this]() {
+  server->AddExecutionStateCallback(S_STARTED, [this]() {
     server->SimulateExecutionBreakpoint(0x80000000, 1);
   });
 
