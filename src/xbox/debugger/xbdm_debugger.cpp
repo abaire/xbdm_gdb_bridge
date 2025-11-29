@@ -272,7 +272,11 @@ std::optional<uint32_t> XBDMDebugger::ActiveThreadID() {
 std::shared_ptr<Thread> XBDMDebugger::ActiveThread() {
   const std::lock_guard lock(threads_lock_);
   if (!active_thread_id_) {
-    return nullptr;
+    auto thread = GetFirstStoppedThread();
+    if (thread) {
+      active_thread_id_ = thread->thread_id;
+    }
+    return thread;
   }
   return GetThread(*active_thread_id_);
 }
@@ -323,10 +327,15 @@ std::shared_ptr<Thread> XBDMDebugger::GetFirstStoppedThread() {
   }
 
   // Prefer the active active_thread if it's still stopped.
-  std::shared_ptr<Thread> active_thread = ActiveThread();
-  if (active_thread && active_thread->FetchStopReasonSync(*context_) &&
-      active_thread->stopped) {
-    return active_thread;
+  if (active_thread_id) {
+    for (auto& thread : threads) {
+      if (thread->thread_id == *active_thread_id) {
+        if (thread->FetchStopReasonSync(*context_) && thread->stopped) {
+          return thread;
+        }
+        break;
+      }
+    }
   }
 
   for (auto& thread : threads) {
@@ -536,9 +545,9 @@ void XBDMDebugger::OnExecutionStateChanged(
     }
   }
   if (state_ == ExecutionState::S_STOPPED) {
-    auto stopped_thread = GetFirstStoppedThread();
-    if (stopped_thread) {
-      SetActiveThread(stopped_thread->thread_id);
+    {
+      const std::lock_guard lock(threads_lock_);
+      active_thread_id_ = std::nullopt;
     }
     FetchMemoryMap();
   }

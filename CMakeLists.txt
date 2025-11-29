@@ -801,6 +801,7 @@ add_executable(
         xbox_debugger_tests
         test/xbox/debugger/test_main.cpp
         test/xbox/debugger/test_xbdm_debugger.cpp
+        test/xbox/debugger/test_xbdm_debugger_threading.cpp
         test/xbox/debugger/test_thread.cpp
 )
 target_include_directories(

@@ -1065,6 +1065,17 @@ void MockXBDMServer::ResumeThread(uint32_t thread_id) {
   }
 }
 
+void MockXBDMServer::SetThreadStopped(uint32_t thread_id, bool stopped) {
+  std::lock_guard lock(state_mutex_);
+  auto it = state_.threads.find(thread_id);
+  if (it != state_.threads.end()) {
+    it->second.stopped = stopped;
+    if (stopped) {
+      it->second.stop_reason = "debug";
+    }
+  }
+}
+
 void MockXBDMServer::AddBreakpoint(uint32_t address, Breakpoint::Type type) {
   std::lock_guard lock(state_mutex_);
   state_.breakpoints.emplace(std::piecewise_construct,
