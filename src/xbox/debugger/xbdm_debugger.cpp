@@ -533,6 +533,8 @@ void XBDMDebugger::OnExecutionStateChanged(
     if (state_ == ExecutionState::S_REBOOTING) {
       modules_.clear();
       sections_.clear();
+      std::lock_guard lock(breakpoints_lock_);
+      breakpoints_.clear();
     }
   }
   if (state_ == ExecutionState::S_STOPPED) {
@@ -889,7 +891,7 @@ bool XBDMDebugger::RestartAndReconnect(uint32_t reboot_flags) {
 
 bool XBDMDebugger::WaitForState(ExecutionState s,
                                 uint32_t max_wait_milliseconds) {
-  std::unique_lock<std::mutex> lock(state_lock_);
+  std::unique_lock lock(state_lock_);
   return state_condition_variable_.wait_for(
       lock, std::chrono::milliseconds(max_wait_milliseconds),
       [this, s] { return state_ == s; });
@@ -897,7 +899,7 @@ bool XBDMDebugger::WaitForState(ExecutionState s,
 
 bool XBDMDebugger::WaitForStateIn(const std::set<ExecutionState>& target_states,
                                   uint32_t max_wait_milliseconds) {
-  std::unique_lock<std::mutex> lock(state_lock_);
+  std::unique_lock lock(state_lock_);
   return state_condition_variable_.wait_for(
       lock, std::chrono::milliseconds(max_wait_milliseconds),
       [this, &target_states] {
@@ -908,7 +910,7 @@ bool XBDMDebugger::WaitForStateIn(const std::set<ExecutionState>& target_states,
 bool XBDMDebugger::WaitForStateNotIn(
     const std::set<ExecutionState>& banned_states,
     uint32_t max_wait_milliseconds) {
-  std::unique_lock<std::mutex> lock(state_lock_);
+  std::unique_lock lock(state_lock_);
   return state_condition_variable_.wait_for(
       lock, std::chrono::milliseconds(max_wait_milliseconds),
       [this, &banned_states] {
@@ -917,7 +919,7 @@ bool XBDMDebugger::WaitForStateNotIn(
 }
 
 ExecutionState XBDMDebugger::CurrentKnownState() {
-  std::unique_lock<std::mutex> lock(state_lock_);
+  std::unique_lock lock(state_lock_);
   return state_;
 }
 
@@ -1062,8 +1064,38 @@ std::optional<std::vector<uint8_t>> XBDMDebugger::GetMemory(uint32_t address,
     return std::nullopt;
   }
 
+  std::vector<uint32_t> overlaps;
+  {
+    std::lock_guard lock(breakpoints_lock_);
+    uint32_t end = address + length;
+    for (uint32_t bp : breakpoints_) {
+      if (bp >= address && bp < end) {
+        overlaps.push_back(bp);
+      }
+    }
+  }
+
+  for (uint32_t bp : overlaps) {
+    auto request = std::make_shared<BreakAddress>(bp, true);
+    context_->SendCommandSync(request);
+    if (!request->IsOK()) {
+      LOG_DEBUGGER(error) << "Failed to remove transparent breakpoint at "
+                          << std::hex << bp;
+    }
+  }
+
   auto request = std::make_shared<GetMemBinary>(address, length);
   context_->SendCommandSync(request);
+
+  for (uint32_t bp : overlaps) {
+    auto restore_request = std::make_shared<BreakAddress>(bp, false);
+    context_->SendCommandSync(restore_request);
+    if (!restore_request->IsOK()) {
+      LOG_DEBUGGER(error) << "Failed to restore transparent breakpoint at "
+                          << std::hex << bp;
+    }
+  }
+
   if (!request->IsOK()) {
     LOG_DEBUGGER(error) << "Failed to read memory " << request->status << " "
                         << request->message;
@@ -1125,9 +1157,14 @@ std::optional<std::string> XBDMDebugger::FindBreakpointCondition(
 }
 
 bool XBDMDebugger::AddBreakpoint(uint32_t address) {
+  std::lock_guard lock(breakpoints_lock_);
   auto request = std::make_shared<BreakAddress>(address);
   context_->SendCommandSync(request);
-  return request->IsOK();
+  if (request->IsOK()) {
+    breakpoints_.insert(address);
+    return true;
+  }
+  return false;
 }
 
 bool XBDMDebugger::AddReadWatch(uint32_t address, uint32_t length) {
@@ -1143,9 +1180,14 @@ bool XBDMDebugger::AddWriteWatch(uint32_t address, uint32_t length) {
 }
 
 bool XBDMDebugger::RemoveBreakpoint(uint32_t address) {
+  std::lock_guard lock(breakpoints_lock_);
   auto request = std::make_shared<BreakAddress>(address, true);
   context_->SendCommandSync(request);
-  return request->IsOK();
+  if (request->IsOK()) {
+    breakpoints_.erase(address);
+    return true;
+  }
+  return false;
 }
 
 bool XBDMDebugger::RemoveReadWatch(uint32_t address, uint32_t length) {

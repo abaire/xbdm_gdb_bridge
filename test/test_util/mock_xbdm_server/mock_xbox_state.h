@@ -185,7 +185,7 @@ struct MockXboxState {
   BootActions boot_actions;
 
   std::atomic<bool> awaiting_debugger_{false};
-  std::atomic<ExecutionState> execution_state{S_REBOOTING};
+  std::atomic<ExecutionState> execution_state{S_INVALID};
 
   // Simulate non-debugable processes.
   bool is_debugable_{true};

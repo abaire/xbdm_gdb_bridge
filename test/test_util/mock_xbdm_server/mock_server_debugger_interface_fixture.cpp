@@ -16,6 +16,13 @@ XBDMDebuggerInterfaceFixture::XBDMDebuggerInterfaceFixture()
   interface =
       std::make_shared<DebuggerXBOXInterface>("Client", server->GetAddress());
   interface->Start();
+
+  server->AddExecutionStateCallback(S_STARTED, [this]() {
+    execution_state_condition_variable_.notify_all();
+  });
+
+  server->SimulateBootToDashboard();
+  BOOST_REQUIRE(AwaitState(S_STARTED));
 }
 
 XBDMDebuggerInterfaceFixture::~XBDMDebuggerInterfaceFixture() {
@@ -26,6 +33,14 @@ XBDMDebuggerInterfaceFixture::~XBDMDebuggerInterfaceFixture() {
 
   server->Stop();
   server.reset();
+}
+
+bool XBDMDebuggerInterfaceFixture::AwaitState(ExecutionState state,
+                                              uint32_t max_wait_milliseconds) {
+  std::unique_lock lock(execution_state_mutex_);
+  return execution_state_condition_variable_.wait_for(
+      lock, std::chrono::milliseconds(max_wait_milliseconds),
+      [this, state]() { return server->GetExecutionState() == state; });
 }
 
 void XBDMDebuggerInterfaceFixture::AwaitQuiescence() const {
