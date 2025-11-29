@@ -382,4 +382,39 @@ DEBUGGER_TEST_CASE(
                                 expected_data.begin(), expected_data.end());
 }
 
+DEBUGGER_TEST_CASE(SetMemSupportsDereferencedRegisterExpressionsInAddress) {
+  std::vector<uint8_t> pointer_data{
+      0x45,
+      0x23,
+      0x01,
+      0x00,
+  };
+
+  std::vector<uint8_t> data{
+      0xFF, 0xEE, 0x44, 0x11, 0x22, 0x33, 0x88, 0x99,
+  };
+  server->AddRegion(0x20004, pointer_data);
+  server->AddRegion(0x12345, data);
+  std::stringstream capture;
+  CommandSetMem cmd;
+  ArgParser args("setmem @($eax + 4) 01020304");
+  ThreadContext thread_context;
+  thread_context.eax = 0x20000;
+  auto memory_reader =
+      [&](uint32_t addr,
+          uint32_t size) -> std::expected<std::vector<uint8_t>, std::string> {
+    return server->GetMemoryRegion(addr, size);
+  };
+
+  interface->SetExpressionParser(std::make_shared<DebuggerExpressionParser>(
+      thread_context, std::nullopt, memory_reader));
+
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+
+  auto updated_data = server->GetMemoryRegion(0x12345, 4);
+  std::vector<uint8_t> expected_data{0x01, 0x02, 0x03, 0x04};
+  BOOST_CHECK_EQUAL_COLLECTIONS(updated_data.begin(), updated_data.end(),
+                                expected_data.begin(), expected_data.end());
+}
+
 BOOST_AUTO_TEST_SUITE_END()

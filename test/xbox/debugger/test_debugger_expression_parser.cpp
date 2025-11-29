@@ -841,4 +841,26 @@ BOOST_AUTO_TEST_CASE(ArgParser_RegisterArithmeticExpression) {
   BOOST_TEST(value == 102);
 }
 
+BOOST_AUTO_TEST_CASE(ArgParser_ParenthesesWithPrefix) {
+  ArgParser p("getmem @(1+2)");
+  std::string val;
+
+  auto type = p.Parse(0, val);
+
+  BOOST_TEST((type == ArgParser::ArgType::PARENTHESIZED));
+  BOOST_TEST(val == "@(1+2)");
+}
+
+BOOST_AUTO_TEST_CASE(ArgParser_PrefixEquality) {
+  ArgParser p1("getmem @(1+2)");
+  std::string val1;
+  p1.Parse(0, val1);
+
+  ArgParser p2("getmem (@(1+2))");
+  std::string val2;
+  p2.Parse(0, val2);
+
+  BOOST_TEST(val1 == val2);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
