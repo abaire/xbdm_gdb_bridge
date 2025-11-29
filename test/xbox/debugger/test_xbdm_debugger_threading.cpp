@@ -67,8 +67,9 @@ BOOST_AUTO_TEST_CASE(LazyThreadResolution) {
   BOOST_REQUIRE_EQUAL(threads.size(), 2);
 
   // Set Thread 2 as stopped.
-  // We use SetThreadStopped to update internal state, then SetExecutionState to trigger notification.
-  // This avoids sending the "break" notification which would cause OnBreakpoint to eagerly set the active thread.
+  // We use SetThreadStopped to update internal state, then SetExecutionState to
+  // trigger notification. This avoids sending the "break" notification which
+  // would cause OnBreakpoint to eagerly set the active thread.
   server->SetThreadStopped(2, true);
   server->SetExecutionState(ExecutionState::S_STOPPED);
 
