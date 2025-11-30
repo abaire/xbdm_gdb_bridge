@@ -1141,15 +1141,15 @@ void XBDMDebugger::SuspendBreakpoints(
   }
 }
 
-void XBDMDebugger::RestoreBreakpoints(
-    const std::vector<uint32_t>& breakpoints, bool wait) {
+void XBDMDebugger::RestoreBreakpoints(const std::vector<uint32_t>& breakpoints,
+                                      bool wait) {
   for (uint32_t bp : breakpoints) {
     auto restore_request = std::make_shared<BreakAddress>(bp, false);
     if (wait) {
       context_->SendCommandSync(restore_request);
       if (!restore_request->IsOK()) {
-        LOG_DEBUGGER(error) << "Failed to restore transparent breakpoint at "
-                            << std::hex << bp;
+        LOG_DEBUGGER(error)
+            << "Failed to restore transparent breakpoint at " << std::hex << bp;
       }
     } else {
       context_->SendCommand(restore_request);
