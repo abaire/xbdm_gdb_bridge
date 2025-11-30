@@ -963,8 +963,7 @@ bool XBDMDebugger::StepInstruction() {
     const std::vector<uint32_t>& breakpoints;
     bool dismissed = false;
 
-    ScopedBreakpointSuspender(XBDMDebugger& d,
-                              const std::vector<uint32_t>& bps)
+    ScopedBreakpointSuspender(XBDMDebugger& d, const std::vector<uint32_t>& bps)
         : debugger(d), breakpoints(bps) {
       if (!breakpoints.empty()) {
         debugger.SuspendBreakpoints(breakpoints);
