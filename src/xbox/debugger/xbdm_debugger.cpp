@@ -956,26 +956,39 @@ bool XBDMDebugger::StepInstruction() {
   }
   uint32_t eip = thread->context->eip.value();
   auto breakpoints = GetActiveBreakpointsInRange(eip, 1);
-  if (!breakpoints.empty()) {
-    SuspendBreakpoints(breakpoints);
-  }
+
+  // Use a RAII helper to ensure breakpoints are restored if the step fails.
+  struct ScopedBreakpointSuspender {
+    XBDMDebugger& debugger;
+    const std::vector<uint32_t>& breakpoints;
+    bool dismissed = false;
+
+    ScopedBreakpointSuspender(XBDMDebugger& d,
+                              const std::vector<uint32_t>& bps)
+        : debugger(d), breakpoints(bps) {
+      if (!breakpoints.empty()) {
+        debugger.SuspendBreakpoints(breakpoints);
+      }
+    }
+
+    ~ScopedBreakpointSuspender() {
+      if (!dismissed && !breakpoints.empty()) {
+        debugger.RestoreBreakpoints(breakpoints);
+      }
+    }
+
+    void Dismiss() { dismissed = true; }
+  } suspender(*this, breakpoints);
 
   if (!thread->StepInstruction(*context_)) {
-    // If we failed to step, we should restore any breakpoints we suspended.
-    if (!breakpoints.empty()) {
-      RestoreBreakpoints(breakpoints);
-    }
     return false;
   }
 
   if (!Go()) {
-    // If we failed to go, we should restore any breakpoints we suspended.
-    if (!breakpoints.empty()) {
-      RestoreBreakpoints(breakpoints);
-    }
     return false;
   }
 
+  suspender.Dismiss();
   return true;
 }
 

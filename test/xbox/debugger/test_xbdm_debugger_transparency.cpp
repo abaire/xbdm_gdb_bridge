@@ -68,17 +68,12 @@ DEBUGGER_TEST_CASE(StepOverBreakpointTemporarilyClearsIt) {
   // This should trigger OnExecutionStateChanged -> RestoreBreakpoints.
   server->SetExecutionState(ExecutionState::S_STOPPED);
 
-  bool restored = false;
-  for (int i = 0; i < 20; ++i) {
-    if (server->HasBreakpoint(kAddress)) {
-      restored = true;
-      break;
-    }
-    std::this_thread::sleep_for(50ms);
-  }
+  // Wait for the restore command to reach the server.
+  AwaitQuiescence();
 
   BOOST_CHECK_MESSAGE(
-      restored, "Breakpoint should be restored after S_STOPPED notification");
+      server->HasBreakpoint(kAddress),
+      "Breakpoint should be restored after S_STOPPED notification");
 }
 
 DEBUGGER_TEST_CASE(StepOverNonBreakpointDoesNotClear) {
@@ -105,9 +100,7 @@ DEBUGGER_TEST_CASE(StepOverNonBreakpointDoesNotClear) {
   BOOST_CHECK(server->HasBreakpoint(kOtherAddress));
 
   server->SetExecutionState(ExecutionState::S_STOPPED);
-
-  // Give a little time for things to settle before destruction
-  std::this_thread::sleep_for(100ms);
+  AwaitQuiescence();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
