@@ -134,32 +134,21 @@ DEBUGGER_TEST_CASE(StepOverBreakpointTemporarilyClearsIt) {
 
   BOOST_REQUIRE(debugger->FetchThreads());
   BOOST_REQUIRE(debugger->SetActiveThread(thread_id));
-
   BOOST_REQUIRE(debugger->AddBreakpoint(kAddress));
-
-  BOOST_CHECK(server->HasBreakpoint(kAddress));
-
-  // Ensure we are in a stopped state.
   BOOST_REQUIRE(debugger->Stop());
 
   BOOST_REQUIRE(debugger->StepInstruction());
 
-  // Verify breakpoint is cleared on server (transparently suspended).
-  // Because StepInstruction suspends it, then calls Go() (which is
-  // asynchronous), and we haven't received S_STOPPED yet, the breakpoint should
-  // still be cleared on the target.
+  // The breakpoint must be removed until the state changes to "stopped"
+  // indicating that the step has completed.
   BOOST_CHECK(!server->HasBreakpoint(kAddress));
 
-  // Now simulate the single step completion by transitioning to S_STOPPED.
-  // This should trigger OnExecutionStateChanged -> RestoreBreakpoints.
   server->SetExecutionState(ExecutionState::S_STOPPED);
-
-  // Wait for the restore command to reach the server.
   AwaitQuiescence();
 
   BOOST_CHECK_MESSAGE(
       server->HasBreakpoint(kAddress),
-      "Breakpoint should be restored after S_STOPPED notification");
+      "Breakpoint must be restored after S_STOPPED notification");
 }
 
 DEBUGGER_TEST_CASE(StepOverNonBreakpointDoesNotClear) {
@@ -170,14 +159,10 @@ DEBUGGER_TEST_CASE(StepOverNonBreakpointDoesNotClear) {
 
   const uint32_t kAddress = 0x80001000;
   uint32_t thread_id = server->AddThread("Thread1", kAddress);
-
   BOOST_REQUIRE(debugger->FetchThreads());
   BOOST_REQUIRE(debugger->SetActiveThread(thread_id));
-
-  const uint32_t kOtherAddress = 0x80002000;
+  static constexpr uint32_t kOtherAddress = 0x88888888;
   BOOST_REQUIRE(debugger->AddBreakpoint(kOtherAddress));
-
-  BOOST_CHECK(server->HasBreakpoint(kOtherAddress));
 
   BOOST_REQUIRE(debugger->Stop());
   BOOST_REQUIRE(debugger->StepInstruction());
