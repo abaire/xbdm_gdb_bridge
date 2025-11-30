@@ -535,19 +535,15 @@ void XBDMDebugger::OnExecutionStateChanged(
       sections_.clear();
       std::lock_guard lock(breakpoints_lock_);
       breakpoints_.clear();
-      step_suspended_breakpoints_.clear();
     }
   }
   if (state_ == ExecutionState::S_STOPPED) {
     std::vector<uint32_t> breakpoints_to_restore;
     {
       std::lock_guard lock(breakpoints_lock_);
-      if (!step_suspended_breakpoints_.empty()) {
-        breakpoints_to_restore.reserve(step_suspended_breakpoints_.size());
-        for (auto bp : step_suspended_breakpoints_) {
-          breakpoints_to_restore.push_back(bp);
-        }
-        step_suspended_breakpoints_.clear();
+      breakpoints_to_restore.reserve(breakpoints_.size());
+      for (auto bp : breakpoints_) {
+        breakpoints_to_restore.push_back(bp);
       }
     }
     if (!breakpoints_to_restore.empty()) {
@@ -961,12 +957,6 @@ bool XBDMDebugger::StepInstruction() {
   uint32_t eip = thread->context->eip.value();
   auto breakpoints = GetActiveBreakpointsInRange(eip, 1);
   if (!breakpoints.empty()) {
-    {
-      std::lock_guard lock(breakpoints_lock_);
-      for (auto bp : breakpoints) {
-        step_suspended_breakpoints_.insert(bp);
-      }
-    }
     SuspendBreakpoints(breakpoints);
   }
 
@@ -974,10 +964,6 @@ bool XBDMDebugger::StepInstruction() {
     // If we failed to step, we should restore any breakpoints we suspended.
     if (!breakpoints.empty()) {
       RestoreBreakpoints(breakpoints);
-      std::lock_guard lock(breakpoints_lock_);
-      for (auto bp : breakpoints) {
-        step_suspended_breakpoints_.erase(bp);
-      }
     }
     return false;
   }
@@ -986,10 +972,6 @@ bool XBDMDebugger::StepInstruction() {
     // If we failed to go, we should restore any breakpoints we suspended.
     if (!breakpoints.empty()) {
       RestoreBreakpoints(breakpoints);
-      std::lock_guard lock(breakpoints_lock_);
-      for (auto bp : breakpoints) {
-        step_suspended_breakpoints_.erase(bp);
-      }
     }
     return false;
   }
@@ -1120,9 +1102,7 @@ std::vector<uint32_t> XBDMDebugger::GetActiveBreakpointsInRange(
   std::lock_guard lock(breakpoints_lock_);
   uint32_t end = address + length;
   for (uint32_t bp : breakpoints_) {
-    if (bp >= address && bp < end &&
-        step_suspended_breakpoints_.find(bp) ==
-            step_suspended_breakpoints_.end()) {
+    if (bp >= address && bp < end) {
       overlaps.push_back(bp);
     }
   }

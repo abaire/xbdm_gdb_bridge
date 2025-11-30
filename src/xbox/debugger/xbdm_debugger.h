@@ -214,7 +214,6 @@ class XBDMDebugger {
 
   mutable std::mutex breakpoints_lock_;
   std::set<uint32_t> breakpoints_;
-  std::set<uint32_t> step_suspended_breakpoints_;
 
   bool target_not_debuggable_{false};
   int notification_handler_id_{0};
