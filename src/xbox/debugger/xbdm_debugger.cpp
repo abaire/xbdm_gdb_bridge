@@ -954,7 +954,6 @@ bool XBDMDebugger::StepInstruction() {
   uint32_t eip = thread->context->eip.value();
   auto breakpoints = GetActiveBreakpointsInRange(eip, 1);
 
-  // Use a RAII helper to ensure breakpoints are restored if the step fails.
   struct ScopedBreakpointSuspender {
     XBDMDebugger& debugger;
     const std::vector<uint32_t>& breakpoints;

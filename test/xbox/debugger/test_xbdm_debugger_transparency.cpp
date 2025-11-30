@@ -112,8 +112,6 @@ void MockCommands(MockXBDMServer* server) {
   server->SetCommandHandler(
       "stop", [server](ClientTransport& client, const std::string&) {
         server->SendResponse(client, StatusCode::OK);
-        // Force state to stopped so subsequent commands like GetContext work if
-        // they check state
         server->SetExecutionState(ExecutionState::S_STOPPED);
         return true;
       });
