@@ -538,6 +538,15 @@ void XBDMDebugger::OnExecutionStateChanged(
     }
   }
   if (state_ == ExecutionState::S_STOPPED) {
+    std::vector<uint32_t> breakpoints_to_restore;
+    {
+      std::lock_guard lock(breakpoints_lock_);
+      breakpoints_to_restore.assign(breakpoints_.begin(), breakpoints_.end());
+    }
+    if (!breakpoints_to_restore.empty()) {
+      RestoreBreakpoints(breakpoints_to_restore, false);
+    }
+
     auto stopped_thread = GetFirstStoppedThread();
     if (stopped_thread) {
       SetActiveThread(stopped_thread->thread_id);
@@ -934,11 +943,48 @@ bool XBDMDebugger::StepInstruction() {
     return false;
   }
 
+  if (!thread->FetchContextSync(*context_)) {
+    LOG_DEBUGGER(error) << "Failed to fetch context for active thread.";
+    return false;
+  }
+  if (!thread->context->eip.has_value()) {
+    LOG_DEBUGGER(error) << "Active thread context has no EIP.";
+    return false;
+  }
+  uint32_t eip = thread->context->eip.value();
+  auto breakpoints = GetActiveBreakpointsInRange(eip, 1);
+
+  struct ScopedBreakpointSuspender {
+    XBDMDebugger& debugger;
+    const std::vector<uint32_t>& breakpoints;
+    bool dismissed = false;
+
+    ScopedBreakpointSuspender(XBDMDebugger& d, const std::vector<uint32_t>& bps)
+        : debugger(d), breakpoints(bps) {
+      if (!breakpoints.empty()) {
+        debugger.SuspendBreakpoints(breakpoints);
+      }
+    }
+
+    ~ScopedBreakpointSuspender() {
+      if (!dismissed && !breakpoints.empty()) {
+        debugger.RestoreBreakpoints(breakpoints);
+      }
+    }
+
+    void Dismiss() { dismissed = true; }
+  } suspender(*this, breakpoints);
+
   if (!thread->StepInstruction(*context_)) {
     return false;
   }
 
-  return Go();
+  if (!Go()) {
+    return false;
+  }
+
+  suspender.Dismiss();
+  return true;
 }
 
 bool XBDMDebugger::StepFunction() {
@@ -1058,24 +1104,22 @@ DebuggerExpressionParser::MemoryReader XBDMDebugger::CreateMemoryReader() {
   };
 }
 
-std::optional<std::vector<uint8_t>> XBDMDebugger::GetMemory(uint32_t address,
-                                                            uint32_t length) {
-  if (!ValidateMemoryAccess(address, length)) {
-    return std::nullopt;
-  }
-
+std::vector<uint32_t> XBDMDebugger::GetActiveBreakpointsInRange(
+    uint32_t address, uint32_t length) {
   std::vector<uint32_t> overlaps;
-  {
-    std::lock_guard lock(breakpoints_lock_);
-    uint32_t end = address + length;
-    for (uint32_t bp : breakpoints_) {
-      if (bp >= address && bp < end) {
-        overlaps.push_back(bp);
-      }
+  std::lock_guard lock(breakpoints_lock_);
+  uint32_t end = address + length;
+  for (uint32_t bp : breakpoints_) {
+    if (bp >= address && bp < end) {
+      overlaps.push_back(bp);
     }
   }
+  return overlaps;
+}
 
-  for (uint32_t bp : overlaps) {
+void XBDMDebugger::SuspendBreakpoints(
+    const std::vector<uint32_t>& breakpoints) {
+  for (uint32_t bp : breakpoints) {
     auto request = std::make_shared<BreakAddress>(bp, true);
     context_->SendCommandSync(request);
     if (!request->IsOK()) {
@@ -1083,18 +1127,37 @@ std::optional<std::vector<uint8_t>> XBDMDebugger::GetMemory(uint32_t address,
                           << std::hex << bp;
     }
   }
+}
+
+void XBDMDebugger::RestoreBreakpoints(const std::vector<uint32_t>& breakpoints,
+                                      bool wait) {
+  for (uint32_t bp : breakpoints) {
+    auto restore_request = std::make_shared<BreakAddress>(bp, false);
+    if (wait) {
+      context_->SendCommandSync(restore_request);
+      if (!restore_request->IsOK()) {
+        LOG_DEBUGGER(error)
+            << "Failed to restore transparent breakpoint at " << std::hex << bp;
+      }
+    } else {
+      context_->SendCommand(restore_request);
+    }
+  }
+}
+
+std::optional<std::vector<uint8_t>> XBDMDebugger::GetMemory(uint32_t address,
+                                                            uint32_t length) {
+  if (!ValidateMemoryAccess(address, length)) {
+    return std::nullopt;
+  }
+
+  std::vector<uint32_t> overlaps = GetActiveBreakpointsInRange(address, length);
+  SuspendBreakpoints(overlaps);
 
   auto request = std::make_shared<GetMemBinary>(address, length);
   context_->SendCommandSync(request);
 
-  for (uint32_t bp : overlaps) {
-    auto restore_request = std::make_shared<BreakAddress>(bp, false);
-    context_->SendCommandSync(restore_request);
-    if (!restore_request->IsOK()) {
-      LOG_DEBUGGER(error) << "Failed to restore transparent breakpoint at "
-                          << std::hex << bp;
-    }
-  }
+  RestoreBreakpoints(overlaps);
 
   if (!request->IsOK()) {
     LOG_DEBUGGER(error) << "Failed to read memory " << request->status << " "

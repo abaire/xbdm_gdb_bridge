@@ -152,6 +152,12 @@ class XBDMDebugger {
   DebuggerExpressionParser::MemoryReader CreateMemoryReader();
 
  private:
+  std::vector<uint32_t> GetActiveBreakpointsInRange(uint32_t address,
+                                                    uint32_t length);
+  void SuspendBreakpoints(const std::vector<uint32_t>& breakpoints);
+  void RestoreBreakpoints(const std::vector<uint32_t>& breakpoints,
+                          bool wait = true);
+
   [[nodiscard]] bool BreakAtStart() const;
   bool SetDebugger(bool enabled);
   bool RestartAndReconnect(uint32_t reboot_flags);

@@ -108,4 +108,67 @@ DEBUGGER_TEST_CASE(RebootClearsBreakpoints) {
   }
 }
 
+void MockCommands(MockXBDMServer* server) {
+  server->SetCommandHandler(
+      "stop", [server](ClientTransport& client, const std::string&) {
+        server->SendResponse(client, StatusCode::OK);
+        server->SetExecutionState(ExecutionState::S_STOPPED);
+        return true;
+      });
+
+  server->SetCommandHandler(
+      "setcontext", [server](ClientTransport& client, const std::string&) {
+        server->SendResponse(client, StatusCode::OK);
+        return true;
+      });
+}
+
+DEBUGGER_TEST_CASE(StepOverBreakpointTemporarilyClearsIt) {
+  MockCommands(server.get());
+
+  Bootup();
+  Connect();
+
+  const uint32_t kAddress = 0x80001000;
+  uint32_t thread_id = server->AddThread("Thread1", kAddress);
+
+  BOOST_REQUIRE(debugger->FetchThreads());
+  BOOST_REQUIRE(debugger->SetActiveThread(thread_id));
+  BOOST_REQUIRE(debugger->AddBreakpoint(kAddress));
+  BOOST_REQUIRE(debugger->Stop());
+
+  BOOST_REQUIRE(debugger->StepInstruction());
+
+  // The breakpoint must be removed until the state changes to "stopped"
+  // indicating that the step has completed.
+  BOOST_CHECK(!server->HasBreakpoint(kAddress));
+
+  server->SetExecutionState(ExecutionState::S_STOPPED);
+  AwaitQuiescence();
+
+  BOOST_CHECK_MESSAGE(
+      server->HasBreakpoint(kAddress),
+      "Breakpoint must be restored after S_STOPPED notification");
+}
+
+DEBUGGER_TEST_CASE(StepOverNonBreakpointDoesNotClear) {
+  MockCommands(server.get());
+
+  Bootup();
+  Connect();
+
+  const uint32_t kAddress = 0x80001000;
+  uint32_t thread_id = server->AddThread("Thread1", kAddress);
+  BOOST_REQUIRE(debugger->FetchThreads());
+  BOOST_REQUIRE(debugger->SetActiveThread(thread_id));
+  static constexpr uint32_t kOtherAddress = 0x88888888;
+  BOOST_REQUIRE(debugger->AddBreakpoint(kOtherAddress));
+
+  BOOST_REQUIRE(debugger->Stop());
+  BOOST_REQUIRE(debugger->StepInstruction());
+
+  // Breakpoint should NOT be cleared because it didn't overlap EIP.
+  BOOST_CHECK(server->HasBreakpoint(kOtherAddress));
+}
+
 BOOST_AUTO_TEST_SUITE_END()
