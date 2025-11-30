@@ -541,10 +541,7 @@ void XBDMDebugger::OnExecutionStateChanged(
     std::vector<uint32_t> breakpoints_to_restore;
     {
       std::lock_guard lock(breakpoints_lock_);
-      breakpoints_to_restore.reserve(breakpoints_.size());
-      for (auto bp : breakpoints_) {
-        breakpoints_to_restore.push_back(bp);
-      }
+      breakpoints_to_restore.assign(breakpoints_.begin(), breakpoints_.end());
     }
     if (!breakpoints_to_restore.empty()) {
       RestoreBreakpoints(breakpoints_to_restore, false);
