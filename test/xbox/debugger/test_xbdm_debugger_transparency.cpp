@@ -184,9 +184,6 @@ DEBUGGER_TEST_CASE(StepOverNonBreakpointDoesNotClear) {
 
   // Breakpoint should NOT be cleared because it didn't overlap EIP.
   BOOST_CHECK(server->HasBreakpoint(kOtherAddress));
-
-  server->SetExecutionState(ExecutionState::S_STOPPED);
-  AwaitQuiescence();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
