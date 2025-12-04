@@ -778,6 +778,7 @@ add_executable(
         test/shell/test_disassemble.cpp
         test/shell/test_dyndxt_commands.cpp
         test/shell/test_command_break.cpp
+        test/shell/test_getmem_render.cpp
 )
 target_include_directories(
         shell_tests

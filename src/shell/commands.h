@@ -237,11 +237,17 @@ struct CommandGetFileAttributes : Command {
 struct CommandGetMem : Command {
   CommandGetMem()
       : Command("Fetch raw memory content.",
-                "<Address> <size>\n"
+                "<Address> <size> [byte | word | dword]\n"
                 "\n"
                 "Fetch the content of the given block of memory.\n"
                 "Mathematical arguments in parentheses will be resolved to "
-                "integers.\n") {}
+                "integers.\n"
+                "An optional layout param may be given to adjust how the data"
+                "is displayed:\n"
+                "  byte - [default] render each byte in hex\n"
+                "  word - render each pair of bytes as little endian words\n"
+                "  dword - render every four bytes as little endian dwords\n") {
+  }
   Result operator()(XBOXInterface& interface, const ArgParser& args,
                     std::ostream& out) override;
 };
