@@ -546,23 +546,49 @@ Command::Result CommandGetMem::operator()(XBOXInterface& interface,
     return HANDLED;
   }
 
+  std::string render_mode;
+  if (!parser.Parse(2, render_mode)) {
+    render_mode = "b";
+  }
+
+  int bytes_per_element = 1;
+  if (render_mode == "b" || render_mode == "byte") {
+    bytes_per_element = 1;
+  } else if (render_mode == "w" || render_mode == "word") {
+    bytes_per_element = 2;
+  } else if (render_mode == "d" || render_mode == "dword") {
+    bytes_per_element = 4;
+  } else {
+    out << "Invalid render mode " << render_mode << std::endl;
+    return HANDLED;
+  }
+
   auto request = std::make_shared<GetMemBinary>(address, size);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
     out << *request << std::endl;
   } else {
     int count = 0;
-    for (auto& val : request->data) {
-      out << std::hex << std::setw(2) << std::setfill('0')
-          << static_cast<uint32_t>(val) << std::dec << " ";
-      if (count && (count % 32) == 0) {
+    auto it = request->data.begin();
+
+    out << std::hex << std::setfill('0');
+    while (it != request->data.end()) {
+      uint32_t val = 0;
+      int remaining = std::distance(it, request->data.end());
+      int current_element_size = std::min(bytes_per_element, remaining);
+
+      for (int i = 0; i < current_element_size; ++i) {
+        val |= (*it++) << (i * 8);
+      }
+
+      out << std::setw(current_element_size * 2) << val << " ";
+
+      if (count && (count % (32 / bytes_per_element)) == 0) {
         out << std::endl;
       }
       ++count;
     }
-    if (((count - 1) % 32) != 0 || count == 1) {
-      out << std::endl;
-    }
+    out << std::dec << std::endl;
   }
 
   return HANDLED;
