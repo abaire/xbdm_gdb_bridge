@@ -1142,8 +1142,14 @@ struct ModLongName : public RDCPProcessedRequest {
     AppendData("\"");
   }
 
-  // TODO: Parse response.
-  // Response will be "200- TheFullPath\r\n"
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
+    if (!IsOK()) {
+      return;
+    }
+    path = response->Message();
+  }
+
+  std::string path;
 };
 
 struct ModSections : public RDCPProcessedRequest {
@@ -1165,10 +1171,10 @@ struct ModSections : public RDCPProcessedRequest {
     }
   };
 
-  explicit ModSections(const std::string& path)
+  explicit ModSections(const std::string& name)
       : RDCPProcessedRequest("modsections") {
-    SetData(" path=\"");
-    AppendData(path);
+    SetData(" name=\"");
+    AppendData(name);
     AppendData("\"");
   }
 

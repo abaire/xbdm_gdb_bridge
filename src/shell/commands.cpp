@@ -159,16 +159,15 @@ Command::Result CommandBye::operator()(XBOXInterface& interface,
 Command::Result CommandContinue::operator()(XBOXInterface& interface,
                                             const ArgParser& args,
                                             std::ostream& out) {
-  ArgParser parser(args);
   int thread_id;
-  if (!parser.Parse(0, thread_id)) {
+  if (!args.Parse(0, thread_id)) {
     out << "Missing required thread_id argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
 
   bool exception = false;
-  parser.Parse(1, exception);
+  args.Parse(1, exception);
 
   SendAndPrintMessage(interface,
                       std::make_shared<Continue>(thread_id, exception), out);
@@ -183,9 +182,8 @@ Command::Result CommandDebugOptions::operator()(XBOXInterface& interface,
     return HANDLED;
   }
 
-  ArgParser parser(args);
-  bool enable_crashdump = parser.ArgExists("c", "crashdump");
-  bool enable_dcptrace = parser.ArgExists("d", "dpctrace");
+  bool enable_crashdump = args.ArgExists("c", "crashdump");
+  bool enable_dcptrace = args.ArgExists("d", "dpctrace");
   SendAndPrintMessage(
       interface,
       std::make_shared<SetDebugOptions>(enable_crashdump, enable_dcptrace),
@@ -196,8 +194,7 @@ Command::Result CommandDebugOptions::operator()(XBOXInterface& interface,
 Command::Result CommandDebugger::operator()(XBOXInterface& interface,
                                             const ArgParser& args,
                                             std::ostream& out) {
-  ArgParser parser(args);
-  bool disable = parser.ArgExists("d", "disable", "off");
+  bool disable = args.ArgExists("d", "disable", "off");
   SendAndPrintMessage(interface, std::make_shared<Debugger>(disable), out);
   return HANDLED;
 }
@@ -223,15 +220,14 @@ Command::Result CommandDedicate::operator()(XBOXInterface& interface,
 Command::Result CommandDelete::operator()(XBOXInterface& interface,
                                           const ArgParser& args,
                                           std::ostream& out) {
-  ArgParser parser(args);
   std::string path;
-  if (!parser.Parse(0, path)) {
+  if (!args.Parse(0, path)) {
     out << "Missing required path argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
   path = EnsureXFATStylePath(path);
-  bool recursive = parser.ArgExists("-r");
+  bool recursive = args.ArgExists("-r");
   if (recursive) {
     bool exists;
     bool is_directory;
@@ -250,9 +246,8 @@ Command::Result CommandDelete::operator()(XBOXInterface& interface,
 Command::Result CommandDirList::operator()(XBOXInterface& interface,
                                            const ArgParser& args,
                                            std::ostream& out) {
-  ArgParser parser(args);
   std::string path;
-  if (!parser.Parse(0, path)) {
+  if (!args.Parse(0, path)) {
     out << "Missing required path argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -302,9 +297,8 @@ Command::Result CommandDebugMonitorVersion::operator()(XBOXInterface& interface,
 Command::Result CommandDriveFreeSpace::operator()(XBOXInterface& interface,
                                                   const ArgParser& args,
                                                   std::ostream& out) {
-  ArgParser parser(args);
   std::string drive_letter;
-  if (!parser.Parse(0, drive_letter)) {
+  if (!args.Parse(0, drive_letter)) {
     out << "Missing required drive_letter argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -341,21 +335,20 @@ Command::Result CommandDriveList::operator()(XBOXInterface& interface,
 Command::Result CommandGetChecksum::operator()(XBOXInterface& interface,
                                                const ArgParser& args,
                                                std::ostream& out) {
-  ArgParser parser(args);
   int address;
   int length;
   int block_size;
-  if (!parser.Parse(0, address)) {
+  if (!args.Parse(0, address)) {
     out << "Missing required Address argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
-  if (!parser.Parse(1, length)) {
+  if (!args.Parse(1, length)) {
     out << "Missing required length argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
-  if (!parser.Parse(2, block_size)) {
+  if (!args.Parse(2, block_size)) {
     out << "Missing required block_size argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -390,9 +383,8 @@ Command::Result CommandGetChecksum::operator()(XBOXInterface& interface,
 Command::Result CommandGetContext::operator()(XBOXInterface& interface,
                                               const ArgParser& args,
                                               std::ostream& out) {
-  ArgParser parser(args);
   int thread_id;
-  if (!parser.Parse(0, thread_id)) {
+  if (!args.Parse(0, thread_id)) {
     out << "Missing required thread_id argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -403,9 +395,9 @@ Command::Result CommandGetContext::operator()(XBOXInterface& interface,
   bool enable_floatingpoint = true;
 
   if (args.size() > 1) {
-    enable_control = parser.ArgExists("control", "c");
-    enable_integer = parser.ArgExists("integer", "int", "i");
-    enable_floatingpoint = parser.ArgExists("float", "fp", "f");
+    enable_control = args.ArgExists("control", "c");
+    enable_integer = args.ArgExists("integer", "int", "i");
+    enable_floatingpoint = args.ArgExists("float", "fp", "f");
   }
 
   auto request = std::make_shared<GetContext>(
@@ -422,9 +414,8 @@ Command::Result CommandGetContext::operator()(XBOXInterface& interface,
 Command::Result CommandGetExtContext::operator()(XBOXInterface& interface,
                                                  const ArgParser& args,
                                                  std::ostream& out) {
-  ArgParser parser(args);
   int thread_id;
-  if (!parser.Parse(0, thread_id)) {
+  if (!args.Parse(0, thread_id)) {
     out << "Missing required thread_id argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -443,9 +434,8 @@ Command::Result CommandGetExtContext::operator()(XBOXInterface& interface,
 Command::Result CommandGetFile::operator()(XBOXInterface& interface,
                                            const ArgParser& args,
                                            std::ostream& out) {
-  ArgParser parser(args);
   std::string path;
-  if (!parser.Parse(0, path)) {
+  if (!args.Parse(0, path)) {
     out << "Missing required path argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -465,7 +455,7 @@ Command::Result CommandGetFile::operator()(XBOXInterface& interface,
 
   std::string local_path_str;
   std::filesystem::path local_path;
-  if (!parser.Parse(1, local_path_str)) {
+  if (!args.Parse(1, local_path_str)) {
     std::string portable_path = path;
     std::replace(portable_path.begin(), portable_path.end(), '\\', '/');
     local_path = std::filesystem::path(portable_path).filename();
@@ -495,9 +485,8 @@ Command::Result CommandGetFile::operator()(XBOXInterface& interface,
 Command::Result CommandGetFileAttributes::operator()(XBOXInterface& interface,
                                                      const ArgParser& args,
                                                      std::ostream& out) {
-  ArgParser parser(args);
   std::string path;
-  if (!parser.Parse(0, path)) {
+  if (!args.Parse(0, path)) {
     out << "Missing required path argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -519,12 +508,12 @@ Command::Result CommandGetFileAttributes::operator()(XBOXInterface& interface,
 }
 
 Command::Result CommandGetMem::operator()(XBOXInterface& interface,
-                                          const ArgParser& parser,
+                                          const ArgParser& args,
                                           std::ostream& out) {
   uint32_t address;
   uint32_t size;
 
-  auto result = parser.Parse(0, address, interface.GetExpressionParser());
+  auto result = args.Parse(0, address, interface.GetExpressionParser());
   if (!result) {
     if (result == ArgParser::ArgType::SYNTAX_ERROR) {
       out << "Syntax error " << result.message << std::endl;
@@ -535,7 +524,7 @@ Command::Result CommandGetMem::operator()(XBOXInterface& interface,
     return HANDLED;
   }
 
-  result = parser.Parse(1, size, interface.GetExpressionParser());
+  result = args.Parse(1, size, interface.GetExpressionParser());
   if (!result) {
     if (result == ArgParser::ArgType::SYNTAX_ERROR) {
       out << "Syntax error " << result.message << std::endl;
@@ -547,7 +536,7 @@ Command::Result CommandGetMem::operator()(XBOXInterface& interface,
   }
 
   std::string render_mode;
-  if (!parser.Parse(2, render_mode)) {
+  if (!args.Parse(2, render_mode)) {
     render_mode = "b";
   }
 
@@ -634,9 +623,8 @@ Command::Result CommandGo::operator()(XBOXInterface& interface,
 Command::Result CommandHalt::operator()(XBOXInterface& interface,
                                         const ArgParser& args,
                                         std::ostream& out) {
-  ArgParser parser(args);
   int thread_id;
-  if (!parser.Parse(0, thread_id)) {
+  if (!args.Parse(0, thread_id)) {
     SendAndPrintMessage(interface, std::make_shared<Halt>(), out);
   } else {
     SendAndPrintMessage(interface, std::make_shared<Halt>(thread_id), out);
@@ -648,9 +636,8 @@ Command::Result CommandHalt::operator()(XBOXInterface& interface,
 Command::Result CommandIsBreak::operator()(XBOXInterface& interface,
                                            const ArgParser& args,
                                            std::ostream& out) {
-  ArgParser parser(args);
   int address;
-  if (!parser.Parse(0, address)) {
+  if (!args.Parse(0, address)) {
     out << "Missing required Address argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -702,9 +689,8 @@ Command::Result CommandIsDebugger::operator()(XBOXInterface& interface,
 Command::Result CommandIsStopped::operator()(XBOXInterface& interface,
                                              const ArgParser& args,
                                              std::ostream& out) {
-  ArgParser parser(args);
   int thread_id;
-  if (!parser.Parse(0, thread_id)) {
+  if (!args.Parse(0, thread_id)) {
     out << "Missing required thread_id argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -728,16 +714,15 @@ Command::Result CommandIsStopped::operator()(XBOXInterface& interface,
 Command::Result CommandMagicBoot::operator()(XBOXInterface& interface,
                                              const ArgParser& args,
                                              std::ostream& out) {
-  ArgParser parser(args);
   std::string path;
-  if (!parser.Parse(0, path)) {
+  if (!args.Parse(0, path)) {
     out << "Missing required path argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
   path = EnsureXFATStylePath(path);
-  bool nodebug = parser.ArgExists("nodebug");
-  bool cold = parser.ArgExists("cold");
+  bool nodebug = args.ArgExists("nodebug");
+  bool cold = args.ArgExists("cold");
   SendAndPrintMessage(interface,
                       std::make_shared<MagicBoot>(path, !nodebug, cold), out);
   return HANDLED;
@@ -772,9 +757,8 @@ Command::Result CommandMemoryMap::operator()(XBOXInterface& interface,
 Command::Result CommandMakeDirectory::operator()(XBOXInterface& interface,
                                                  const ArgParser& args,
                                                  std::ostream& out) {
-  ArgParser parser(args);
   std::string path;
-  if (!parser.Parse(0, path)) {
+  if (!args.Parse(0, path)) {
     out << "Missing required path argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -787,15 +771,13 @@ Command::Result CommandMakeDirectory::operator()(XBOXInterface& interface,
 Command::Result CommandModuleSections::operator()(XBOXInterface& interface,
                                                   const ArgParser& args,
                                                   std::ostream& out) {
-  ArgParser parser(args);
-  std::string path;
-  if (!parser.Parse(0, path)) {
-    out << "Missing required path argument." << std::endl;
+  std::string name;
+  if (!args.Parse(0, name)) {
+    out << "Missing required name argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
-  path = EnsureXFATStylePath(path);
-  auto request = std::make_shared<ModSections>(path);
+  auto request = std::make_shared<ModSections>(name);
   interface.SendCommandSync(request);
   if (!request->IsOK()) {
     out << *request << std::endl;
@@ -803,6 +785,26 @@ Command::Result CommandModuleSections::operator()(XBOXInterface& interface,
     for (auto& m : request->sections) {
       out << m << std::endl;
     }
+  }
+  return HANDLED;
+}
+
+Command::Result CommandModuleLongName::operator()(XBOXInterface& interface,
+                                                  const ArgParser& args,
+                                                  std::ostream& out) {
+  std::string name;
+  if (!args.Parse(0, name)) {
+    out << "Missing required name argument." << std::endl;
+    PrintUsage();
+    return HANDLED;
+  }
+
+  auto request = std::make_shared<ModLongName>(name);
+  interface.SendCommandSync(request);
+  if (!request->IsOK()) {
+    out << *request << std::endl;
+  } else {
+    out << request->path << std::endl;
   }
   return HANDLED;
 }
@@ -826,17 +828,16 @@ Command::Result CommandNoStopOn::operator()(XBOXInterface& interface,
                                             const ArgParser& args,
                                             std::ostream& out) {
   uint32_t flags = 0;
-  ArgParser parser(args);
-  if (parser.ArgExists("fce", "exception")) {
+  if (args.ArgExists("fce", "exception")) {
     flags |= NoStopOn::kFirstChanceException;
   }
-  if (parser.ArgExists("debugstr")) {
+  if (args.ArgExists("debugstr")) {
     flags |= NoStopOn::kDebugStr;
   }
-  if (parser.ArgExists("createthread")) {
+  if (args.ArgExists("createthread")) {
     flags |= NoStopOn::kCreateThread;
   }
-  if (parser.ArgExists("stacktrace")) {
+  if (args.ArgExists("stacktrace")) {
     flags |= NoStopOn::kStacktrace;
   }
   if (!flags) {
@@ -850,9 +851,8 @@ Command::Result CommandNotifyAt::operator()(XBOXInterface& base_interface,
                                             const ArgParser& args,
                                             std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
-  ArgParser parser(args);
   uint32_t port;
-  if (!parser.Parse(0, port)) {
+  if (!args.Parse(0, port)) {
     out << "Missing required Port argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -870,8 +870,8 @@ Command::Result CommandNotifyAt::operator()(XBOXInterface& base_interface,
     return HANDLED;
   }
 
-  bool drop_flag = parser.ArgExists("drop");
-  bool debug_flag = parser.ArgExists("debug");
+  bool drop_flag = args.ArgExists("drop");
+  bool debug_flag = args.ArgExists("debug");
   SendAndPrintMessage(
       interface, std::make_shared<NotifyAt>(port, drop_flag, debug_flag), out);
 
@@ -886,16 +886,15 @@ Command::Result CommandNotifyAt::operator()(XBOXInterface& base_interface,
 Command::Result CommandPutFile::operator()(XBOXInterface& interface,
                                            const ArgParser& args,
                                            std::ostream& out) {
-  ArgParser parser(args);
   std::string local_path;
-  if (!parser.Parse(0, local_path)) {
+  if (!args.Parse(0, local_path)) {
     out << "Missing required local_path argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
 
   std::string remote_path;
-  if (!parser.Parse(1, remote_path)) {
+  if (!args.Parse(1, remote_path)) {
     out << "Missing required remote_path argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -910,7 +909,7 @@ Command::Result CommandPutFile::operator()(XBOXInterface& interface,
   }
 
   UploadFileOverwriteAction overwrite_action =
-      parser.ArgExists("allow_overwrite", "overwrite", "-f")
+      args.ArgExists("allow_overwrite", "overwrite", "-f")
           ? UploadFileOverwriteAction::OVERWRITE
           : (is_directory ? UploadFileOverwriteAction::SKIP
                           : UploadFileOverwriteAction::ABORT);
@@ -928,15 +927,14 @@ Command::Result CommandPutFile::operator()(XBOXInterface& interface,
 Command::Result CommandRename::operator()(XBOXInterface& interface,
                                           const ArgParser& args,
                                           std::ostream& out) {
-  ArgParser parser(args);
   std::string path;
   std::string new_path;
-  if (!parser.Parse(0, path)) {
+  if (!args.Parse(0, path)) {
     out << "Missing required path argument." << std::endl;
     PrintUsage();
     return HANDLED;
   }
-  if (!parser.Parse(1, new_path)) {
+  if (!args.Parse(1, new_path)) {
     out << "Missing required new_path argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -952,17 +950,16 @@ Command::Result CommandReboot::operator()(XBOXInterface& interface,
                                           const ArgParser& args,
                                           std::ostream& out) {
   uint32_t flags = 0;
-  ArgParser parser(args);
-  if (parser.ArgExists("wait")) {
+  if (args.ArgExists("wait")) {
     flags |= Reboot::kWait;
   }
-  if (parser.ArgExists("warm")) {
+  if (args.ArgExists("warm")) {
     flags |= Reboot::kWarm;
   }
-  if (parser.ArgExists("nodebug")) {
+  if (args.ArgExists("nodebug")) {
     flags |= Reboot::kNoDebug;
   }
-  if (parser.ArgExists("stop")) {
+  if (args.ArgExists("stop")) {
     flags |= Reboot::kStop;
   }
   SendAndPrintMessage(interface, std::make_shared<Reboot>(flags), out);
@@ -972,9 +969,8 @@ Command::Result CommandReboot::operator()(XBOXInterface& interface,
 Command::Result CommandResume::operator()(XBOXInterface& interface,
                                           const ArgParser& args,
                                           std::ostream& out) {
-  ArgParser parser(args);
   int thread_id;
-  if (!parser.Parse(0, thread_id)) {
+  if (!args.Parse(0, thread_id)) {
     out << "Missing required thread_id argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -1035,9 +1031,8 @@ Command::Result CommandScreenshot::operator()(XBOXInterface& interface,
 Command::Result CommandSetMem::operator()(XBOXInterface& interface,
                                           const ArgParser& args,
                                           std::ostream& out) {
-  const ArgParser& parser(args);
   uint32_t address;
-  auto result = parser.Parse(0, address, interface.GetExpressionParser());
+  auto result = args.Parse(0, address, interface.GetExpressionParser());
   if (!result) {
     if (result == ArgParser::ArgType::SYNTAX_ERROR) {
       out << "Syntax error " << result.message << std::endl;
@@ -1075,17 +1070,16 @@ Command::Result CommandStopOn::operator()(XBOXInterface& interface,
                                           const ArgParser& args,
                                           std::ostream& out) {
   uint32_t flags = 0;
-  ArgParser parser(args);
-  if (parser.ArgExists("fce", "exception")) {
+  if (args.ArgExists("fce", "exception")) {
     flags |= StopOn::kFirstChanceException;
   }
-  if (parser.ArgExists("debugstr")) {
+  if (args.ArgExists("debugstr")) {
     flags |= StopOn::kDebugStr;
   }
-  if (parser.ArgExists("createthread")) {
+  if (args.ArgExists("createthread")) {
     flags |= StopOn::kCreateThread;
   }
-  if (parser.ArgExists("stacktrace")) {
+  if (args.ArgExists("stacktrace")) {
     flags |= StopOn::kStacktrace;
   }
   if (!flags) {
@@ -1098,9 +1092,8 @@ Command::Result CommandStopOn::operator()(XBOXInterface& interface,
 Command::Result CommandSuspend::operator()(XBOXInterface& interface,
                                            const ArgParser& args,
                                            std::ostream& out) {
-  ArgParser parser(args);
   int thread_id;
-  if (!parser.Parse(0, thread_id)) {
+  if (!args.Parse(0, thread_id)) {
     out << "Missing required thread_id argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -1113,9 +1106,8 @@ Command::Result CommandSuspend::operator()(XBOXInterface& interface,
 Command::Result CommandThreadInfo::operator()(XBOXInterface& interface,
                                               const ArgParser& args,
                                               std::ostream& out) {
-  ArgParser parser(args);
   int thread_id;
-  if (!parser.Parse(0, thread_id)) {
+  if (!args.Parse(0, thread_id)) {
     out << "Missing required thread_id argument." << std::endl;
     PrintUsage();
     return HANDLED;
@@ -1178,14 +1170,13 @@ Command::Result CommandWalkMem::operator()(XBOXInterface& interface,
 Command::Result CommandXBEInfo::operator()(XBOXInterface& interface,
                                            const ArgParser& args,
                                            std::ostream& out) {
-  ArgParser parser(args);
   std::string path;
   std::shared_ptr<XBEInfo> request;
-  if (!parser.Parse(0, path)) {
+  if (!args.Parse(0, path)) {
     request = std::make_shared<XBEInfo>();
   } else {
     path = EnsureXFATStylePath(path);
-    bool on_disk_only = parser.ArgExists("disk_only", "true");
+    bool on_disk_only = args.ArgExists("disk_only", "true");
     request = std::make_shared<XBEInfo>(path, on_disk_only);
   }
 

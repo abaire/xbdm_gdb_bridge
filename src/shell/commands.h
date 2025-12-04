@@ -344,10 +344,20 @@ struct CommandMakeDirectory : Command {
 struct CommandModuleSections : Command {
   CommandModuleSections()
       : Command("Print information about a module on the target.",
-                "<path>\n"
+                "<name>\n"
                 "\n"
                 "Return information about the sections in the given executable "
                 "Module.") {}
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
+                    std::ostream& out) override;
+};
+
+struct CommandModuleLongName : Command {
+  CommandModuleLongName()
+      : Command("Print path information about a module on the target.",
+                "<name>\n"
+                "\n"
+                "Return path information about the given executable Module.") {}
   Result operator()(XBOXInterface& interface, const ArgParser& args,
                     std::ostream& out) override;
 };

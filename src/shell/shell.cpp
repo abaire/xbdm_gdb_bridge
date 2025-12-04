@@ -164,6 +164,8 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
   commands_["mem_map"] = mem_map;
   REGISTER("mkdir", CommandMakeDirectory);
   REGISTER("modsections", CommandModuleSections);
+  REGISTER("modlong", CommandModuleLongName);
+  ALIAS("modlong", "modpath");
   REGISTER("modules", CommandModules);
   REGISTER("nostopon", CommandNoStopOn);
   REGISTER("notifyat", CommandNotifyAt);
