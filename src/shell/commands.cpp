@@ -380,7 +380,7 @@ Command::Result CommandGetChecksum::operator()(XBOXInterface& interface,
   } else {
     for (auto& checksum : request->checksums) {
       out << std::hex << std::setfill('0') << std::setw(8) << checksum
-          << std::endl;
+          << std::dec << std::endl;
     }
   }
 
@@ -554,7 +554,7 @@ Command::Result CommandGetMem::operator()(XBOXInterface& interface,
     int count = 0;
     for (auto& val : request->data) {
       out << std::hex << std::setw(2) << std::setfill('0')
-          << static_cast<uint32_t>(val) << " ";
+          << static_cast<uint32_t>(val) << std::dec << " ";
       if (count && (count % 32) == 0) {
         out << std::endl;
       }
@@ -577,7 +577,7 @@ Command::Result CommandGetProcessID::operator()(XBOXInterface& interface,
     out << *request << std::endl;
   } else {
     out << std::hex << std::setfill('0') << std::setw(8) << request->process_id
-        << std::endl;
+        << std::dec << std::endl;
   }
   return HANDLED;
 }
@@ -592,7 +592,7 @@ Command::Result CommandGetUtilityDriveInfo::operator()(XBOXInterface& interface,
   } else {
     for (auto& partition : request->partitions) {
       out << partition.first << ": 0x" << std::hex << std::setfill('0')
-          << std::setw(8) << partition.second << std::endl;
+          << std::setw(8) << partition.second << std::dec << std::endl;
     }
   }
   return HANDLED;
@@ -1108,7 +1108,7 @@ Command::Result CommandThreadInfo::operator()(XBOXInterface& interface,
         << request->start << std::endl;
     out << "Base addr: 0x" << std::hex << std::setw(8) << std::setfill('0')
         << request->base << std::endl;
-    out << "limit: " << request->limit << std::endl;
+    out << "limit: " << request->limit << std::dec << std::endl;
   }
   return HANDLED;
 }
@@ -1143,7 +1143,7 @@ Command::Result CommandWalkMem::operator()(XBOXInterface& interface,
       for (auto& flag : region.flags) {
         out << " " << flag;
       }
-      out << std::endl;
+      out << std::dec << std::endl;
     }
   }
   return HANDLED;
@@ -1168,7 +1168,8 @@ Command::Result CommandXBEInfo::operator()(XBOXInterface& interface,
     out << *request << std::endl;
   } else {
     out << "Name: " << request->name << " checksum " << std::hex
-        << std::setfill('0') << std::setw(8) << request->checksum << std::endl;
+        << std::setfill('0') << std::setw(8) << request->checksum << std::dec
+        << std::endl;
   }
 
   return HANDLED;
@@ -1183,7 +1184,7 @@ Command::Result CommandXTLInfo::operator()(XBOXInterface& interface,
     out << *request << std::endl;
   } else {
     out << "Last error: " << std::hex << std::setfill('0') << std::setw(8)
-        << request->last_err << std::endl;
+        << request->last_err << std::dec << std::endl;
   }
   return HANDLED;
 }

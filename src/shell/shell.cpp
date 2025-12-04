@@ -80,6 +80,8 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
   REGISTER("/restart", DebuggerCommandRestart);
   REGISTER("/switch", DebuggerCommandSetActiveThread);
   REGISTER("/threads", DebuggerCommandGetThreads);
+  REGISTER("/whichthread", DebuggerCommandWhichThread);
+  ALIAS("/whichthread", "/wt");
   REGISTER("/info", DebuggerCommandGetThreadInfo);
   REGISTER("/infowithcontext", DebuggerCommandGetThreadInfoAndContext);
   ALIAS("/infowithcontext", "/ic");

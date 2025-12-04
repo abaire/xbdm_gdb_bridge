@@ -104,6 +104,19 @@ struct DebuggerCommandGetThreads : Command {
                     std::ostream& out) override;
 };
 
+struct DebuggerCommandWhichThread : Command {
+  DebuggerCommandWhichThread()
+      : Command(
+            "Attempt to determine which thread owns a given stack.",
+            "<stack_address>\n"
+            "\n"
+            "Attempts to find which thread owns a stack address. Typically "
+            "this would be used along with a separate gdb connection by "
+            "looking up $ebp or $esp and passing the value to this command.") {}
+  Result operator()(XBOXInterface& interface, const ArgParser&,
+                    std::ostream& out) override;
+};
+
 struct DebuggerCommandGetThreadInfo : Command {
   DebuggerCommandGetThreadInfo()
       : Command("Print detailed information about the active thread.") {}

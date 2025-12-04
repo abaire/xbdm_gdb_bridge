@@ -286,6 +286,39 @@ Command::Result DebuggerCommandGetThreads::operator()(
   return HANDLED;
 }
 
+Command::Result DebuggerCommandWhichThread::operator()(
+    XBOXInterface& base_interface, const ArgParser& args, std::ostream& out) {
+  GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
+  auto debugger = interface.Debugger();
+  if (!debugger) {
+    out << "Debugger not attached." << std::endl;
+    return HANDLED;
+  }
+
+  if (!debugger->FetchThreads()) {
+    out << "Failed to fetch threads." << std::endl;
+    return HANDLED;
+  }
+
+  uint32_t address;
+  if (!args.Parse(0, address)) {
+    out << "Missing required `address` argument." << std::endl;
+    return HANDLED;
+  }
+
+  for (auto& thread : debugger->Threads()) {
+    if (thread->HasStack(address)) {
+      out << *thread << std::endl;
+      PrintThreadContext(thread, interface, {}, out);
+      return HANDLED;
+    }
+  }
+
+  out << "Failed to find a thread with a stack containing " << std::hex
+      << address << std::dec << std::endl;
+  return HANDLED;
+}
+
 Command::Result DebuggerCommandGetThreadInfo::operator()(
     XBOXInterface& base_interface, const ArgParser&, std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);

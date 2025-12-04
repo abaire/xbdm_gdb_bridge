@@ -36,7 +36,7 @@ struct SimulatedThread {
   uint32_t start{0x00060000};
   uint32_t base{0xd0000000};
   uint32_t tls_base{0xd0001000};
-  uint32_t limit{0xd0200000};
+  uint32_t limit{0xCFFF0000};
 
   union {
     uint64_t timestamp;

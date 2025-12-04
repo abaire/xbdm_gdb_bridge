@@ -30,6 +30,9 @@ struct Thread {
 
   bool StepInstruction(XBDMContext& ctx);
 
+  //! Checks if `address` is within the stack region owned by this thread.
+  bool HasStack(uint32_t address) const;
+
  private:
   void Parse(const RDCPMapResponse& parsed) {
     suspend_count = parsed.GetDWORD("suspend");
