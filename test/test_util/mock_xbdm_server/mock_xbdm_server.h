@@ -72,7 +72,8 @@ class MockXBDMServer {
   std::vector<uint8_t> GetMemoryRegion(uint32_t address, size_t length);
 
   uint32_t AddThread(const std::string& name, uint32_t eip = 0x80000000,
-                     uint32_t base = 0xd0000000, uint32_t start = 0x00060000);
+                     uint32_t base = 0xd0000000, uint32_t start = 0x00060000,
+                     uint32_t limit = 0);
   void RemoveThread(uint32_t thread_id);
   void SetThreadRegister(uint32_t thread_id, const std::string& reg_name,
                          uint32_t value);

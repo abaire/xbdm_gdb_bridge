@@ -35,10 +35,10 @@ std::ostream& operator<<(std::ostream& os, const Thread& t) {
     os << std::endl;
   };
 
-  print_hex("Base: ", t.base);
   print_hex("Start: ", t.start);
-  print_hex("Thread local base: ", t.tls_base);
+  print_hex("Base: ", t.base);
   print_hex("Limit: ", t.limit);
+  print_hex("Thread local base: ", t.tls_base);
 
   os << std::dec << std::setfill(' ');
   return os;
@@ -176,4 +176,8 @@ bool Thread::StepInstruction(XBDMContext& ctx) {
   }
 
   return Continue(ctx);
+}
+
+bool Thread::HasStack(uint32_t address) const {
+  return address > limit && address <= base;
 }

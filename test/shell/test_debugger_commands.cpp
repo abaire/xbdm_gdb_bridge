@@ -121,9 +121,9 @@ DEBUGGER_TEST_CASE(GetThreadsWithThreads) {
   auto debugger_interface =
       std::static_pointer_cast<DebuggerXBOXInterface>(interface);
   BOOST_REQUIRE(debugger_interface->AttachDebugger());
-  server->AddThread("1", 0x1234, 0x4567, 0x89AB);
-  server->AddThread("2", 0x2222, 0x2000, 0x2200);
-  server->AddThread("3", 0x3333, 0x3000, 0x3300);
+  server->AddThread("1", 0x1234, 0x45670000, 0x89AB);
+  server->AddThread("2", 0x2222, 0x20000000, 0x2200);
+  server->AddThread("3", 0x3333, 0x30000000, 0x3300);
 
   std::stringstream capture;
   DebuggerCommandGetThreads cmd;
@@ -134,34 +134,34 @@ DEBUGGER_TEST_CASE(GetThreadsWithThreads) {
       "Thread 1\n"
       "Priority 9\n"
       "Suspend count 0\n"
-      "Base:  0xd0000000\n"
       "Start:  0x00060000\n"
+      "Base:  0xd0000000\n"
+      "Limit:  0xcfff0000\n"
       "Thread local base:  0xd0001000\n"
-      "Limit:  0xd0200000\n"
       "\n"
       "Thread 2\n"
       "Priority 9\n"
       "Suspend count 0\n"
-      "Base:  0x00004567\n"
       "Start:  0x000089ab\n"
+      "Base:  0x45670000\n"
+      "Limit:  0x45660000\n"
       "Thread local base:  0xd0001000\n"
-      "Limit:  0xd0200000\n"
       "\n"
       "Thread 3\n"
       "Priority 9\n"
       "Suspend count 0\n"
-      "Base:  0x00002000\n"
       "Start:  0x00002200\n"
+      "Base:  0x20000000\n"
+      "Limit:  0x1fff0000\n"
       "Thread local base:  0xd0001000\n"
-      "Limit:  0xd0200000\n"
       "\n"
       "Thread 4\n"
       "Priority 9\n"
       "Suspend count 0\n"
-      "Base:  0x00003000\n"
       "Start:  0x00003300\n"
-      "Thread local base:  0xd0001000\n"
-      "Limit:  0xd0200000\n";
+      "Base:  0x30000000\n"
+      "Limit:  0x2fff0000\n"
+      "Thread local base:  0xd0001000\n";
   BOOST_CHECK_EQUAL(Trimmed(capture), expected);
 }
 
@@ -169,9 +169,9 @@ DEBUGGER_TEST_CASE(GetThreadsWithActiveThread) {
   auto debugger_interface =
       std::static_pointer_cast<DebuggerXBOXInterface>(interface);
   BOOST_REQUIRE(debugger_interface->AttachDebugger());
-  server->AddThread("Something", 0x1234, 0x4567, 0x89AB);
-  uint32_t active_tid = server->AddThread("Active", 0x2222, 0x2000, 0x2200);
-  server->AddThread("AnotherThread", 0x3333, 0x3000, 0x3300);
+  server->AddThread("Something", 0x1234, 0x45670000, 0x89AB);
+  uint32_t active_tid = server->AddThread("Active", 0x2222, 0x20000000, 0x2200);
+  server->AddThread("AnotherThread", 0x3333, 0x30000000, 0x3300);
 
   server->SimulateExecutionBreakpoint(0x1000, active_tid);
   AwaitQuiescence();
@@ -188,36 +188,91 @@ DEBUGGER_TEST_CASE(GetThreadsWithActiveThread) {
       "Thread 1\n"
       "Priority 9\n"
       "Suspend count 0\n"
-      "Base:  0xd0000000\n"
       "Start:  0x00060000\n"
+      "Base:  0xd0000000\n"
+      "Limit:  0xcfff0000\n"
       "Thread local base:  0xd0001000\n"
-      "Limit:  0xd0200000\n"
       "\n"
       "Thread 2\n"
       "Priority 9\n"
       "Suspend count 0\n"
-      "Base:  0x00004567\n"
       "Start:  0x000089ab\n"
+      "Base:  0x45670000\n"
+      "Limit:  0x45660000\n"
       "Thread local base:  0xd0001000\n"
-      "Limit:  0xd0200000\n"
       "\n"
       "[Active thread]\n"
       "Thread 3\n"
       "Priority 9\n"
       "Suspend count 0\n"
-      "Base:  0x00002000\n"
       "Start:  0x00002200\n"
+      "Base:  0x20000000\n"
+      "Limit:  0x1fff0000\n"
       "Thread local base:  0xd0001000\n"
-      "Limit:  0xd0200000\n"
       "\n"
       "Thread 4\n"
       "Priority 9\n"
       "Suspend count 0\n"
-      "Base:  0x00003000\n"
       "Start:  0x00003300\n"
-      "Thread local base:  0xd0001000\n"
-      "Limit:  0xd0200000\n";
+      "Base:  0x30000000\n"
+      "Limit:  0x2fff0000\n"
+      "Thread local base:  0xd0001000\n";
   BOOST_CHECK_EQUAL(Trimmed(capture), expected);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// WhichThread
+BOOST_FIXTURE_TEST_SUITE(WhichThreadTests, XBDMDebuggerInterfaceFixture)
+
+DEBUGGER_TEST_CASE(WhichThreadWithNoAddressFails) {
+  auto debugger_interface =
+      std::static_pointer_cast<DebuggerXBOXInterface>(interface);
+  BOOST_REQUIRE(debugger_interface->AttachDebugger());
+  std::stringstream capture;
+  DebuggerCommandWhichThread cmd;
+  BOOST_REQUIRE(cmd(*interface, empty_args, capture) == Command::HANDLED);
+
+  BOOST_CHECK_EQUAL(Trimmed(capture), "Missing required `address` argument.");
+}
+
+DEBUGGER_TEST_CASE(WhichThreadFindsThreadWithStack) {
+  uint32_t active_tid = server->AddThread("Active", 0x2222, 0xCFFFF00A, 0x2200);
+  auto debugger_interface =
+      std::static_pointer_cast<DebuggerXBOXInterface>(interface);
+  BOOST_REQUIRE(debugger_interface->AttachDebugger());
+  std::stringstream capture;
+  DebuggerCommandWhichThread cmd;
+  ArgParser args("whichthread", std::vector<std::string>{"0xCFFFF00A"});
+
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+
+  std::string expected_thread_name = "Thread " + std::to_string(active_tid - 1);
+  std::string output = Trimmed(capture);
+  BOOST_CHECK(output.find(expected_thread_name) != std::string::npos);
+}
+
+DEBUGGER_TEST_CASE(WhichThreadFailsWhenNoThreadHasStack) {
+  auto debugger_interface =
+      std::static_pointer_cast<DebuggerXBOXInterface>(interface);
+  BOOST_REQUIRE(debugger_interface->AttachDebugger());
+  std::stringstream capture;
+  DebuggerCommandWhichThread cmd;
+  ArgParser args("whichthread 0x10000000");
+
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+
+  BOOST_CHECK_EQUAL(Trimmed(capture),
+                    "Failed to find a thread with a stack containing 10000000");
+}
+
+DEBUGGER_TEST_CASE(WhichThreadFailsWhenDebuggerNotAttached) {
+  std::stringstream capture;
+  DebuggerCommandWhichThread cmd;
+  ArgParser args("whichthread 0xCFFFF004");
+
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+  BOOST_CHECK_EQUAL(Trimmed(capture), "Debugger not attached.");
 }
 
 BOOST_AUTO_TEST_SUITE_END()
