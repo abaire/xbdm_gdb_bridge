@@ -575,3 +575,65 @@ Command::Result DebuggerCommandContinueAllAndGo::operator()(
 
   return HANDLED;
 }
+
+Command::Result DebuggerCommandGuessBackTrace::operator()(
+    XBOXInterface& base_interface, const ArgParser& args, std::ostream& out) {
+  GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
+  auto debugger = interface.Debugger();
+  if (!debugger) {
+    out << "Debugger not attached." << std::endl;
+    return HANDLED;
+  }
+
+  uint32_t thread_id;
+  if (!args.Parse(0, thread_id)) {
+    auto active_thread = debugger->ActiveThreadID();
+    if (!active_thread) {
+      out << "No active thread and no thread_id provided." << std::endl;
+      return HANDLED;
+    }
+    thread_id = *active_thread;
+  }
+
+  auto frames = debugger->GuessBackTrace(thread_id);
+  if (frames.empty()) {
+    out << "No frames found." << std::endl;
+    return HANDLED;
+  }
+
+  int index = 0;
+  auto sections = debugger->Sections();
+  auto module_ranges = debugger->ModuleRanges();
+
+  for (uint32_t addr : frames) {
+    out << "#" << std::setw(2) << index++ << " 0x" << std::hex << addr
+        << std::dec;
+
+    std::string location;
+    auto section_it = sections.upper_bound(addr);
+    if (section_it != sections.begin()) {
+      --section_it;
+      const auto& section = section_it->second;
+      if (addr >= section->base_address &&
+          addr < section->base_address + section->size) {
+        location = section->name;
+
+        auto it = module_ranges.upper_bound({section->base_address, 0});
+        if (it != module_ranges.begin()) {
+          --it;
+          if (section->base_address >= it->first.first &&
+              section->base_address < it->first.second) {
+            location = it->second->name + "!" + location;
+          }
+        }
+      }
+    }
+
+    if (!location.empty()) {
+      out << " in " << location;
+    }
+    out << std::endl;
+  }
+
+  return HANDLED;
+}

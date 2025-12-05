@@ -128,3 +128,74 @@ DEBUGGER_TEST_CASE(ConditionsAreIsolatedByAddressAndType) {
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+// ============================================================================
+// GuessBackTraceTests
+// ============================================================================
+
+BOOST_FIXTURE_TEST_SUITE(GuessBackTraceTests, XBDMDebuggerFixture)
+
+DEBUGGER_TEST_CASE(GuessBackTraceFindsCalls) {
+  Bootup();
+  BOOST_REQUIRE(debugger->Attach());
+
+  const uint32_t kStackBase = 0xD0001000;
+  const uint32_t kStackLimit = 0xD0000000;
+  const uint32_t kTextBase = 0x00010000;
+  const uint32_t kTextSize = 0x1000;
+
+  uint32_t thread_id = server->AddThread("TestThread", kTextBase, kStackBase,
+                                         kTextBase, kStackLimit);
+  server->SetThreadRegister(thread_id, "esp", kStackLimit);
+
+  server->AddModule("default.xbe", kTextBase, kTextSize);
+  server->AddXbeSection("default.xbe", ".text", kTextBase, kTextSize, 1);
+  server->AddRegion(kTextBase, kTextSize);
+
+  // 3. Setup Stack Memory
+  // We will place 3 values on the stack:
+  // [ESP]     = Valid Return Address (points to .text, preceded by CALL)
+  // [ESP + 4] = Invalid Return Address (points to .text, NO CALL)
+  // [ESP + 8] = Invalid Address (outside .text)
+
+  uint32_t valid_ret_addr = kTextBase + 0x100;
+  uint32_t invalid_ret_addr_no_call = kTextBase + 0x200;
+  uint32_t invalid_addr_outside = kTextBase + kTextSize + 0x100;
+
+  std::vector<uint8_t> stack_data(12);
+  // Helper to write uint32 to vector
+  auto write_u32 = [](std::vector<uint8_t>& data, size_t offset, uint32_t val) {
+    data[offset] = val & 0xFF;
+    data[offset + 1] = (val >> 8) & 0xFF;
+    data[offset + 2] = (val >> 16) & 0xFF;
+    data[offset + 3] = (val >> 24) & 0xFF;
+  };
+
+  write_u32(stack_data, 0, valid_ret_addr);
+  write_u32(stack_data, 4, invalid_ret_addr_no_call);
+  write_u32(stack_data, 8, invalid_addr_outside);
+
+  server->AddRegion(kStackLimit, stack_data);
+
+  // 4. Setup .text content
+  // Valid Call: E8 xx xx xx xx at valid_ret_addr - 5
+  std::vector<uint8_t> text_data(kTextSize, 0x90);  // NOPs
+  uint32_t call_offset = valid_ret_addr - kTextBase - 5;
+  text_data[call_offset] = 0xE8;  // CALL relative
+  // The operand doesn't matter for the heuristic, just the opcode
+
+  // Invalid Call: Just NOPs at invalid_ret_addr_no_call - 5
+
+  server->SetMemoryRegion(kTextBase, text_data);
+
+  // 5. Run GuessBackTrace
+  BOOST_REQUIRE(debugger->FetchModules());
+  BOOST_REQUIRE(debugger->FetchThreads());
+  auto frames = debugger->GuessBackTrace(thread_id);
+
+  // 6. Verify
+  BOOST_REQUIRE_EQUAL(frames.size(), 1);
+  BOOST_CHECK_EQUAL(frames[0], valid_ret_addr);
+}
+
+BOOST_AUTO_TEST_SUITE_END()

@@ -248,4 +248,15 @@ struct DebuggerCommandDisassemble : Command {
                     std::ostream& out) override;
 };
 
+struct DebuggerCommandGuessBackTrace : Command {
+  DebuggerCommandGuessBackTrace()
+      : Command("Guess backtrace by scanning the stack.",
+                "[thread_id]\n"
+                "\n"
+                "Scans the stack of the given thread (or active thread) for "
+                "potential return addresses.") {}
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
+                    std::ostream& out) override;
+};
+
 #endif  // XBDM_GDB_BRIDGE_DEBUGGER_COMMANDS_H

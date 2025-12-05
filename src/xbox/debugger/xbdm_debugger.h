@@ -101,6 +101,8 @@ class XBDMDebugger {
   bool FetchMemoryMap();
   bool RestartAndAttach(int flags = Reboot::kStop);
 
+  std::vector<uint32_t> GuessBackTrace(uint32_t thread_id);
+
   bool StepInstruction();
   bool StepFunction();
 
