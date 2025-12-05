@@ -88,8 +88,9 @@ class MockXBDMServer {
   void AddModule(const std::string& name, uint32_t base_address, uint32_t size);
   void RemoveModule(const std::string& name);
 
-  void AddXbeSection(const std::string& name, uint32_t base_address,
-                     uint32_t size, uint32_t index, uint32_t flags = 1);
+  void AddXbeSection(const std::string& module_name, const std::string& name,
+                     uint32_t base_address, uint32_t size, uint32_t index,
+                     uint32_t flags = 1);
   void RemoveXbeSection(const std::string& name);
 
   /**
@@ -285,6 +286,8 @@ class MockXBDMServer {
   bool HandleGo(ClientTransport& client, const std::string& parameters);
   bool HandleIsStopped(ClientTransport& client, const std::string& parameters);
   bool HandleModules(ClientTransport& client, const std::string& parameters);
+  bool HandleModSections(ClientTransport& client,
+                         const std::string& parameters);
   bool HandleNoStopOn(ClientTransport& client, const std::string& parameters);
   bool HandleNotifyAt(ClientTransport& client, const std::string& parameters);
   bool HandleReboot(ClientTransport& client, const std::string& parameters);

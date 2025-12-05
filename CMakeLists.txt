@@ -80,9 +80,10 @@ ExternalProject_Add(
         <INSTALL_DIR>/include/replxx.h
 )
 ExternalProject_Get_Property(replxx INSTALL_DIR)
-set(replxx_include_dir ${INSTALL_DIR}/include)
+file(MAKE_DIRECTORY ${INSTALL_DIR}/include)
 set(REPLXX_STATIC_LIB ${INSTALL_DIR}/lib/${REPLXX_FILENAME})
 add_library(libreplxx STATIC IMPORTED GLOBAL)
+target_include_directories(libreplxx INTERFACE ${INSTALL_DIR}/include)
 set_target_properties(libreplxx PROPERTIES IMPORTED_LOCATION "${REPLXX_STATIC_LIB}")
 add_dependencies(libreplxx replxx)
 
@@ -101,8 +102,9 @@ ExternalProject_Add(
         <INSTALL_DIR>/include/capstone/capstone.h
 )
 ExternalProject_Get_Property(capstone INSTALL_DIR)
-set(capstone_include_dir ${INSTALL_DIR}/include)
+file(MAKE_DIRECTORY ${INSTALL_DIR}/include)
 add_library(libcapstone STATIC IMPORTED GLOBAL)
+target_include_directories(libcapstone INTERFACE ${INSTALL_DIR}/include)
 set_target_properties(libcapstone PROPERTIES IMPORTED_LOCATION "${INSTALL_DIR}/lib/libcapstone.a")
 add_dependencies(libcapstone capstone)
 
@@ -487,6 +489,7 @@ target_link_libraries(
         Boost::log
         xbdm_gdb_bridge_rdcp
         xbdm_gdb_bridge_xbox_xbdm_context
+        libcapstone
 )
 
 
@@ -518,9 +521,6 @@ target_include_directories(
         xbdm_gdb_bridge_shell
         PRIVATE
         src
-        PUBLIC
-        ${replxx_include_dir}
-        ${capstone_include_dir}
 )
 target_link_libraries(
         xbdm_gdb_bridge_shell

@@ -368,6 +368,7 @@ bool MockXBDMServer::ProcessCommand(ClientTransport& client,
   }
 
   // Built-in command handlers
+
 #define HANDLE(cmd, handler)                    \
   if (command == cmd) {                         \
     return Handle##handler(client, params_str); \
@@ -379,14 +380,15 @@ bool MockXBDMServer::ProcessCommand(ClientTransport& client,
   HANDLE("debugger", Debugger)
   HANDLE("getcontext", GetContext)
   HANDLE("getmem2", GetMem2)
-  HANDLE("setmem", SetMem)
   HANDLE("go", Go)
   HANDLE("isstopped", IsStopped)
+  HANDLE("modsections", ModSections)
   HANDLE("modules", Modules)
   HANDLE("nostopon", NoStopOn)
   HANDLE("notifyat", NotifyAt)
   HANDLE("reboot", Reboot)
   HANDLE("resume", Resume)
+  HANDLE("setmem", SetMem)
   HANDLE("stopon", StopOn)
   HANDLE("suspend", Suspend)
   HANDLE("threadinfo", ThreadInfo)
@@ -478,6 +480,7 @@ bool MockXBDMServer::HandleDebugger(ClientTransport& client,
 bool MockXBDMServer::HandleThreads(ClientTransport& client,
                                    const std::string&) {
   SendResponse(client, OK_MULTILINE_RESPONSE, "thread list follows");
+  std::lock_guard lock(state_mutex_);
   for (auto& thread : state_.threads) {
     SendStringWithTerminator(client, std::to_string(thread.first));
   }
@@ -553,6 +556,41 @@ bool MockXBDMServer::HandleModules(ClientTransport& client,
     SENDHEX("size", size);
     SENDHEX("check", checksum);
     SENDHEX("timestamp", timestamp);
+
+    SendTerminator(client);
+  }
+#undef SENDHEX
+
+  SendMultilineTerminator(client);
+  return true;
+}
+
+bool MockXBDMServer::HandleModSections(ClientTransport& client,
+                                       const std::string& parameters) {
+  RDCPMapResponse params(parameters);
+  auto name = params.GetString("name");
+  if (name.empty()) {
+    SendResponse(client, ERR_UNEXPECTED, "Missing name");
+    return true;
+  }
+
+  SendResponse(client, OK_MULTILINE_RESPONSE);
+  std::lock_guard lock(state_mutex_);
+
+#define SENDHEX(key, param) SendKeyHexValue(client, key, section.param, true)
+
+  for (auto& entry : state_.xbe_sections) {
+    auto& section = entry.second;
+    if (section.module_name != name) {
+      continue;
+    }
+
+    SendKeyValue(client, "name", section.name);
+
+    SENDHEX("base", base_address);
+    SENDHEX("size", size);
+    SENDHEX("index", index);
+    SENDHEX("flags", flags);
 
     SendTerminator(client);
   }
@@ -1102,10 +1140,12 @@ void MockXBDMServer::RemoveModule(const std::string& name) {
   state_.modules.erase(name);
 }
 
-void MockXBDMServer::AddXbeSection(const std::string& name,
+void MockXBDMServer::AddXbeSection(const std::string& module_name,
+                                   const std::string& name,
                                    uint32_t base_address, uint32_t size,
                                    uint32_t index, uint32_t flags) {
-  XbeSection section{.name = name,
+  XbeSection section{.module_name = module_name,
+                     .name = name,
                      .base_address = base_address,
                      .size = size,
                      .index = index,

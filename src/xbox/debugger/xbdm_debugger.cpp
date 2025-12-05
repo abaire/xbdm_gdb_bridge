@@ -1,5 +1,7 @@
 #include "xbdm_debugger.h"
 
+#include <capstone/capstone.h>
+
 #include "debugger_expression_parser.h"
 #include "notification/xbdm_notification.h"
 #include "util/logging.h"
@@ -290,7 +292,7 @@ std::shared_ptr<Thread> XBDMDebugger::GetAnyThread() {
 }
 
 std::shared_ptr<Thread> XBDMDebugger::GetThread(uint32_t thread_id) {
-  const std::lock_guard lock(threads_lock_);
+  std::lock_guard lock(threads_lock_);
   for (auto& thread : threads_) {
     if (thread->thread_id == thread_id) {
       return thread;
@@ -744,6 +746,106 @@ void XBDMDebugger::PerformAfterStopActions(
     LOG_DEBUGGER(info) << "Active thread:" << std::endl
                        << *active_thread << context_info.str();
   }
+}
+
+std::vector<uint32_t> XBDMDebugger::GuessBackTrace(uint32_t thread_id) {
+  auto thread = GetThread(thread_id);
+  if (!thread) {
+    LOG_DEBUGGER(error) << "GuessBackTrace: Thread " << thread_id
+                        << " not found.";
+    return {};
+  }
+
+  if (!thread->FetchContextSync(*context_)) {
+    LOG_DEBUGGER(error) << "GuessBackTrace: Failed to fetch context for thread "
+                        << thread_id;
+    return {};
+  }
+
+  if (!thread->FetchInfoSync(*context_)) {
+    LOG_DEBUGGER(error) << "GuessBackTrace: Failed to fetch info for thread "
+                        << thread_id;
+    return {};
+  }
+
+  if (!thread->base.has_value() || !thread->limit.has_value()) {
+    LOG_DEBUGGER(error) << "GuessBackTrace: Stack limits unknown for thread "
+                        << thread_id;
+    return {};
+  }
+
+  uint32_t esp = thread->context->esp.value_or(0);
+  uint32_t stack_base = *thread->base;
+  uint32_t stack_limit = *thread->limit;
+
+  if (esp < stack_limit || esp >= stack_base) {
+    LOG_DEBUGGER(warning) << "GuessBackTrace: ESP " << std::hex << esp
+                          << " outside stack range [" << stack_limit << ", "
+                          << stack_base << ")";
+  }
+
+  std::vector<uint32_t> guessed_frames;
+  uint32_t current_sp = esp;
+  uint32_t bytes_scanned = 0;
+  static constexpr uint32_t kMaxScanBytes = 1024;
+  static constexpr size_t kMaxFrames = 16;
+  static constexpr uint32_t kInstructionLookbehind = 16;
+
+  csh handle;
+  if (cs_open(CS_ARCH_X86, CS_MODE_32, &handle) != CS_ERR_OK) {
+    LOG_DEBUGGER(error) << "GuessBackTrace: Failed to initialize Capstone";
+    return {};
+  }
+
+  std::shared_ptr<void> cs_cleanup(nullptr, [&](void*) { cs_close(&handle); });
+  auto sections = Sections();
+
+  while (bytes_scanned < kMaxScanBytes && guessed_frames.size() < kMaxFrames &&
+         current_sp < stack_base) {
+    auto maybe_val = GetDWORD(current_sp);
+    if (!maybe_val) {
+      current_sp += 4;
+      bytes_scanned += 4;
+      continue;
+    }
+    uint32_t val = *maybe_val;
+
+    bool in_executable_section = false;
+    auto it = sections.upper_bound(val);
+    if (it != sections.begin()) {
+      --it;
+      const auto& section = it->second;
+      if (val >= section->base_address &&
+          val < section->base_address + section->size) {
+        if (section->name == ".text" || section->name == "KDCODE") {
+          in_executable_section = true;
+        }
+      }
+    }
+
+    if (in_executable_section) {
+      uint32_t read_addr = val - kInstructionLookbehind;
+      auto bytes = GetMemory(read_addr, kInstructionLookbehind);
+      if (bytes && bytes->size() == kInstructionLookbehind) {
+        cs_insn* insn;
+        size_t count = cs_disasm(handle, bytes->data(), bytes->size(),
+                                 read_addr, 0, &insn);
+        if (count > 0) {
+          const auto& last_insn = insn[count - 1];
+          if (last_insn.address + last_insn.size == val &&
+              last_insn.id == X86_INS_CALL) {
+            guessed_frames.push_back(val);
+          }
+          cs_free(insn, count);
+        }
+      }
+    }
+
+    current_sp += 4;
+    bytes_scanned += 4;
+  }
+
+  return guessed_frames;
 }
 
 bool XBDMDebugger::RestartAndAttach(int flags) {

@@ -106,6 +106,9 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
   REGISTER("/stepfun", DebuggerCommandStepFunction);
   ALIAS("/stepfun", "/stepf");
 
+  REGISTER("/guessbacktrace", DebuggerCommandGuessBackTrace);
+  ALIAS("/guessbacktrace", "/gbt");
+
   REGISTER("@bootstrap", DynDXTCommandLoadBootstrap);
   REGISTER("@hello", DynDXTCommandHello);
   REGISTER("@load", DynDXTCommandLoad);

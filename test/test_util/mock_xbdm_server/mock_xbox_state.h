@@ -89,8 +89,9 @@ struct Module {
   uint32_t checksum;
 };
 
-//! Represents a section within an XBE.
+//! Represents a section within an XBE module.
 struct XbeSection {
+  std::string module_name;
   std::string name;
   uint32_t base_address;
   uint32_t size;

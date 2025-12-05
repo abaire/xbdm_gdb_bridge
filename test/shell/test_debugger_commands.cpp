@@ -90,7 +90,7 @@ DEBUGGER_TEST_CASE(LaunchWaitWithInvalidPathFails) {
 
 DEBUGGER_TEST_CASE(LaunchWaitWithValidPathSucceeds) {
   server->AddModule("test.exe", 0x80000000, 0x10000);
-  server->AddXbeSection(".test", 0x1000, 100, 0);
+  server->AddXbeSection("test.exe", ".test", 0x1000, 100, 0);
   server->AddRegion(0x00010000, 0x00001000, 0x00000004);
   server->AddRegion(0x80000000, 0x10000, 2);
 
