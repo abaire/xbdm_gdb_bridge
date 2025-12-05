@@ -523,7 +523,7 @@ Command::Result DebuggerCommandGetModules::operator()(
 
   auto modules = debugger->Modules();
   for (auto& module : modules) {
-    out << *module << std::endl;
+    out << *module.second << std::endl;
   }
   return HANDLED;
 }
@@ -537,9 +537,18 @@ Command::Result DebuggerCommandGetSections::operator()(
     return HANDLED;
   }
 
+  auto module_ranges = debugger->ModuleRanges();
+
   auto sections = debugger->Sections();
   for (auto& section : sections) {
-    out << *section << std::endl;
+    auto it = module_ranges.upper_bound({section.first, 0});
+    if (it != module_ranges.begin()) {
+      --it;
+      if (section.first < it->first.second) {
+        out << it->second->name << ": ";
+      }
+    }
+    out << *section.second << std::endl;
   }
   return HANDLED;
 }
