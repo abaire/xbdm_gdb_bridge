@@ -13,6 +13,10 @@ struct Module {
          uint32_t checksum, uint32_t timestamp, bool isTls, bool isXbe);
   explicit Module(const RDCPMapResponse& parsed);
 
+  std::pair<uint32_t, uint32_t> MemoryRange() const {
+    return std::make_pair(base_address, base_address + size);
+  }
+
   friend std::ostream& operator<<(std::ostream& os, const Module& loaded);
 
   std::string name;

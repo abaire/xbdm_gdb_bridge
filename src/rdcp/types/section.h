@@ -3,6 +3,7 @@
 
 #include <cinttypes>
 #include <string>
+#include <utility>
 
 #include "rdcp/rdcp_processed_request.h"
 
@@ -14,6 +15,13 @@ struct Section {
     index = parsed.GetUInt32("index");
     flags = parsed.GetUInt32("flags");
   }
+  Section(std::string name, uint32_t base_address, uint32_t size,
+          uint32_t index, uint32_t flags)
+      : name(std::move(name)),
+        base_address(base_address),
+        size(size),
+        index(index),
+        flags(flags) {}
 
   friend std::ostream& operator<<(std::ostream& os, const Section& loaded);
 

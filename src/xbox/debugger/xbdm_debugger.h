@@ -58,11 +58,15 @@ class XBDMDebugger {
                 bool wait_forever = false, bool break_at_start = true);
 
   [[nodiscard]] std::list<std::shared_ptr<Thread>> Threads();
-  [[nodiscard]] std::list<std::shared_ptr<Module>> Modules();
-  [[nodiscard]] std::list<std::shared_ptr<Section>> Sections();
+  [[nodiscard]] std::map<uint32_t, std::shared_ptr<Module>> Modules();
+  //! Returns the module map keyed by their start and end virtual memory
+  //! addresses.
+  [[nodiscard]] std::map<std::pair<uint32_t, uint32_t>, std::shared_ptr<Module>>
+  ModuleRanges();
+  [[nodiscard]] std::map<uint32_t, std::shared_ptr<Section>> Sections();
 
   [[nodiscard]] std::shared_ptr<Module> GetModule(
-      const std::string& module_name) const;
+      const std::string& module_name);
 
   std::vector<uint32_t> GetThreadIDs();
 
@@ -81,14 +85,6 @@ class XBDMDebugger {
 
   bool SetActiveThread(uint32_t thread_id);
 
-  [[nodiscard]] const std::list<std::shared_ptr<Module>>& Modules() const {
-    return modules_;
-  }
-
-  [[nodiscard]] const std::list<std::shared_ptr<Section>>& Sections() const {
-    return sections_;
-  }
-
   bool ContinueAll(bool no_break_on_exception = false);
   bool ContinueThread(uint32_t thread_id, bool no_break_on_exception = false);
   bool HaltAll(
@@ -101,6 +97,7 @@ class XBDMDebugger {
 
   bool FetchThreads();
   bool FetchModules();
+  bool FetchSections(const std::string& module_name);
   bool FetchMemoryMap();
   bool RestartAndAttach(int flags = Reboot::kStop);
 
@@ -197,10 +194,12 @@ class XBDMDebugger {
   std::list<std::shared_ptr<Thread>> threads_;
 
   mutable std::recursive_mutex modules_lock_;
-  std::list<std::shared_ptr<Module>> modules_;
+  //! Map of base virtual address to Module.
+  std::map<uint32_t, std::shared_ptr<Module>> modules_;
 
   mutable std::recursive_mutex sections_lock_;
-  std::list<std::shared_ptr<Section>> sections_;
+  //! Map of virtual address to Section
+  std::map<uint32_t, std::shared_ptr<Section>> sections_;
 
   mutable std::recursive_mutex memory_regions_lock_;
   std::list<std::shared_ptr<MemoryRegion>> memory_regions_;

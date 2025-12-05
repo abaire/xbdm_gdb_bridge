@@ -231,15 +231,6 @@ std::list<std::shared_ptr<Thread>> XBDMDebugger::Threads() {
   return threads_;
 }
 
-std::list<std::shared_ptr<Module>> XBDMDebugger::Modules() {
-  std::unique_lock lock(modules_lock_);
-  return modules_;
-}
-std::list<std::shared_ptr<Section>> XBDMDebugger::Sections() {
-  std::unique_lock lock(sections_lock_);
-  return sections_;
-}
-
 std::vector<uint32_t> XBDMDebugger::GetThreadIDs() {
   std::unique_lock lock(threads_lock_);
   std::vector<uint32_t> ret;
@@ -355,6 +346,36 @@ bool XBDMDebugger::SetActiveThread(uint32_t thread_id) {
   return false;
 }
 
+std::map<uint32_t, std::shared_ptr<Module>> XBDMDebugger::Modules() {
+  std::lock_guard lock(modules_lock_);
+  if (modules_.empty()) {
+    FetchModules();
+  }
+  return modules_;
+}
+
+std::map<uint32_t, std::shared_ptr<Section>> XBDMDebugger::Sections() {
+  std::lock_guard module_lock(modules_lock_);
+  if (sections_.empty()) {
+    FetchModules();
+  }
+
+  std::lock_guard section_lock(sections_lock_);
+  return sections_;
+}
+
+std::map<std::pair<uint32_t, uint32_t>, std::shared_ptr<Module>>
+XBDMDebugger::ModuleRanges() {
+  auto modules = Modules();
+
+  std::map<std::pair<uint32_t, uint32_t>, std::shared_ptr<Module>> ret;
+  for (const auto& entry : modules) {
+    ret.emplace(entry.second->MemoryRange(), entry.second);
+  }
+
+  return ret;
+}
+
 void XBDMDebugger::OnNotification(
     const std::shared_ptr<XBDMNotification>& notification) {
   if (notification->Type() == NT_CUSTOM) {
@@ -463,14 +484,16 @@ void XBDMDebugger::OnModuleLoaded(
     const std::shared_ptr<NotificationModuleLoaded>& msg) {
   LOG_DEBUGGER(info) << "Module loaded";
   std::unique_lock lock(modules_lock_);
-  modules_.push_back(std::make_shared<Module>(msg->module));
+  auto mod = std::make_shared<Module>(msg->module);
+  modules_[mod->base_address] = mod;
   FetchMemoryMap();
 }
 
 void XBDMDebugger::OnSectionLoaded(
     const std::shared_ptr<NotificationSectionLoaded>& msg) {
   std::unique_lock lock(sections_lock_);
-  sections_.push_back(std::make_shared<Section>(msg->section));
+  auto section = std::make_shared<Section>(msg->section);
+  sections_[section->base_address] = section;
   FetchMemoryMap();
 }
 
@@ -478,13 +501,7 @@ void XBDMDebugger::OnSectionUnloaded(
     const std::shared_ptr<NotificationSectionUnloaded>& msg) {
   std::unique_lock lock(sections_lock_);
   auto& section = msg->section;
-  sections_.remove_if([&section](const std::shared_ptr<Section>& other) {
-    if (!other) {
-      return false;
-    }
-
-    return other->base_address == section.base_address;
-  });
+  sections_.erase(section.base_address);
   FetchMemoryMap();
 }
 
@@ -822,8 +839,32 @@ bool XBDMDebugger::FetchModules() {
 
   const std::lock_guard lock(modules_lock_);
   modules_.clear();
+  {
+    const std::lock_guard sections_lock(sections_lock_);
+    sections_.clear();
+  }
   for (auto& module : request->modules) {
-    modules_.emplace_back(std::make_shared<Module>(module));
+    modules_[module.base_address] = std::make_shared<Module>(module);
+    FetchSections(module.name);
+  }
+
+  return true;
+}
+
+bool XBDMDebugger::FetchSections(const std::string& module_name) {
+  auto request = std::make_shared<ModSections>(module_name);
+  context_->SendCommandSync(request);
+  if (!request->IsOK()) {
+    LOG_DEBUGGER(error) << "Failed to fetch sections for module '"
+                        << module_name << "' " << request->status << " "
+                        << request->message;
+    return false;
+  }
+
+  const std::lock_guard lock(sections_lock_);
+  for (auto& section : request->sections) {
+    sections_[section.base] = std::make_shared<Section>(
+        section.name, section.base, section.size, section.index, section.flags);
   }
 
   return true;
@@ -1292,11 +1333,11 @@ bool XBDMDebugger::ValidateMemoryAccess(uint32_t address, uint32_t length,
 }
 
 std::shared_ptr<Module> XBDMDebugger::GetModule(
-    const std::string& module_name) const {
+    const std::string& module_name) {
   auto modules = Modules();
   for (auto& module : modules) {
-    if (module->name == module_name) {
-      return module;
+    if (module.second->name == module_name) {
+      return module.second;
     }
   }
   return nullptr;
