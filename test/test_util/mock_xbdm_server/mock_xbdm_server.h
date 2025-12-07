@@ -284,6 +284,7 @@ class MockXBDMServer {
   bool HandleGetMem2(ClientTransport& client, const std::string& parameters);
   bool HandleSetMem(ClientTransport& client, const std::string& parameters);
   bool HandleGo(ClientTransport& client, const std::string& parameters);
+  bool HandleStop(ClientTransport& client, const std::string& parameters);
   bool HandleIsStopped(ClientTransport& client, const std::string& parameters);
   bool HandleModules(ClientTransport& client, const std::string& parameters);
   bool HandleModSections(ClientTransport& client,

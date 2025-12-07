@@ -605,7 +605,8 @@ Command::Result DebuggerCommandGuessBackTrace::operator()(
   auto sections = debugger->Sections();
   auto module_ranges = debugger->ModuleRanges();
 
-  for (uint32_t addr : frames) {
+  for (const auto& frame : frames) {
+    uint32_t addr = frame.address;
     out << "#" << std::setw(2) << index++ << " 0x" << std::hex << addr
         << std::dec;
 
@@ -631,6 +632,20 @@ Command::Result DebuggerCommandGuessBackTrace::operator()(
 
     if (!location.empty()) {
       out << " in " << location;
+    }
+
+    if (frame.call_target) {
+      out << " ";
+      if (frame.is_suspicious) {
+        out << "? " << "0x" << std::hex << *frame.call_target << " ?"
+            << std::dec;
+      } else {
+        out << "[ 0x" << std::hex << *frame.call_target << " ]" << std::dec;
+      }
+    }
+
+    if (frame.is_indirect_call) {
+      out << " [calc]";
     }
     out << std::endl;
   }

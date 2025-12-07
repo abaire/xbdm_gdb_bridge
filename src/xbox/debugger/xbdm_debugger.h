@@ -45,6 +45,27 @@ class XBDMDebugger {
     EXECUTE_WATCH,
   };
 
+  struct BacktraceFrame {
+    uint32_t address;
+    bool is_indirect_call;
+    std::optional<uint32_t> call_target;
+    bool is_suspicious{false};
+  };
+
+  struct ScopedResume {
+    explicit ScopedResume(XBDMDebugger& dbg);
+    ~ScopedResume();
+
+    ScopedResume(const ScopedResume& other) = delete;
+    ScopedResume(const ScopedResume&& other) = delete;
+    ScopedResume& operator=(const ScopedResume& other) = delete;
+    ScopedResume& operator=(ScopedResume&& other) = delete;
+
+   private:
+    XBDMDebugger& debugger;
+    bool should_resume{false};
+  };
+
  public:
   explicit XBDMDebugger(std::shared_ptr<XBDMContext> context);
 
@@ -101,7 +122,7 @@ class XBDMDebugger {
   bool FetchMemoryMap();
   bool RestartAndAttach(int flags = Reboot::kStop);
 
-  std::vector<uint32_t> GuessBackTrace(uint32_t thread_id);
+  std::vector<BacktraceFrame> GuessBackTrace(uint32_t thread_id);
 
   bool StepInstruction();
   bool StepFunction();
