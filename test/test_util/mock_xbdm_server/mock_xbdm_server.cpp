@@ -389,6 +389,7 @@ bool MockXBDMServer::ProcessCommand(ClientTransport& client,
   HANDLE("reboot", Reboot)
   HANDLE("resume", Resume)
   HANDLE("setmem", SetMem)
+  HANDLE("stop", Stop)
   HANDLE("stopon", StopOn)
   HANDLE("suspend", Suspend)
   HANDLE("threadinfo", ThreadInfo)
@@ -822,6 +823,25 @@ bool MockXBDMServer::HandleGo(ClientTransport& client, const std::string&) {
     if (state_.IsStartingUp()) {
       task_queue_->Post([this]() { AdvancePhase(); });
     }
+  }
+
+  return true;
+}
+
+bool MockXBDMServer::HandleStop(ClientTransport& client, const std::string&) {
+  auto previous_state = SetExecutionState(S_STOPPED);
+
+  {
+    std::lock_guard lock(state_mutex_);
+    for (auto& entry : state_.threads) {
+      entry.second.stopped = true;
+    }
+  }
+
+  if (previous_state == S_STOPPED) {
+    SendResponse(client, ERR_UNEXPECTED, "Already stopped");
+  } else {
+    SendResponse(client, OK);
   }
 
   return true;

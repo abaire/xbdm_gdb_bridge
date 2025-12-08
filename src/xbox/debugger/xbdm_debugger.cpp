@@ -15,8 +15,33 @@ static constexpr uint32_t kBreakAtStartMaxWaitMilliseconds = 10 * 1000;
 static constexpr uint32_t kPostBreakAtStartThreadCreateMakeWaitMilliseconds =
     1 * 1000;
 
+//! The maximum delta between a known EIP and a call target to consider the call
+//! likely to have actually been taken.
+static constexpr uint32_t kMaxReasonableFunctionOffset = 1024;
+
 XBDMDebugger::XBDMDebugger(std::shared_ptr<XBDMContext> context)
     : context_(std::move(context)) {}
+
+XBDMDebugger::ScopedResume::ScopedResume(XBDMDebugger& dbg) : debugger(dbg) {
+  auto stop_request = std::make_shared<::Stop>();
+  debugger.context_->SendCommandSync(stop_request);
+  should_resume = stop_request->status == StatusCode::OK;
+
+  if (should_resume) {
+    if (!debugger.WaitForState(ExecutionState::S_STOPPED,
+                               kDefaultHaltAllMaxWaitMilliseconds)) {
+      LOG_DEBUGGER(error) << "ScopedResume: Timed out waiting for stop.";
+    }
+  }
+}
+
+XBDMDebugger::ScopedResume::~ScopedResume() {
+  if (should_resume) {
+    if (!debugger.Go()) {
+      LOG_DEBUGGER(error) << "ScopedResume: Failed to resume execution.";
+    }
+  }
+}
 
 static bool RequestDebugNotifications(uint16_t port,
                                       std::shared_ptr<XBDMContext> context) {
@@ -748,7 +773,10 @@ void XBDMDebugger::PerformAfterStopActions(
   }
 }
 
-std::vector<uint32_t> XBDMDebugger::GuessBackTrace(uint32_t thread_id) {
+std::vector<XBDMDebugger::BacktraceFrame> XBDMDebugger::GuessBackTrace(
+    uint32_t thread_id) {
+  ScopedResume resume_guard(*this);
+
   auto thread = GetThread(thread_id);
   if (!thread) {
     LOG_DEBUGGER(error) << "GuessBackTrace: Thread " << thread_id
@@ -784,7 +812,8 @@ std::vector<uint32_t> XBDMDebugger::GuessBackTrace(uint32_t thread_id) {
                           << stack_base << ")";
   }
 
-  std::vector<uint32_t> guessed_frames;
+  uint32_t last_known_eip = thread->context->eip.value_or(0);
+  std::vector<BacktraceFrame> guessed_frames;
   uint32_t current_sp = esp;
   uint32_t bytes_scanned = 0;
   static constexpr uint32_t kMaxScanBytes = 1024;
@@ -796,6 +825,7 @@ std::vector<uint32_t> XBDMDebugger::GuessBackTrace(uint32_t thread_id) {
     LOG_DEBUGGER(error) << "GuessBackTrace: Failed to initialize Capstone";
     return {};
   }
+  cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
 
   std::shared_ptr<void> cs_cleanup(nullptr, [&](void*) { cs_close(&handle); });
   auto sections = Sections();
@@ -834,7 +864,26 @@ std::vector<uint32_t> XBDMDebugger::GuessBackTrace(uint32_t thread_id) {
           const auto& last_insn = insn[count - 1];
           if (last_insn.address + last_insn.size == val &&
               last_insn.id == X86_INS_CALL) {
-            guessed_frames.push_back(val);
+            if (last_insn.detail && last_insn.detail->x86.op_count > 0) {
+              const auto& op = last_insn.detail->x86.operands[0];
+
+              if (op.type == X86_OP_IMM) {
+                // Sanity check the call target to ensure it could've resulted
+                // in the current stack frame.
+                // This could fail in cases where a jmp was performed from the
+                // called location.
+                auto target = static_cast<uint32_t>(op.imm);
+                bool is_suspicious =
+                    target > last_known_eip ||
+                    (last_known_eip - target > kMaxReasonableFunctionOffset);
+                guessed_frames.push_back({val, false, target, is_suspicious});
+                last_known_eip = last_insn.address;
+              } else if (op.type == X86_OP_MEM || op.type == X86_OP_REG) {
+                // Indirect calls are assumed to be correct.
+                guessed_frames.push_back({val, true, std::nullopt, false});
+                last_known_eip = last_insn.address;
+              }
+            }
           }
           cs_free(insn, count);
         }

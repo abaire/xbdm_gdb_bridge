@@ -17,15 +17,7 @@ Command::Result DynDXTCommandLoadBootstrap::operator()(
     return HANDLED;
   }
 
-  auto request = std::make_shared<::Stop>();
-  interface.SendCommandSync(request);
-  if (!request->IsOK()) {
-    out << "Failed to stop target." << std::endl;
-    return HANDLED;
-  }
-
-  // The status will be ERR_UNEXPECTED if the target was already stopped.
-  bool should_go = request->status == OK;
+  XBDMDebugger::ScopedResume guard(*debugger);
 
   if (!debugger->HaltAll()) {
     out << "Failed to halt target." << std::endl;
@@ -39,12 +31,6 @@ Command::Result DynDXTCommandLoadBootstrap::operator()(
 
   if (!debugger->ContinueAll()) {
     out << "Failed to resume target." << std::endl;
-  }
-
-  if (should_go) {
-    if (!debugger->Go()) {
-      out << "Failed to go." << std::endl;
-    }
   }
 
   return HANDLED;
