@@ -50,6 +50,7 @@ class XBDMDebugger {
     bool is_indirect_call;
     std::optional<uint32_t> call_target;
     bool is_suspicious{false};
+    uint32_t chain_id{0};
   };
 
   struct ScopedResume {
