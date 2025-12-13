@@ -223,6 +223,7 @@ DEBUGGER_TEST_CASE(GetThreadsWithActiveThread) {
 BOOST_AUTO_TEST_SUITE_END()
 
 // WhichThread
+
 BOOST_FIXTURE_TEST_SUITE(WhichThreadTests, XBDMDebuggerInterfaceFixture)
 
 DEBUGGER_TEST_CASE(WhichThreadWithNoAddressFails) {
@@ -273,6 +274,193 @@ DEBUGGER_TEST_CASE(WhichThreadFailsWhenDebuggerNotAttached) {
 
   BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
   BOOST_CHECK_EQUAL(Trimmed(capture), "Debugger not attached.");
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// GuessBackTraceTests
+
+BOOST_FIXTURE_TEST_SUITE(GuessBackTraceTests, XBDMDebuggerInterfaceFixture)
+
+namespace {
+
+void WriteInt(std::vector<uint8_t>& data, size_t offset, uint32_t val) {
+  if (offset + 4 > data.size()) return;
+  data[offset] = val & 0xFF;
+  data[offset + 1] = (val >> 8) & 0xFF;
+  data[offset + 2] = (val >> 16) & 0xFF;
+  data[offset + 3] = (val >> 24) & 0xFF;
+}
+
+void DefineCall(std::vector<uint8_t>& text_data, uint32_t text_base,
+                uint32_t ret_addr, uint32_t call_target) {
+  const uint32_t call_instruction_addr = ret_addr - text_base - 5;
+  if (call_instruction_addr + 5 > text_data.size()) return;
+  text_data[call_instruction_addr] = 0xE8;
+  WriteInt(text_data, call_instruction_addr + 1, call_target - ret_addr);
+}
+
+}  // namespace
+
+DEBUGGER_TEST_CASE(GuessBackTraceRendersChains) {
+  auto debugger_interface =
+      std::static_pointer_cast<DebuggerXBOXInterface>(interface);
+  constexpr uint32_t kTextBase = 0x00010000;
+  constexpr uint32_t kTextSize = 0x1000;
+  constexpr uint32_t kStackBase = 0xD0001000;
+  constexpr uint32_t kStackLimit = 0xD0000000;
+
+  uint32_t thread_id = server->AddThread("TestThread", kTextBase, kStackBase,
+                                         kTextBase, kStackLimit);
+  server->SetThreadRegister(thread_id, "esp", kStackLimit);
+
+  server->AddModule("default.xbe", kTextBase, kTextSize);
+  server->AddXbeSection("default.xbe", ".text", kTextBase, kTextSize, 1);
+  server->AddRegion(kTextBase, kTextSize);
+
+  BOOST_REQUIRE(debugger_interface->AttachDebugger());
+
+  constexpr uint32_t kFunctionStart = kTextBase + 0x20;
+  constexpr uint32_t kCurrentEIP = kFunctionStart + 0x20;
+  server->SetThreadRegister(thread_id, "eip", kCurrentEIP);
+
+  // Setup:
+  // [ESP]   -> Valid Ret Addr 1 (Targets kFunctionStart) -> Chain 0
+  // [ESP+4] -> Weak Ret Addr (Targets kUnrelatedFunction) -> Chain 1
+  // (Suspicious) [ESP+8] -> Valid Ret Addr 2 (Targets Valid Ret Addr 1) ->
+  // Chain 0
+
+  constexpr uint32_t kValidRetAddr1 = kTextBase + 0x100;
+  constexpr uint32_t kWeakRetAddr = kTextBase + 0x200;
+  constexpr uint32_t kValidRetAddr2 = kTextBase + 0x300;
+  constexpr uint32_t kUnrelatedFunction = kTextBase + 0x900;
+
+  std::vector<uint8_t> stack_data(12);
+  WriteInt(stack_data, 0, kValidRetAddr1);
+  WriteInt(stack_data, 4, kWeakRetAddr);
+  WriteInt(stack_data, 8, kValidRetAddr2);
+  server->AddRegion(kStackLimit, stack_data);
+
+  std::vector<uint8_t> text_data(kTextSize, 0x90);
+  DefineCall(text_data, kTextBase, kValidRetAddr1, kFunctionStart);
+  DefineCall(text_data, kTextBase, kWeakRetAddr, kUnrelatedFunction);
+  // Fix: Target exact call site (ret - 5)
+  DefineCall(text_data, kTextBase, kValidRetAddr2, kValidRetAddr1 - 5);
+
+  server->SetMemoryRegion(kTextBase, text_data);
+  server->AwaitQuiescence();
+
+  std::stringstream capture;
+  DebuggerCommandGuessBackTrace cmd;
+  ArgParser args("guessbacktrace", {std::to_string(thread_id)});
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+  AwaitQuiescence();
+
+  std::string output = capture.str();
+
+  // Verify EIP
+  BOOST_CHECK(output.find("EIP: 0x") != std::string::npos);
+
+  // Verify interleaved chains with indentation
+  // Expected roughly:
+  // EIP: ...
+  // # 0 ...  (Chain 0)
+  // #  1 ... (Chain 1)
+  // # 0 ...  (Chain 0)
+
+  auto pos_eip = output.find("EIP: 0x");
+  auto pos_c0_1 = output.find("# 0 ", pos_eip + 1);
+  auto pos_c1 = output.find("#  1 ", pos_c0_1 + 1);
+  auto pos_c0_2 = output.find("# 0 ", pos_c1 + 1);
+
+  BOOST_CHECK(pos_eip != std::string::npos);
+  BOOST_CHECK(pos_c0_1 != std::string::npos);
+  BOOST_CHECK(pos_c1 != std::string::npos);
+  BOOST_CHECK(pos_c0_2 != std::string::npos);
+}
+
+DEBUGGER_TEST_CASE(GuessBackTraceRendersManyChains) {
+  auto debugger_interface =
+      std::static_pointer_cast<DebuggerXBOXInterface>(interface);
+  constexpr uint32_t kTextBase = 0x00010000;
+  constexpr uint32_t kTextSize = 0x2000;
+  constexpr uint32_t kStackBase = 0xD0001000;
+  constexpr uint32_t kStackLimit = 0xD0000000;
+
+  uint32_t thread_id = server->AddThread("TestThread", kTextBase, kStackBase,
+                                         kTextBase, kStackLimit);
+  server->SetThreadRegister(thread_id, "esp", kStackLimit);
+
+  server->AddModule("default.xbe", kTextBase, kTextSize);
+  server->AddXbeSection("default.xbe", ".text", kTextBase, kTextSize, 1);
+  server->AddRegion(kTextBase, kTextSize);
+
+  BOOST_REQUIRE(debugger_interface->AttachDebugger());
+
+  constexpr uint32_t kFunctionStart = kTextBase + 0x20;
+  constexpr uint32_t kCurrentEIP = kFunctionStart + 0x20;
+  server->SetThreadRegister(thread_id, "eip", kCurrentEIP);
+
+  // Setup chains 0, 1, 2
+  // [ESP]    -> Chain 0
+  // [ESP+4]  -> Chain 1
+  // [ESP+8]  -> Chain 2
+  // [ESP+12] -> Chain 0 (re-entry)
+
+  constexpr uint32_t kRetAddr0 = kTextBase + 0x100;
+  constexpr uint32_t kRetAddr1 = kTextBase + 0x200;
+  constexpr uint32_t kRetAddr2 = kTextBase + 0x300;
+  constexpr uint32_t kRetAddr0_2 = kTextBase + 0x400;
+
+  // Calls
+  constexpr uint32_t kFunc0 = kTextBase + 0x1000;
+  constexpr uint32_t kFunc1 = kTextBase + 0x1100;
+  constexpr uint32_t kFunc2 = kTextBase + 0x1200;
+
+  std::vector<uint8_t> stack_data(16);
+  WriteInt(stack_data, 0, kRetAddr0);
+  WriteInt(stack_data, 4, kRetAddr1);
+  WriteInt(stack_data, 8, kRetAddr2);
+  WriteInt(stack_data, 12, kRetAddr0_2);
+  server->AddRegion(kStackLimit, stack_data);
+
+  std::vector<uint8_t> text_data(kTextSize, 0x90);
+  DefineCall(text_data, kTextBase, kRetAddr0, kFunctionStart);
+  DefineCall(text_data, kTextBase, kRetAddr1, kFunc1);
+  DefineCall(text_data, kTextBase, kRetAddr2, kFunc2);
+  DefineCall(text_data, kTextBase, kRetAddr0_2, kRetAddr0 - 5);
+
+  server->SetMemoryRegion(kTextBase, text_data);
+  server->AwaitQuiescence();
+
+  std::stringstream capture;
+  DebuggerCommandGuessBackTrace cmd;
+  ArgParser args("guessbacktrace", {std::to_string(thread_id)});
+  BOOST_REQUIRE(cmd(*interface, args, capture) == Command::HANDLED);
+  AwaitQuiescence();
+
+  std::string output = capture.str();
+
+  // Verify indentation levels
+  // Chain 0: "# 0 "
+  // Chain 1: "#  1 "
+  // Chain 2: "#   2 "
+
+  BOOST_CHECK(output.find("# 0 ") != std::string::npos);
+  BOOST_CHECK(output.find("#  1 ") != std::string::npos);
+  BOOST_CHECK(
+      output.find("#   2 ") !=
+      std::string::npos);  // Indentation should be 2 spaces for id 2? No, id+1
+                           // spaces total (1 fixed + id) space?.
+  auto pos_c0 = output.find("# 0 ");
+  auto pos_c1 = output.find("#  1 ", pos_c0 + 1);
+  auto pos_c2 = output.find("#   2 ", pos_c1 + 1);
+  auto pos_c0_2 = output.find("# 0 ", pos_c2 + 1);
+
+  BOOST_CHECK(pos_c0 != std::string::npos);
+  BOOST_CHECK(pos_c1 != std::string::npos);
+  BOOST_CHECK(pos_c2 != std::string::npos);
+  BOOST_CHECK(pos_c0_2 != std::string::npos);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

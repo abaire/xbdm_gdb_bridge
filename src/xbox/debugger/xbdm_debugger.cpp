@@ -812,7 +812,16 @@ std::vector<XBDMDebugger::BacktraceFrame> XBDMDebugger::GuessBackTrace(
                           << stack_base << ")";
   }
 
-  uint32_t last_known_eip = thread->context->eip.value_or(0);
+  uint32_t confirmed_eip = thread->context->eip.value_or(0);
+  std::optional<uint32_t> speculative_eip;
+  bool speculative_is_strong = false;
+
+  struct PendingFrame {
+    BacktraceFrame frame;
+    uint32_t call_site;
+  };
+  std::vector<PendingFrame> pending_frames;
+
   std::vector<BacktraceFrame> guessed_frames;
   uint32_t current_sp = esp;
   uint32_t bytes_scanned = 0;
@@ -830,7 +839,29 @@ std::vector<XBDMDebugger::BacktraceFrame> XBDMDebugger::GuessBackTrace(
   std::shared_ptr<void> cs_cleanup(nullptr, [&](void*) { cs_close(&handle); });
   auto sections = Sections();
 
-  while (bytes_scanned < kMaxScanBytes && guessed_frames.size() < kMaxFrames &&
+  uint32_t next_chain_id = 1;
+  auto flush_pending = [&](bool as_suspicious) {
+    if (pending_frames.empty()) {
+      return;
+    }
+
+    uint32_t id = 0;
+    if (as_suspicious) {
+      id = next_chain_id++;
+    }
+
+    for (auto& item : pending_frames) {
+      item.frame.chain_id = id;
+      if (as_suspicious) {
+        item.frame.is_suspicious = true;
+      }
+      guessed_frames.push_back(item.frame);
+    }
+    pending_frames.clear();
+  };
+
+  while (bytes_scanned < kMaxScanBytes &&
+         (guessed_frames.size() + pending_frames.size()) < kMaxFrames &&
          current_sp < stack_base) {
     auto maybe_val = GetDWORD(current_sp);
     if (!maybe_val) {
@@ -862,26 +893,62 @@ std::vector<XBDMDebugger::BacktraceFrame> XBDMDebugger::GuessBackTrace(
                                  read_addr, 0, &insn);
         if (count > 0) {
           const auto& last_insn = insn[count - 1];
+          // Ensure the instruction ends exactly at the return address.
           if (last_insn.address + last_insn.size == val &&
               last_insn.id == X86_INS_CALL) {
+            bool match_confirmed = false;
+            bool match_speculative = false;
+            uint32_t target_addr = 0;
+            bool is_immediate = false;
+
             if (last_insn.detail && last_insn.detail->x86.op_count > 0) {
               const auto& op = last_insn.detail->x86.operands[0];
-
               if (op.type == X86_OP_IMM) {
-                // Sanity check the call target to ensure it could've resulted
-                // in the current stack frame.
-                // This could fail in cases where a jmp was performed from the
-                // called location.
-                auto target = static_cast<uint32_t>(op.imm);
-                bool is_suspicious =
-                    target > last_known_eip ||
-                    (last_known_eip - target > kMaxReasonableFunctionOffset);
-                guessed_frames.push_back({val, false, target, is_suspicious});
-                last_known_eip = last_insn.address;
-              } else if (op.type == X86_OP_MEM || op.type == X86_OP_REG) {
-                // Indirect calls are assumed to be correct.
-                guessed_frames.push_back({val, true, std::nullopt, false});
-                last_known_eip = last_insn.address;
+                target_addr = static_cast<uint32_t>(op.imm);
+                is_immediate = true;
+
+                // Helper to check range match.
+                auto is_match = [&](uint32_t anchor) {
+                  return target_addr <= anchor &&
+                         (anchor - target_addr <= kMaxReasonableFunctionOffset);
+                };
+
+                if (is_match(confirmed_eip)) {
+                  match_confirmed = true;
+                } else if (speculative_eip && is_match(*speculative_eip)) {
+                  match_speculative = true;
+                }
+              }
+            }
+
+            if (match_confirmed) {
+              // Any pending speculative frames are likely spurious.
+              flush_pending(true);
+
+              guessed_frames.push_back({val, false, target_addr, false, 0});
+              confirmed_eip = last_insn.address;
+              speculative_eip = std::nullopt;
+              speculative_is_strong = false;
+            } else if (match_speculative) {
+              pending_frames.push_back(
+                  {{val, false, target_addr, false},
+                   static_cast<uint32_t>(last_insn.address)});
+              speculative_eip = last_insn.address;
+            } else {
+              flush_pending(!speculative_is_strong);
+
+              if (is_immediate) {
+                pending_frames.push_back(
+                    {{val, false, target_addr, true},
+                     static_cast<uint32_t>(last_insn.address)});
+                speculative_eip = last_insn.address;
+                speculative_is_strong = false;
+              } else {
+                pending_frames.push_back(
+                    {{val, true, std::nullopt, false},
+                     static_cast<uint32_t>(last_insn.address)});
+                speculative_eip = last_insn.address;
+                speculative_is_strong = true;
               }
             }
           }
@@ -893,6 +960,8 @@ std::vector<XBDMDebugger::BacktraceFrame> XBDMDebugger::GuessBackTrace(
     current_sp += 4;
     bytes_scanned += 4;
   }
+
+  flush_pending(!speculative_is_strong);
 
   return guessed_frames;
 }

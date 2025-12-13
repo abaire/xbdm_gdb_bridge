@@ -601,13 +601,29 @@ Command::Result DebuggerCommandGuessBackTrace::operator()(
     return HANDLED;
   }
 
-  int index = 0;
   auto sections = debugger->Sections();
   auto module_ranges = debugger->ModuleRanges();
 
+  // Fetch active thread context for EIP
+  auto thread = debugger->GetThread(thread_id);
+  if (thread) {
+    auto context = interface.Context();
+    if (thread->FetchContextSync(*context)) {
+      if (thread->context && thread->context->eip.has_value()) {
+        out << "EIP: 0x" << std::hex << *thread->context->eip << std::dec
+            << std::endl;
+      }
+    }
+  }
+
   for (const auto& frame : frames) {
     uint32_t addr = frame.address;
-    out << "#" << std::setw(2) << index++ << " 0x" << std::hex << addr
+
+    out << "#";
+    for (uint32_t i = 0; i < frame.chain_id; ++i) {
+      out << " ";
+    }
+    out << " " << frame.chain_id << "      " << "0x" << std::hex << addr
         << std::dec;
 
     std::string location;
