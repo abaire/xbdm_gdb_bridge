@@ -12,6 +12,8 @@
 #include "rdcp/xbdm_requests.h"
 #include "util/logging.h"
 #include "util/timer.h"
+#include "xbox/debugger/debugger_xbox_interface.h"
+#include "xbox/debugger/xbdm_debugger.h"
 #include "xbox/xbdm_context.h"
 #include "xbox/xbox_interface.h"
 
@@ -219,6 +221,19 @@ bool Tracer::BreakOnFrameStart_(XBOXInterface& interface, bool require_flip) {
       return false;
     }
 
+    GET_DEBUGGERXBOXINTERFACE(interface, debugger_interface);
+    auto debugger = debugger_interface.Debugger();
+    if (!debugger) {
+      LOG_TRACER(warning) << "Debugger not attached." << std::endl;
+    } else {
+      if (!debugger->Go()) {
+        LOG_TRACER(warning) << "Debugger Go() failed." << std::endl;
+      }
+      if (!debugger->ContinueAll()) {
+        LOG_TRACER(warning) << "Debugger ContinueAll() failed." << std::endl;
+      }
+    }
+
     while (!request_processed_.exchange(false)) {
       WaitMilliseconds(10);
     }
@@ -245,7 +260,7 @@ bool Tracer::BreakOnFrameStart_(XBOXInterface& interface, bool require_flip) {
 
 bool Tracer::TraceFrames(XBOXInterface& interface,
                          const std::string& artifact_path, uint32_t num_frames,
-                         bool verbose) {
+                         bool verbose, bool allow_partial_frame) {
   Tracer* instance = singleton_;
   if (!instance) {
     LOG_TRACER(error) << "Tracer not initialized.";
@@ -256,7 +271,8 @@ bool Tracer::TraceFrames(XBOXInterface& interface,
     char frame_name[32];
     snprintf(frame_name, sizeof(frame_name), "frame_%d", i + 1);
     auto output_path = std::filesystem::path(artifact_path) / frame_name;
-    if (!instance->TraceFrame(interface, output_path, verbose)) {
+    if (!instance->TraceFrame(interface, output_path, verbose,
+                              allow_partial_frame)) {
       return false;
     }
 
@@ -267,7 +283,7 @@ bool Tracer::TraceFrames(XBOXInterface& interface,
 
 bool Tracer::TraceFrame(XBOXInterface& interface,
                         const std::filesystem::path& artifact_path,
-                        bool verbose) {
+                        bool verbose, bool allow_partial_frame) {
   if (!exists(artifact_path)) {
     create_directories(artifact_path);
   }
@@ -279,8 +295,12 @@ bool Tracer::TraceFrame(XBOXInterface& interface,
   pgraph_data_available_ = false;
   aux_data_available_ = false;
 
-  auto request = std::make_shared<DynDXTLoader::InvokeSimple>(NTRC_HANDLER_NAME
-                                                              "!trace_frame");
+  std::string args;
+  if (allow_partial_frame) {
+    args = "nodiscard";
+  }
+  auto request = std::make_shared<DynDXTLoader::InvokeSimple>(
+      NTRC_HANDLER_NAME "!trace_frame", args);
   interface.SendCommandSync(request, NTRC_HANDLER_NAME);
   if (!request->IsOK()) {
     LOG_TRACER(error) << *request << std::endl;

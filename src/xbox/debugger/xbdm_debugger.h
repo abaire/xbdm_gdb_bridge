@@ -45,6 +45,14 @@ class XBDMDebugger {
     EXECUTE_WATCH,
   };
 
+  enum class LaunchMode {
+    NORMAL,                      // Run the application without stopping.
+    BREAK_AT_ENTRYPOINT,         // Break before the first application thread is
+                                 // created.
+    BREAK_AT_APPLICATION_START,  // Break when the first application thread is
+                                 // created.
+  };
+
   struct BacktraceFrame {
     uint32_t address;
     bool is_indirect_call;
@@ -74,10 +82,13 @@ class XBDMDebugger {
   [[nodiscard]] inline bool IsAttached() const { return is_attached_; }
   void Shutdown();
 
-  bool DebugXBE(const std::string& path, bool wait_forever = false,
-                bool break_at_start = true);
-  bool DebugXBE(const std::string& path, const std::string& command_line,
-                bool wait_forever = false, bool break_at_start = true);
+  bool DebugXBE(
+      const std::string& path, bool wait_forever = false,
+      LaunchMode launch_mode = LaunchMode::BREAK_AT_APPLICATION_START);
+  bool DebugXBE(
+      const std::string& path, const std::string& command_line,
+      bool wait_forever = false,
+      LaunchMode launch_mode = LaunchMode::BREAK_AT_APPLICATION_START);
 
   [[nodiscard]] std::list<std::shared_ptr<Thread>> Threads();
   [[nodiscard]] std::map<uint32_t, std::shared_ptr<Module>> Modules();
@@ -203,6 +214,8 @@ class XBDMDebugger {
    * Called by the various On<x> handlers for breakpoints/watches/steps/fce's
    */
   void PerformAfterStopActions(const std::shared_ptr<Thread>& active_thread);
+
+  bool BreakOnNextThreadCreate();
 
  private:
   bool is_attached_{false};
