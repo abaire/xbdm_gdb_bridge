@@ -66,6 +66,8 @@ struct TracerCommandTraceFrames : Command {
                 "the form 'frame_X'. Default: <current working dir>.\n"
                 "  frames <int> - Number of consecutive frames to capture. "
                 "Default: 1.\n"
+                "  nodiscard - Starts capture immediately without seeking the "
+                "start of a new frame.\n"
                 "  verbose - Emits more verbose information into the capture "
                 "log.") {}
   Result operator()(XBOXInterface& interface, const ArgParser&,

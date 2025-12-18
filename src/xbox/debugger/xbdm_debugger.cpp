@@ -11,9 +11,9 @@
 
 static constexpr uint32_t kRestartRebootingMaxWaitMilliseconds = 5 * 1000;
 static constexpr uint32_t kRestartPendingMaxWaitMilliseconds = 15 * 1000;
-static constexpr uint32_t kBreakAtStartMaxWaitMilliseconds = 10 * 1000;
+static constexpr uint32_t kBreakAtStartMaxWaitMilliseconds = 20 * 1000;
 static constexpr uint32_t kPostBreakAtStartThreadCreateMakeWaitMilliseconds =
-    1 * 1000;
+    5 * 1000;
 
 //! The maximum delta between a known EIP and a call target to consider the call
 //! likely to have actually been taken.

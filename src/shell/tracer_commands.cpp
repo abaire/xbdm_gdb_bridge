@@ -74,6 +74,7 @@ Command::Result TracerCommandTraceFrames::operator()(XBOXInterface& interface,
   auto local_artifact_path = std::filesystem::current_path();
   auto num_frames = 1;
   auto verbose = false;
+  auto nodiscard = false;
 
   auto it = args.begin();
   while (it != args.end()) {
@@ -81,6 +82,11 @@ Command::Result TracerCommandTraceFrames::operator()(XBOXInterface& interface,
 
     if (key == "verbose") {
       verbose = true;
+      continue;
+    }
+
+    if (key == "nodiscard") {
+      nodiscard = true;
       continue;
     }
 
@@ -109,18 +115,20 @@ Command::Result TracerCommandTraceFrames::operator()(XBOXInterface& interface,
         out << "Invalid '" << key << "' argument." << std::endl;
         return HANDLED;
       }
+    } else if (key == "nodiscard") {
+      nodiscard = true;
     } else {
       out << "Unknown config argument '" << key << "'" << std::endl;
     }
   }
 
-  if (!NTRCTracer::Tracer::BreakOnFrameStart(interface, false)) {
+  if (!nodiscard && !NTRCTracer::Tracer::BreakOnFrameStart(interface, false)) {
     out << "Failed to request break on frame start." << std::endl;
     return HANDLED;
   }
 
   if (!NTRCTracer::Tracer::TraceFrames(interface, local_artifact_path,
-                                       num_frames, verbose)) {
+                                       num_frames, verbose, nodiscard)) {
     out << "Failed to trace frames." << std::endl;
     return HANDLED;
   }

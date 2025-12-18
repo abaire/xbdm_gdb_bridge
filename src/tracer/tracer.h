@@ -44,7 +44,8 @@ class Tracer {
   //! Trace one or more consecutive frames.
   static bool TraceFrames(XBOXInterface& interface,
                           const std::string& artifact_path,
-                          uint32_t num_frames = 1, bool verbose = false);
+                          uint32_t num_frames = 1, bool verbose = false,
+                          bool allow_partial_frame = false);
 
  private:
   //! Installs the ntrc_dyndxt if necessary and registers for notifications.
@@ -68,7 +69,7 @@ class Tracer {
   //! Traces a single frame.
   bool TraceFrame(XBOXInterface& interface,
                   const std::filesystem::path& artifact_path,
-                  bool verbose = false);
+                  bool verbose = false, bool allow_partial_frame = false);
 
  private:
   static Tracer* singleton_;
@@ -79,7 +80,7 @@ class Tracer {
   std::atomic_bool pgraph_data_available_{false};
   std::atomic_bool aux_data_available_{false};
 
-  FrameCapture in_progress_frame_;
+  FrameCapture in_progress_frame_{};
   std::list<FrameCapture> captured_frames_;
 };
 
