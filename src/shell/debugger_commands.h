@@ -33,7 +33,23 @@ struct DebuggerCommandLaunch : Command {
 struct DebuggerCommandLaunchWait : Command {
   DebuggerCommandLaunchWait()
       : Command(
-            "Launch XBE with debugging and break at the entrypoint.",
+            "Launch XBE with debugging and break when the first application "
+            "thread is created.",
+            "<path_to_xbe> [commandline_args]\n"
+            "\n"
+            "Launch the given path, passing any remaining parameters as "
+            "command line arguments.\n"
+            "A breakpoint will be set on the XBE entrypoint and execution will "
+            "wait for a `go` command.") {}
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
+                    std::ostream& out) override;
+};
+
+struct DebuggerCommandLaunchBreakAtEntrypoint : Command {
+  DebuggerCommandLaunchBreakAtEntrypoint()
+      : Command(
+            "Launch XBE with debugging and break at the entrypoint (before the "
+            "first application thread is created).",
             "<path_to_xbe> [commandline_args]\n"
             "\n"
             "Launch the given path, passing any remaining parameters as "

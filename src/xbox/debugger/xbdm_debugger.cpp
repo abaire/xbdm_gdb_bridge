@@ -127,63 +127,11 @@ void XBDMDebugger::Shutdown() {
 }
 
 bool XBDMDebugger::DebugXBE(const std::string& path, bool wait_forever,
-                            bool break_at_start) {
-  return DebugXBE(path, "", wait_forever, break_at_start);
+                            LaunchMode launch_mode) {
+  return DebugXBE(path, "", wait_forever, launch_mode);
 }
 
-bool XBDMDebugger::DebugXBE(const std::string& path,
-                            const std::string& command_line, bool wait_forever,
-                            bool break_at_start) {
-  std::string xbe_dir;
-  std::string xbe_name;
-  if (!SplitXBEPath(path, xbe_dir, xbe_name)) {
-    LOG_DEBUGGER(error) << "Invalid XBE path '" << path << "'";
-    return false;
-  }
-
-  uint32_t flags = Reboot::kWait | Reboot::kWarm;
-  if (wait_forever) {
-    flags |= Reboot::kStop;
-  }
-  if (!RestartAndReconnect(flags)) {
-    LOG_DEBUGGER(error) << "Failed to restart.";
-    return false;
-  }
-
-  {
-    auto request =
-        std::make_shared<LoadOnBootTitle>(xbe_name, xbe_dir, command_line);
-    context_->SendCommandSync(request);
-    if (!request->IsOK()) {
-      LOG_DEBUGGER(error) << "Failed to set load on boot title "
-                          << request->status << " " << request->message;
-      return false;
-    }
-  }
-
-  if (!break_at_start) {
-    return Go();
-  }
-
-  if (!BreakAtStart()) {
-    return false;
-  }
-
-  if (!Go()) {
-    return false;
-  }
-
-  if (!WaitForState(S_STOPPED, kBreakAtStartMaxWaitMilliseconds)) {
-    // This indicates that the target has failed to break at start. It may be
-    // worthwhile to stop and halt all threads to attempt to recover.
-    LOG_DEBUGGER(error) << "Timed out waiting for break at start.";
-  }
-
-  if (!FetchThreads()) {
-    LOG_DEBUGGER(warning)
-        << "Failed to fetch threads while at start breakpoint.";
-  }
-
+bool XBDMDebugger::BreakOnNextThreadCreate() {
   // Wait until the first application thread is created.
   {
     auto request = std::make_shared<StopOn>(StopOn::kCreateThread |
@@ -225,10 +173,10 @@ bool XBDMDebugger::DebugXBE(const std::string& path,
   } else {
     remove_break_on_create();
 
-    // This indicates that no new threads were created within the timeout. This
-    // may be normal operation, particularly for alternatives to the official
-    // XDK.
-    LOG_DEBUGGER(warning) << "Timed out waiting for first app thread.";
+    // This indicates that no new threads were created within the timeout.
+    // This may be normal operation, particularly for alternatives to the
+    // official XDK.
+    LOG_DEBUGGER(warning) << "Timed out waiting for app thread creation.";
 
     // If no threads are known, force a stop in order to determine an active
     // thread and produce a consistent state.
@@ -245,6 +193,68 @@ bool XBDMDebugger::DebugXBE(const std::string& path,
         LOG_DEBUGGER(error) << "Failed to Go after determining active thread.";
         return false;
       }
+    }
+  }
+
+  return true;
+}
+
+bool XBDMDebugger::DebugXBE(const std::string& path,
+                            const std::string& command_line, bool wait_forever,
+                            LaunchMode launch_mode) {
+  std::string xbe_dir;
+  std::string xbe_name;
+  if (!SplitXBEPath(path, xbe_dir, xbe_name)) {
+    LOG_DEBUGGER(error) << "Invalid XBE path '" << path << "'";
+    return false;
+  }
+
+  uint32_t flags = Reboot::kWait | Reboot::kWarm;
+  if (wait_forever) {
+    flags |= Reboot::kStop;
+  }
+  if (!RestartAndReconnect(flags)) {
+    LOG_DEBUGGER(error) << "Failed to restart.";
+    return false;
+  }
+
+  {
+    auto request =
+        std::make_shared<LoadOnBootTitle>(xbe_name, xbe_dir, command_line);
+    context_->SendCommandSync(request);
+    if (!request->IsOK()) {
+      LOG_DEBUGGER(error) << "Failed to set load on boot title "
+                          << request->status << " " << request->message;
+      return false;
+    }
+  }
+
+  if (launch_mode == LaunchMode::NORMAL) {
+    return Go();
+  }
+
+  if (!BreakAtStart()) {
+    return false;
+  }
+
+  if (!Go()) {
+    return false;
+  }
+
+  if (!WaitForState(S_STOPPED, kBreakAtStartMaxWaitMilliseconds)) {
+    // This indicates that the target has failed to break at start. It may be
+    // worthwhile to stop and halt all threads to attempt to recover.
+    LOG_DEBUGGER(error) << "Timed out waiting for break at start.";
+  }
+
+  if (!FetchThreads()) {
+    LOG_DEBUGGER(warning)
+        << "Failed to fetch threads while at start breakpoint.";
+  }
+
+  if (launch_mode == LaunchMode::BREAK_AT_APPLICATION_START) {
+    if (!BreakOnNextThreadCreate()) {
+      return false;
     }
   }
 
