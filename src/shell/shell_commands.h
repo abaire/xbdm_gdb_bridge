@@ -31,6 +31,8 @@ struct ShellCommandTrace : Command {
                 "the form 'frame_X'. Default: <current working dir>.\n"
                 "  frames <int> - Number of consecutive frames to capture. "
                 "Default: 1.\n"
+                "  nodiscard - Starts capture immediately without seeking the "
+                "start of a new frame.\n"
                 "  tex <on|off> - Enables or disables capture of raw "
                 "textures. Default: on.\n"
                 "  depth <on|off> - Enables or disables capture of the depth "

@@ -34,6 +34,8 @@ Command::Result ShellCommandTrace::operator()(XBOXInterface& interface,
     if (key == "path" || key == "frames") {
       trace_args.emplace_back(key);
       trace_args.emplace_back(*it++);
+    } else if (key == "nodiscard") {
+      trace_args.emplace_back(key);
     } else {
       attach_args.emplace_back(key);
       attach_args.emplace_back(*it++);

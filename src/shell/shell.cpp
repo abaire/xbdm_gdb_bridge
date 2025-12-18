@@ -75,6 +75,7 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
   REGISTER("/run", DebuggerCommandRun);
   REGISTER("/launch", DebuggerCommandLaunch);
   REGISTER("/launchwait", DebuggerCommandLaunchWait);
+  REGISTER("/launchbreak", DebuggerCommandLaunchBreakAtEntrypoint);
   REGISTER("/attach", DebuggerCommandAttach);
   REGISTER("/detach", DebuggerCommandDetach);
   REGISTER("/restart", DebuggerCommandRestart);

@@ -17,7 +17,7 @@ static constexpr auto kMaxInstructionBytes = 15;
 static constexpr uint32_t kDisassemblyOpCount = 16;
 
 static bool DebugXBE(XBOXInterface& base_interface, const ArgParser& args,
-                     bool wait_forever, bool break_at_start,
+                     bool wait_forever, XBDMDebugger::LaunchMode launch_mode,
                      std::ostream& out) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   std::string path;
@@ -36,7 +36,7 @@ static bool DebugXBE(XBOXInterface& base_interface, const ArgParser& args,
   assert(debugger);
 
   if (!debugger->DebugXBE(EnsureXFATStylePath(path), command_line_args,
-                          wait_forever, break_at_start)) {
+                          wait_forever, launch_mode)) {
     out << "Failed to launch XBE" << std::endl;
   }
   return true;
@@ -45,7 +45,8 @@ static bool DebugXBE(XBOXInterface& base_interface, const ArgParser& args,
 Command::Result DebuggerCommandRun::operator()(XBOXInterface& interface,
                                                const ArgParser& args,
                                                std::ostream& out) {
-  if (!DebugXBE(interface, args, false, false, out)) {
+  if (!DebugXBE(interface, args, false, XBDMDebugger::LaunchMode::NORMAL,
+                out)) {
     PrintUsage();
   }
   return HANDLED;
@@ -54,7 +55,8 @@ Command::Result DebuggerCommandRun::operator()(XBOXInterface& interface,
 Command::Result DebuggerCommandLaunch::operator()(XBOXInterface& interface,
                                                   const ArgParser& args,
                                                   std::ostream& out) {
-  if (!DebugXBE(interface, args, false, true, out)) {
+  if (!DebugXBE(interface, args, false,
+                XBDMDebugger::LaunchMode::BREAK_AT_APPLICATION_START, out)) {
     PrintUsage();
   }
   return HANDLED;
@@ -63,7 +65,17 @@ Command::Result DebuggerCommandLaunch::operator()(XBOXInterface& interface,
 Command::Result DebuggerCommandLaunchWait::operator()(XBOXInterface& interface,
                                                       const ArgParser& args,
                                                       std::ostream& out) {
-  if (!DebugXBE(interface, args, true, true, out)) {
+  if (!DebugXBE(interface, args, true,
+                XBDMDebugger::LaunchMode::BREAK_AT_APPLICATION_START, out)) {
+    PrintUsage();
+  }
+  return HANDLED;
+}
+
+Command::Result DebuggerCommandLaunchBreakAtEntrypoint::operator()(
+    XBOXInterface& interface, const ArgParser& args, std::ostream& out) {
+  if (!DebugXBE(interface, args, true,
+                XBDMDebugger::LaunchMode::BREAK_AT_ENTRYPOINT, out)) {
     PrintUsage();
   }
   return HANDLED;
