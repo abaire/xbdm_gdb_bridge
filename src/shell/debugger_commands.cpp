@@ -711,7 +711,8 @@ Command::Result DebuggerCommandLookupNV2ADMADescriptor::operator()(
     return HANDLED;
   }
 
-  const auto* entry = reinterpret_cast<const uint32_t*>(memory->data());
+  uint32_t entry[3];
+  memcpy(entry, memory->data(), 12);
 
   static constexpr uint32_t kDMAClass = 0x00000FFF;
   static constexpr uint32_t kDMATarget = 0x00030000;
