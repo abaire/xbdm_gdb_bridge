@@ -97,6 +97,8 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
   ALIAS("/disassemble", "/disasm");
   ALIAS("/disassemble", "/u");
 
+  REGISTER("/dma", DebuggerCommandLookupNV2ADMADescriptor);
+
   REGISTER("/continue", DebuggerCommandContinue);
   REGISTER("/suspend", DebuggerCommandSuspend);
   REGISTER("/resume", DebuggerCommandResume);

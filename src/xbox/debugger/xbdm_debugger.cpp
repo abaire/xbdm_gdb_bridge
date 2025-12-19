@@ -1417,8 +1417,9 @@ void XBDMDebugger::RestoreBreakpoints(const std::vector<uint32_t>& breakpoints,
 }
 
 std::optional<std::vector<uint8_t>> XBDMDebugger::GetMemory(uint32_t address,
-                                                            uint32_t length) {
-  if (!ValidateMemoryAccess(address, length)) {
+                                                            uint32_t length,
+                                                            bool validate) {
+  if (validate && !ValidateMemoryAccess(address, length)) {
     return std::nullopt;
   }
 
