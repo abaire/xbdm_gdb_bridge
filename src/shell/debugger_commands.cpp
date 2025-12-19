@@ -10,11 +10,18 @@
 #include "util/parsing.h"
 #include "xbox/debugger/debugger_xbox_interface.h"
 #include "xbox/debugger/xbdm_debugger.h"
+#include "xboxkrnl/xboxdef.h"
+
+#define GET_MASK(v, mask) (((v) & (mask)) >> __builtin_ctz(mask))
 
 //! Maximum number of bytes in an i386 instruction.
 static constexpr auto kMaxInstructionBytes = 15;
 //! The number of instructions to disassemble in the disassembly command.
 static constexpr uint32_t kDisassemblyOpCount = 16;
+
+static constexpr uint32_t kVideoBase = 0xFD000000;
+static constexpr uint32_t kPRAMINOffset = 0x00700000;
+static constexpr uint32_t kPRAMINAddress = kVideoBase + kPRAMINOffset;
 
 static bool DebugXBE(XBOXInterface& base_interface, const ArgParser& args,
                      bool wait_forever, XBDMDebugger::LaunchMode launch_mode,
@@ -680,3 +687,52 @@ Command::Result DebuggerCommandGuessBackTrace::operator()(
 
   return HANDLED;
 }
+
+Command::Result DebuggerCommandLookupNV2ADMADescriptor::operator()(
+    XBOXInterface& base_interface, const ArgParser& args, std::ostream& out) {
+  GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
+  auto debugger = interface.Debugger();
+  if (!debugger) {
+    out << "Debugger not attached." << std::endl;
+    return HANDLED;
+  }
+
+  uint32_t entry_offset;
+  if (!args.Parse(0, entry_offset)) {
+    out << "Missing required dma_descriptor_offset argument." << std::endl;
+    return HANDLED;
+  }
+
+  uint32_t resolved_address = kPRAMINAddress + entry_offset;
+  auto memory = debugger->GetMemory(resolved_address, 12, false);
+  if (!memory) {
+    out << "Failed to load DMA table entry from address 0x" << std::hex
+        << resolved_address << std::dec << std::endl;
+    return HANDLED;
+  }
+
+  uint32_t entry[3];
+  memcpy(entry, memory->data(), 12);
+
+  static constexpr uint32_t kDMAClass = 0x00000FFF;
+  static constexpr uint32_t kDMATarget = 0x00030000;
+  static constexpr uint32_t kDMAAdjust = 0xFFF00000;
+  static constexpr uint32_t kDMAAddress = 0xFFFFF000;
+
+  out << "DMA entry 0x" << std::hex << entry_offset << std::endl;
+  uint32_t dma_class = GET_MASK(entry[0], kDMAClass);
+  uint32_t dma_target = GET_MASK(entry[0], kDMATarget);
+  uint32_t address = (entry[2] & kDMAAddress) | GET_MASK(entry[0], kDMAAdjust);
+
+  out << "\tClass: 0x" << std::hex << dma_class << " (" << std::dec << dma_class
+      << ")" << std::endl;
+  out << "\tTarget: 0x" << std::hex << dma_target << " (" << std::dec
+      << dma_target << ")" << std::endl;
+  out << "\tAddress: 0x" << std::hex << address << std::dec << std::endl;
+  out << "\tLimit: 0x" << std::hex << entry[1] << " (" << std::dec << entry[1]
+      << ")" << std::endl;
+
+  return HANDLED;
+}
+
+#undef GET_MASK

@@ -139,8 +139,18 @@ class XBDMDebugger {
   bool StepInstruction();
   bool StepFunction();
 
+  /**
+   * Fetches memory from the remote.
+   * @param address - The address to start fetching from.
+   * @param length - Number of bytes to retrieve.
+   * @param validate - If true, the address and length are checked against known
+   *    mapped memory locations prior to fetching the memory in order to avoid
+   *    triggering an exception.
+   * @return An optional containing a vector of retrieved bytes.
+   */
   std::optional<std::vector<uint8_t>> GetMemory(uint32_t address,
-                                                uint32_t length);
+                                                uint32_t length,
+                                                bool validate = true);
   std::optional<uint32_t> GetDWORD(uint32_t address);
   bool SetMemory(uint32_t address, const std::vector<uint8_t>& data);
 

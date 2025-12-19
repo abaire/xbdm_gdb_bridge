@@ -275,4 +275,15 @@ struct DebuggerCommandGuessBackTrace : Command {
                     std::ostream& out) override;
 };
 
+struct DebuggerCommandLookupNV2ADMADescriptor : Command {
+  DebuggerCommandLookupNV2ADMADescriptor()
+      : Command("Look up a DMA descriptor by its offset in PRAMIN.",
+                "<dma_descriptor_offset>\n"
+                "\n"
+                "Returns the DMA descriptor with the given offset (typically "
+                "something like 0x11170).") {}
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
+                    std::ostream& out) override;
+};
+
 #endif  // XBDM_GDB_BRIDGE_DEBUGGER_COMMANDS_H
