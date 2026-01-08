@@ -540,6 +540,7 @@ Command::Result CommandGetMem::operator()(XBOXInterface& interface,
     render_mode = "b";
   }
 
+  std::string output_file;
   int bytes_per_element = 1;
   if (render_mode == "b" || render_mode == "byte") {
     bytes_per_element = 1;
@@ -547,6 +548,11 @@ Command::Result CommandGetMem::operator()(XBOXInterface& interface,
     bytes_per_element = 2;
   } else if (render_mode == "d" || render_mode == "dword") {
     bytes_per_element = 4;
+  } else if (render_mode == "bin" || render_mode == "binary") {
+    if (!args.Parse(3, output_file)) {
+      out << "Missing output file for 'binary' rendering mode" << std::endl;
+      return HANDLED;
+    }
   } else {
     out << "Invalid render mode " << render_mode << std::endl;
     return HANDLED;
@@ -557,27 +563,52 @@ Command::Result CommandGetMem::operator()(XBOXInterface& interface,
   if (!request->IsOK()) {
     out << *request << std::endl;
   } else {
-    int count = 0;
-    auto it = request->data.begin();
+    if (output_file.empty()) {
+      int count = 0;
+      auto it = request->data.begin();
 
-    out << std::hex << std::setfill('0');
-    while (it != request->data.end()) {
-      uint32_t val = 0;
-      int remaining = std::distance(it, request->data.end());
-      int current_element_size = std::min(bytes_per_element, remaining);
+      out << std::hex << std::setfill('0');
+      while (it != request->data.end()) {
+        uint32_t val = 0;
+        int remaining = std::distance(it, request->data.end());
+        int current_element_size = std::min(bytes_per_element, remaining);
 
-      for (int i = 0; i < current_element_size; ++i) {
-        val |= (*it++) << (i * 8);
+        for (int i = 0; i < current_element_size; ++i) {
+          val |= (*it++) << (i * 8);
+        }
+
+        out << std::setw(current_element_size * 2) << val << " ";
+
+        if (count && (count % (32 / bytes_per_element)) == 0) {
+          out << std::endl;
+        }
+        ++count;
+      }
+      out << std::dec << std::endl;
+    } else {
+      std::filesystem::path target_path{output_file};
+      if (target_path.has_parent_path()) {
+        std::error_code ec;
+        // NOTE: Intentionally restrict creation to a single subdir.
+        std::filesystem::create_directory(target_path.parent_path(), ec);
+        if (ec) {
+          out << "Failed to create target directory " << target_path << " "
+              << ec << std::endl;
+          return HANDLED;
+        }
       }
 
-      out << std::setw(current_element_size * 2) << val << " ";
-
-      if (count && (count % (32 / bytes_per_element)) == 0) {
-        out << std::endl;
+      std::ofstream ofs(target_path, std::ios::binary);
+      if (!ofs) {
+        out << "Failed to open " << target_path << " for writing" << std::endl;
+        return HANDLED;
       }
-      ++count;
+
+      ofs.write(reinterpret_cast<const char*>(request->data.data()),
+                request->data.size());
+      out << "Wrote " << request->data.size() << " bytes to " << target_path
+          << std::endl;
     }
-    out << std::dec << std::endl;
   }
 
   return HANDLED;
