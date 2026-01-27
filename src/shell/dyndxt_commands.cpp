@@ -65,7 +65,10 @@ Command::Result DynDXTCommandInvokeSimple::operator()(XBOXInterface& interface,
     return HANDLED;
   }
   std::string command_line_args;
-  parser.Parse(1, command_line_args);
+  auto command_args = parser.ExtractSubcommand();
+  if (command_args) {
+    command_line_args = command_args->FlattenArgs();
+  }
 
   auto request =
       std::make_shared<DynDXTLoader::InvokeSimple>(command, command_line_args);
@@ -89,7 +92,10 @@ Command::Result DynDXTCommandInvokeMultiline::operator()(
     return HANDLED;
   }
   std::string command_line_args;
-  parser.Parse(1, command_line_args);
+  auto command_args = parser.ExtractSubcommand();
+  if (command_args) {
+    command_line_args = command_args->FlattenArgs();
+  }
 
   auto request = std::make_shared<DynDXTLoader::InvokeMultiline>(
       command, command_line_args);
@@ -118,7 +124,10 @@ Command::Result DynDXTCommandInvokeSendBinary::operator()(
     return HANDLED;
   }
   std::string command_line_args;
-  parser.Parse(2, command_line_args);
+  auto command_args = parser.ExtractSubcommand(2);
+  if (command_args) {
+    command_line_args = command_args->FlattenArgs();
+  }
 
   FILE* fp = fopen(file_path.c_str(), "rb");
   if (!fp) {
@@ -165,7 +174,10 @@ Command::Result DynDXTCommandInvokeReceiveSizePrefixedBinary::operator()(
     return HANDLED;
   }
   std::string command_line_args;
-  parser.Parse(2, command_line_args);
+  auto command_args = parser.ExtractSubcommand(2);
+  if (command_args) {
+    command_line_args = command_args->FlattenArgs();
+  }
 
   auto request =
       std::make_shared<DynDXTLoader::InvokeReceiveSizePrefixedBinary>(
@@ -202,7 +214,10 @@ Command::Result DynDXTCommandInvokeReceiveKnownSizedBinary::operator()(
     return HANDLED;
   }
   std::string command_line_args;
-  parser.Parse(3, command_line_args);
+  auto command_args = parser.ExtractSubcommand(3);
+  if (command_args) {
+    command_line_args = command_args->FlattenArgs();
+  }
 
   auto request = std::make_shared<DynDXTLoader::InvokeReceiveKnownSizedBinary>(
       command, size, command_line_args);

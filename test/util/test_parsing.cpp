@@ -171,7 +171,7 @@ BOOST_AUTO_TEST_CASE(ArgParser_ExtractSubcommand) {
 
 BOOST_AUTO_TEST_CASE(ArgParser_QuotedStrings) {
   // Tests preservation of spaces and stripping of quotes
-  ArgParser p("echo \"hello world\" \"quoted\"");
+  ArgParser p(R"(echo "hello world" "quoted" not="quoted")");
 
   BOOST_TEST(p.command == "echo");
 
@@ -184,11 +184,15 @@ BOOST_AUTO_TEST_CASE(ArgParser_QuotedStrings) {
   type = p.Parse(1, val);
   BOOST_TEST((type == ArgParser::ArgType::QUOTED));
   BOOST_TEST(val == "quoted");
+
+  type = p.Parse(2, val);
+  BOOST_TEST((type == ArgParser::ArgType::BASIC));
+  BOOST_TEST(val == "not=\"quoted\"");
 }
 
 BOOST_AUTO_TEST_CASE(ArgParser_QuotedEscapeSequences) {
   // Tests \" becoming " inside a string
-  ArgParser p("print \"say \\\"hello\\\" now\"");
+  ArgParser p(R"(print "say \"hello\" now")");
 
   std::string val;
   auto type = p.Parse(0, val);

@@ -157,17 +157,18 @@ struct ArgParser {
 
   bool operator==(const ArgParser& other) const = default;
 
-  [[nodiscard]] std::optional<ArgParser> ExtractSubcommand() const {
+  [[nodiscard]] std::optional<ArgParser> ExtractSubcommand(
+      unsigned int depth = 1) const {
     if (arguments.empty()) {
       return std::nullopt;
     }
 
     std::vector<Argument> sub_args;
-    if (arguments.size() > 1) {
-      sub_args.assign(arguments.begin() + 1, arguments.end());
+    if (arguments.size() > depth) {
+      sub_args.assign(arguments.begin() + depth, arguments.end());
     }
 
-    return ArgParser(arguments[0].value, std::move(sub_args));
+    return ArgParser(arguments[depth - 1].value, std::move(sub_args));
   }
 
   /**
@@ -197,6 +198,13 @@ struct ArgParser {
    * @return Recomposed command line
    */
   [[nodiscard]] std::string Flatten() const;
+
+  /**
+   * Generates a minimal string that will parse to just the args of this
+   * instance.
+   * @return Recomposed command line
+   */
+  [[nodiscard]] std::string FlattenArgs() const;
 
   template <typename T, typename... Ts>
   using are_same_type = std::conjunction<std::is_same<T, Ts>...>;
