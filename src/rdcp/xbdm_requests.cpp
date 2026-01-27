@@ -30,7 +30,7 @@ GetChecksum::GetChecksum(uint32_t addr, uint32_t len, uint32_t blocksize)
   };
 }
 
-GetExtContext::GetExtContext(int thread_id)
+GetExtContext::GetExtContext(uint32_t thread_id)
     : RDCPProcessedRequest("getextcontext") {
   SetData(" thread=");
   AppendHexString(thread_id);

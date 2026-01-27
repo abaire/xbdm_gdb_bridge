@@ -53,3 +53,35 @@ BOOST_AUTO_TEST_CASE(altaddr_fail) {
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(xbdm_requests_formatting)
+
+BOOST_AUTO_TEST_CASE(getmem_command_formatting) {
+  GetMem request(0x1234, 0x10);
+  std::vector<uint8_t> packet = static_cast<std::vector<uint8_t>>(request);
+  std::string command(packet.begin(), packet.end());
+
+  // Remove CRLF
+  while (!command.empty() &&
+         (command.back() == '\r' || command.back() == '\n')) {
+    command.pop_back();
+  }
+
+  BOOST_TEST(command == "getmem addr=0x00001234 length=0x00000010");
+}
+
+BOOST_AUTO_TEST_CASE(vssnap_command_formatting) {
+  VSSnap request(0x10, 0x20);
+  std::vector<uint8_t> packet = static_cast<std::vector<uint8_t>>(request);
+  std::string command(packet.begin(), packet.end());
+
+  // Remove CRLF
+  while (!command.empty() &&
+         (command.back() == '\r' || command.back() == '\n')) {
+    command.pop_back();
+  }
+
+  BOOST_TEST(command == "vssnap first=0x00000010 last=0x00000020");
+}
+
+BOOST_AUTO_TEST_SUITE_END()
