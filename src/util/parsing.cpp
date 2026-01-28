@@ -117,9 +117,14 @@ std::vector<ArgParser::Argument> ArgParser::Tokenize(std::string_view input) {
       if (c == ' ' || c == '\t') {
         flush_token();
       } else if (c == '"') {
-        in_quote = true;
-        token_dirty = true;
-        current_type = ArgType{ArgType::QUOTED};
+        if (current_token.empty()) {
+          in_quote = true;
+          token_dirty = true;
+          current_type = ArgType{ArgType::QUOTED};
+        } else {
+          current_token += c;
+          token_dirty = true;
+        }
       } else if (c == '(') {
         paren_depth = 1;
         token_dirty = true;
@@ -180,6 +185,29 @@ bool ArgParser::SplitAt(ArgParser& pre, ArgParser& post,
 
 std::string ArgParser::Flatten() const {
   std::string out = command;
+  for (const auto& arg : arguments) {
+    if (!out.empty()) {
+      out += " ";
+    }
+    if (arg.type == ArgType::QUOTED) {
+      std::string escaped = arg.value;
+      size_t pos = 0;
+      while ((pos = escaped.find("\"", pos)) != std::string::npos) {
+        escaped.replace(pos, 1, "\\\"");
+        pos += 2;
+      }
+      out += "\"" + escaped + "\"";
+    } else if (arg.type == ArgType::PARENTHESIZED) {
+      out += "(" + arg.value + ")";
+    } else {
+      out += arg.value;
+    }
+  }
+  return out;
+}
+
+std::string ArgParser::FlattenArgs() const {
+  std::string out;
   for (const auto& arg : arguments) {
     if (!out.empty()) {
       out += " ";

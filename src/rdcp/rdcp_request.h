@@ -6,6 +6,7 @@
 #include <cstring>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "rdcp_response.h"
@@ -74,7 +75,11 @@ class RDCPRequest {
       std::enable_if_t<std::is_integral<T>::value && sizeof(T) <= 8, int> = 0>
   void AppendHexString(T value) {
     char buf[32] = {0};
-    snprintf(buf, 31, "0x%08x", value);
+    if (sizeof(T) > 4) {
+      snprintf(buf, 31, "0q%016llx", (unsigned long long)value);
+    } else {
+      snprintf(buf, 31, "0x%08x", (unsigned int)value);
+    }
     data_.insert(data_.end(), buf, buf + strlen(buf));
   }
 
