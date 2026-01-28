@@ -48,7 +48,7 @@ set(dyndxt_include_dir ${INSTALL_DIR}/include)
 ExternalProject_Add(
         ntrc_dyndxt
         GIT_REPOSITORY https://github.com/abaire/nxdk_ntrc_dyndxt.git
-        GIT_TAG af1aff2eb56546e4535a174adad3afe1cd0ebc6a
+        GIT_TAG a82c9c8de11a699d4f738b58366a495f4565a90b
         CMAKE_ARGS
         -DCMAKE_TOOLCHAIN_FILE=${NXDK_DIR}/share/toolchain-nxdk.cmake
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
