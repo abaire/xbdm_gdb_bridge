@@ -439,16 +439,21 @@ void FrameCapture::LogPacket(const PushBufferCommandTraceInfo& packet) {
       break;
   }
 
-  uint32_t method = packet.command.method;
-  for (auto i = 0; i < packet.command.parameter_count; ++i) {
-    const uint32_t* param = nullptr;
-    if (data) {
-      param = data + i;
+  if (packet.command.valid) {
+    uint32_t method = packet.command.method;
+    for (auto i = 0; i < packet.command.parameter_count; ++i) {
+      const uint32_t* param = nullptr;
+      if (data) {
+        param = data + i;
+      }
+      log(method, param);
+      if (!packet.command.non_increasing) {
+        method += 4;
+      }
     }
-    log(method, param);
-    if (!packet.command.non_increasing) {
-      method += 4;
-    }
+  } else {
+    LOG_CAP(trace) << "Skipped packet " << packet.packet_index
+                   << " containing invalid command" << std::endl;
   }
 
   if (verbose_logging_) {
