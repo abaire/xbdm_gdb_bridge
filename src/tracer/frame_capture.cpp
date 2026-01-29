@@ -898,9 +898,11 @@ void FrameCapture::LogTexture(const NTRCTracer::AuxDataHeader& packet,
     os = std::ofstream(artifact_path_ / filename, std::ios_base::out |
                                                       std::ios_base::trunc |
                                                       std::ios_base::binary);
-    SaveTextureImage(d, data_len, os, texture_type, texture_format,
-                     mipmap_levels, header->width, header->height,
-                     header->depth, header->pitch);
+    if (header->width && header->height) {
+      SaveTextureImage(d, data_len, os, texture_type, texture_format,
+                       mipmap_levels, header->width, header->height,
+                       header->depth, header->pitch);
+    }
     os.close();
   }
 }
