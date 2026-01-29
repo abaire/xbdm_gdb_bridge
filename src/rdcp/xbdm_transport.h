@@ -17,7 +17,12 @@ class RDCPResponse;
 
 class XBDMTransport : public TCPConnection {
  public:
-  enum ConnectionState { INIT = 0, CONNECTED, AWAITING_RESPONSE };
+  enum class ConnectionState {
+    DISCONNECTED = -1,
+    INIT = 0,
+    CONNECTED,
+    AWAITING_RESPONSE
+  };
 
  public:
   explicit XBDMTransport(std::string name) : TCPConnection(std::move(name)) {}
@@ -26,11 +31,18 @@ class XBDMTransport : public TCPConnection {
   void Close() override;
 
   [[nodiscard]] ConnectionState State() const { return state_; }
-  [[nodiscard]] bool CanProcessCommands() const { return state_ >= CONNECTED; }
+  [[nodiscard]] bool CanProcessCommands() const {
+    return state_ >= ConnectionState::CONNECTED;
+  }
 
   void SetConnected();
 
   void Send(const std::shared_ptr<RDCPRequest>& request);
+
+  void NotifyRemoved() override {
+    state_ = ConnectionState::DISCONNECTED;
+    is_shutdown_ = true;
+  }
 
  protected:
   void OnBytesRead() override;

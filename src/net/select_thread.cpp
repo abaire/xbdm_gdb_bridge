@@ -158,6 +158,9 @@ void SelectThread::ApplyAndEraseIf(
     for (auto& entry : entries_to_service) {
       if (!entry || func(entry)) {
         entries_to_remove.insert(entry);
+        if (entry) {
+          entry->NotifyRemoved();
+        }
       }
     }
 

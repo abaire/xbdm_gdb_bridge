@@ -43,6 +43,10 @@ class SelectableBase {
     return os << "Selectable[" << name_ << "]";
   }
 
+  //! Called to notify this selectable that it has been removed from the
+  //! SelectThread.
+  virtual void NotifyRemoved() {}
+
  protected:
   std::string name_;
   bool is_shutdown_{false};

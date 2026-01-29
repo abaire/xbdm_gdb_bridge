@@ -251,6 +251,10 @@ bool XBDMContext::XBDMConnect(const std::shared_ptr<XBDMTransport>& transport,
     return true;
   }
 
+  if (transport->IsShutdown()) {
+    Reconnect();
+  }
+
   if (!transport->IsConnected() && !transport->Connect(xbox_address_)) {
     return false;
   }
@@ -265,8 +269,11 @@ bool XBDMContext::XBDMConnect(const std::shared_ptr<XBDMTransport>& transport,
     max_wait_millis -= busywait_millis;
   }
 
-  LOG_XBDM(warning)
-      << "Timeout waiting for command processing to become available.";
+  LOG_XBDM(warning) << "Timeout waiting for command processing to become "
+                       "available. Attempting to reconnect...";
+
+  transport->Connect(xbox_address_);
+
   return false;
 }
 int XBDMContext::RegisterNotificationHandler(
