@@ -14,6 +14,8 @@ class XBOXInterface;
 namespace NTRCTracer {
 
 class FrameCapture {
+  friend class FrameCaptureTestFixture;
+
  public:
   //! Prepares this FrameCapture for use, creating artifacts within the given
   //! path.

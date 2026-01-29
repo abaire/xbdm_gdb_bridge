@@ -351,10 +351,11 @@ FrameCapture::FetchResult FrameCapture::FetchAuxTraceData(
 
 void FrameCapture::ProcessPGRAPHBuffer() {
   const auto packet_size = sizeof(PushBufferCommandTraceInfo);
-  while (pgraph_trace_buffer_.size() >= packet_size) {
+  size_t bytes_consumed = 0;
+  while (pgraph_trace_buffer_.size() - bytes_consumed >= packet_size) {
     PushBufferCommandTraceInfo packet;
-    memcpy(&packet, pgraph_trace_buffer_.data(), packet_size);
-    auto packet_end = pgraph_trace_buffer_.begin() + packet_size;
+    memcpy(&packet, pgraph_trace_buffer_.data() + bytes_consumed, packet_size);
+    auto packet_end_offset = bytes_consumed + packet_size;
 
     // data_id is currently set to the XBOX-side address of the parameter data
     // buffer, unless the parameters were discarded, in which case no parameter
@@ -362,8 +363,9 @@ void FrameCapture::ProcessPGRAPHBuffer() {
     if (packet.command.valid && packet.data.data_state == PBCPDS_HEAP_BUFFER &&
         packet.command.parameter_count) {
       auto additional_data_size = 4 * packet.command.parameter_count;
-      if (pgraph_trace_buffer_.size() < packet_size + additional_data_size) {
-        return;
+      if (pgraph_trace_buffer_.size() - bytes_consumed <
+          packet_size + additional_data_size) {
+        break;
       }
 
       // TODO: Allow slots to be recycled to avoid overflow.
@@ -373,19 +375,24 @@ void FrameCapture::ProcessPGRAPHBuffer() {
 
       auto data_id = next_free_id++;
       const auto* params = reinterpret_cast<const uint32_t*>(
-          pgraph_trace_buffer_.data() + packet_size);
+          pgraph_trace_buffer_.data() + bytes_consumed + packet_size);
       pgraph_parameter_map.emplace(
           data_id, std::vector<uint32_t>(
                        params, params + packet.command.parameter_count));
 
-      packet_end += additional_data_size;
+      packet_end_offset += additional_data_size;
       packet.data.data.data_id = data_id;
     }
 
-    pgraph_trace_buffer_.erase(pgraph_trace_buffer_.begin(), packet_end);
+    bytes_consumed = packet_end_offset;
     pgraph_commands.emplace_back(packet);
 
     LogPacket(packet);
+  }
+
+  if (bytes_consumed > 0) {
+    pgraph_trace_buffer_.erase(pgraph_trace_buffer_.begin(),
+                               pgraph_trace_buffer_.begin() + bytes_consumed);
   }
 }
 
@@ -478,36 +485,42 @@ void FrameCapture::LogPacket(const PushBufferCommandTraceInfo& packet) {
 
 void FrameCapture::ProcessAuxBuffer() {
   const auto header_size = sizeof(AuxDataHeader);
-  while (aux_trace_buffer_.size() >= header_size) {
+  size_t bytes_consumed = 0;
+  while (aux_trace_buffer_.size() - bytes_consumed >= header_size) {
     AuxDataHeader packet;
-    memcpy(&packet, aux_trace_buffer_.data(), header_size);
-    auto packet_end = aux_trace_buffer_.begin() + header_size;
+    memcpy(&packet, aux_trace_buffer_.data() + bytes_consumed, header_size);
+    auto packet_end_offset = bytes_consumed + header_size;
 
     // Check to see if the packet's data is fully retrieved yet.
-    if (aux_trace_buffer_.size() < (header_size + packet.len)) {
-      return;
+    if (aux_trace_buffer_.size() - bytes_consumed <
+        (header_size + packet.len)) {
+      break;
     }
+
+    // packet_end is used by the Log* functions to access the data.
+    auto packet_data_start =
+        aux_trace_buffer_.begin() + bytes_consumed + header_size;
 
     switch (packet.data_type) {
       case ADT_PGRAPH_DUMP:
-        LogPGRAPH(packet, packet.len, packet_end);
+        LogPGRAPH(packet, packet.len, packet_data_start);
         break;
 
       case ADT_PFB_DUMP:
-        LogPFB(packet, packet.len, packet_end);
+        LogPFB(packet, packet.len, packet_data_start);
         LOG_CAP(error) << "TODO: Save PFB" << std::endl;
         break;
 
       case ADT_RDI_DUMP:
-        LogRDI(packet, packet.len, packet_end);
+        LogRDI(packet, packet.len, packet_data_start);
         break;
 
       case ADT_SURFACE:
-        LogSurface(packet, packet.len, packet_end);
+        LogSurface(packet, packet.len, packet_data_start);
         break;
 
       case ADT_TEXTURE:
-        LogTexture(packet, packet.len, packet_end);
+        LogTexture(packet, packet.len, packet_data_start);
         break;
 
       default:
@@ -516,8 +529,12 @@ void FrameCapture::ProcessAuxBuffer() {
         break;
     }
 
-    packet_end += packet.len;
-    aux_trace_buffer_.erase(aux_trace_buffer_.begin(), packet_end);
+    bytes_consumed = packet_end_offset + packet.len;
+  }
+
+  if (bytes_consumed > 0) {
+    aux_trace_buffer_.erase(aux_trace_buffer_.begin(),
+                            aux_trace_buffer_.begin() + bytes_consumed);
   }
 }
 

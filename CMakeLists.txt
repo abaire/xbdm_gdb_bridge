@@ -845,3 +845,29 @@ target_link_libraries(
         test_util
 )
 add_test(NAME mock_xbdm_server_tests COMMAND mock_xbdm_server_tests)
+
+# tracer_tests
+add_executable(
+        tracer_tests
+        test/tracer/test_main.cpp
+        test/tracer/test_frame_capture.cpp
+)
+target_include_directories(
+        tracer_tests
+        PRIVATE src
+        PRIVATE test
+)
+target_link_libraries(
+        tracer_tests
+        LINK_PRIVATE
+        Boost::log
+        Boost::unit_test_framework
+        LINK_PRIVATE
+        test_util
+        xbdm_gdb_bridge_dyndxt_loader
+        xbdm_gdb_bridge_net
+        xbdm_gdb_bridge_tracer
+        xbdm_gdb_bridge_xbox_interface
+        xbdm_gdb_bridge_xbox_xbdm_context
+)
+add_test(NAME tracer_tests COMMAND tracer_tests)
