@@ -87,7 +87,8 @@ BOOST_AUTO_TEST_CASE(test_process_pgraph_single_packet) {
   ProcessPGRAPH();
 
   BOOST_TEST(capture.pgraph_commands.size() == 1);
-  BOOST_TEST(capture.pgraph_commands.front().packet_index == 123);
+  auto packet_index = capture.pgraph_commands.front().packet_index;
+  BOOST_TEST(packet_index == 123);
   BOOST_TEST(GetPGRAPHBuffer().empty());
 }
 
@@ -133,7 +134,8 @@ BOOST_AUTO_TEST_CASE(test_process_pgraph_partial_packet) {
   ProcessPGRAPH();
 
   BOOST_TEST(capture.pgraph_commands.size() == 1);
-  BOOST_TEST(capture.pgraph_commands.front().packet_index == 456);
+  auto packet_index = capture.pgraph_commands.front().packet_index;
+  BOOST_TEST(packet_index == 456);
   BOOST_TEST(buffer.empty());
 }
 

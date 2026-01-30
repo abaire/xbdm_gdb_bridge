@@ -372,6 +372,7 @@ target_link_libraries(
         LINK_PUBLIC
         Boost::log
         xbdm_gdb_bridge_util
+        xbdm_gdb_bridge_net
 )
 
 
@@ -418,6 +419,7 @@ target_link_libraries(
         lodepng
         swizzle
         xbdm_gdb_bridge_notification
+        xbdm_gdb_bridge_dyndxt_loader
 )
 add_dependencies(xbdm_gdb_bridge_tracer ntrc_dyndxt)
 
@@ -465,6 +467,7 @@ target_link_libraries(
         LINK_PUBLIC
         Boost::log
         xbdm_gdb_bridge_notification
+        xbdm_gdb_bridge_net
 )
 
 
@@ -578,6 +581,7 @@ target_link_libraries(
         LINK_PUBLIC
         Boost::log
         xbdm_gdb_bridge_gdb
+        xbdm_gdb_bridge_net
 )
 
 
