@@ -291,7 +291,7 @@ FrameCapture::FetchResult FrameCapture::FetchPGRAPHTraceData(
     XBOXInterface& interface) {
   auto request =
       std::make_shared<DynDXTLoader::InvokeReceiveSizePrefixedBinary>(
-          NTRC_HANDLER_NAME "!read_pgraph maxsize=0x100000");
+          NTRC_HANDLER_NAME "!read_pgraph maxsize=0x1000000");
   interface.SendCommandSync(request, NTRC_HANDLER_NAME);
   if (!request->IsOK()) {
     // A notification of data availability may have triggered this fetch while a
@@ -485,7 +485,7 @@ void FrameCapture::LogPacket(const PushBufferCommandTraceInfo& packet) {
 
 void FrameCapture::ProcessAuxBuffer() {
   const auto header_size = sizeof(AuxDataHeader);
-  size_t bytes_consumed = 0;
+  ssize_t bytes_consumed = 0;
   while (aux_trace_buffer_.size() - bytes_consumed >= header_size) {
     AuxDataHeader packet;
     memcpy(&packet, aux_trace_buffer_.data() + bytes_consumed, header_size);
