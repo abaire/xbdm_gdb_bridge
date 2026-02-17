@@ -13,8 +13,15 @@ Command::Result DynDXTCommandLoadBootstrap::operator()(
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
-    out << "Debugger not attached." << std::endl;
-    return HANDLED;
+    if (!interface.AttachDebugger()) {
+      out << "Debugger not attached and failed to attach." << std::endl;
+      return HANDLED;
+    }
+    debugger = interface.Debugger();
+    if (!debugger) {
+      out << "Debugger not attached." << std::endl;
+      return HANDLED;
+    }
   }
 
   XBDMDebugger::ScopedResume guard(*debugger);

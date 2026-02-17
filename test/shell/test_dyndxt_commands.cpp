@@ -127,4 +127,35 @@ DEBUGGER_TEST_CASE(BootstrapDoesNotResumeIfTargetWasStopped) {
   BOOST_CHECK(!go_called);
 }
 
+DEBUGGER_TEST_CASE(BootstrapAutomaticallyAttaches) {
+  std::stringstream capture;
+  DynDXTCommandLoadBootstrap cmd;
+  auto debugger_interface =
+      std::dynamic_pointer_cast<DebuggerXBOXInterface>(interface);
+  BOOST_REQUIRE(debugger_interface);
+  BOOST_REQUIRE(!debugger_interface->Debugger());
+
+  // Mock responses needed for Bootstrap to "succeed" enough for the test
+  server->SetCommandHandler("stop",
+                            [](ClientTransport& client, const std::string&) {
+                              client.Send("200- stopped\r\n");
+                              return true;
+                            });
+  server->AddThread("main", 1);
+  server->SetCommandHandler("halt",
+                            [](ClientTransport& client, const std::string&) {
+                              client.Send("200- halted\r\n");
+                              return true;
+                            });
+  server->SetCommandHandler("go",
+                            [](ClientTransport& client, const std::string&) {
+                              client.Send("200- running\r\n");
+                              return true;
+                            });
+
+  cmd(*interface, empty_args, capture);
+
+  BOOST_CHECK(debugger_interface->Debugger());
+}
+
 BOOST_AUTO_TEST_SUITE_END()
