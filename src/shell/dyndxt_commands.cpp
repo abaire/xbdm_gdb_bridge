@@ -5,39 +5,12 @@
 #include "dyndxt_loader/dxt_library.h"
 #include "dyndxt_loader/dyndxt_requests.h"
 #include "dyndxt_loader/loader.h"
-#include "xbox/debugger/debugger_xbox_interface.h"
-#include "xbox/debugger/xbdm_debugger.h"
 
 Command::Result DynDXTCommandLoadBootstrap::operator()(
     XBOXInterface& base_interface, const ArgParser&, std::ostream& out) {
-  GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
-  auto debugger = interface.Debugger();
-  if (!debugger) {
-    if (!interface.AttachDebugger()) {
-      out << "Debugger not attached and failed to attach." << std::endl;
-      return HANDLED;
-    }
-    debugger = interface.Debugger();
-    if (!debugger) {
-      out << "Debugger not attached." << std::endl;
-      return HANDLED;
-    }
-  }
-
-  XBDMDebugger::ScopedResume guard(*debugger);
-
-  if (!debugger->HaltAll()) {
-    out << "Failed to halt target." << std::endl;
-  }
-
-  bool successful = DynDXTLoader::Loader::Bootstrap(interface);
-  if (!successful) {
+  if (!DynDXTLoader::Loader::Bootstrap(base_interface)) {
     out << "Failed to inject handler loader. XBDM handlers will not work."
         << std::endl;
-  }
-
-  if (!debugger->ContinueAll()) {
-    out << "Failed to resume target." << std::endl;
   }
 
   return HANDLED;

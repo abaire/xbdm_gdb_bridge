@@ -76,7 +76,7 @@ bool Loader::Bootstrap(XBOXInterface& interface) {
 }
 
 bool Loader::Load(XBOXInterface& interface, const std::string& path) {
-  if (!singleton_ && !Bootstrap(interface)) {
+  if (!Bootstrap(interface)) {
     LOG_LOADER(error) << "Failed to bootstrap handler loader.";
     return false;
   }
@@ -85,7 +85,7 @@ bool Loader::Load(XBOXInterface& interface, const std::string& path) {
 
 bool Loader::Install(XBOXInterface& interface,
                      const std::vector<uint8_t>& data) {
-  if (!singleton_ && !Bootstrap(interface)) {
+  if (!Bootstrap(interface)) {
     LOG_LOADER(error) << "Failed to bootstrap handler loader.";
     return false;
   }
@@ -96,8 +96,17 @@ bool Loader::InjectLoader(XBOXInterface& base_interface) {
   GET_DEBUGGERXBOXINTERFACE(base_interface, interface);
   auto debugger = interface.Debugger();
   if (!debugger) {
-    LOG_LOADER(error) << "Debugger not attached.";
-    return false;
+    if (!interface.AttachDebugger()) {
+      LOG_LOADER(error) << "Debugger not attached.";
+      return false;
+    }
+    debugger = interface.Debugger();
+  }
+
+  ExecutionState current_state = debugger->CurrentKnownState();
+  XBDMDebugger::ScopedResume resume_guard(*debugger);
+  if (!debugger->HaltAll()) {
+    LOG_LOADER(warning) << "Failed to halt target.";
   }
 
   if (!FetchBaseAddress(debugger, "xbdm.dll")) {

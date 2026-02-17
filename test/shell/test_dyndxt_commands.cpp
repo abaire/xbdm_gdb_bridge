@@ -82,7 +82,7 @@ DEBUGGER_TEST_CASE(BootstrapResumesIfTargetWasRunning) {
                               client.Send("200- running\r\n");
                               return true;
                             });
-  server->SetExecutionState(ExecutionState::S_STOPPED);
+  server->SetExecutionState(ExecutionState::S_STARTED);
 
   cmd(*interface, empty_args, capture);
 
@@ -154,6 +154,59 @@ DEBUGGER_TEST_CASE(BootstrapAutomaticallyAttaches) {
                             });
 
   cmd(*interface, empty_args, capture);
+
+  BOOST_CHECK(debugger_interface->Debugger());
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_FIXTURE_TEST_SUITE(LoadTests, XBDMDebuggerInterfaceFixture)
+
+DEBUGGER_TEST_CASE(LoadAutomaticallyBootstrapsAndAttaches) {
+  std::stringstream capture;
+  DynDXTCommandLoad cmd;
+  auto debugger_interface =
+      std::dynamic_pointer_cast<DebuggerXBOXInterface>(interface);
+  BOOST_REQUIRE(debugger_interface);
+  BOOST_REQUIRE(!debugger_interface->Debugger());
+
+  // Mock responses for Bootstrap/InjectLoader
+  server->SetCommandHandler("stop",
+                            [](ClientTransport& client, const std::string&) {
+                              client.Send("200- stopped\r\n");
+                              return true;
+                            });
+  server->AddThread("main", 1);
+  server->SetCommandHandler("halt",
+                            [](ClientTransport& client, const std::string&) {
+                              client.Send("200- halted\r\n");
+                              return true;
+                            });
+  server->SetCommandHandler("go",
+                            [](ClientTransport& client, const std::string&) {
+                              client.Send("200- running\r\n");
+                              return true;
+                            });
+
+  // Mock "ddxt!hello" check
+  server->SetCommandHandler("ddxt!hello",
+                            [](ClientTransport& client, const std::string&) {
+                              client.Send("400- Unknown command\r\n");
+                              return true;
+                            });
+
+  // Mock module lookup
+  server->SetCommandHandler(
+      "modules", [](ClientTransport& client, const std::string&) {
+        client.Send(
+            "200- modules follow\r\n"
+            "name=\"xbdm.dll\" base=0x10000000 size=0x10000\r\n"
+            ".\r\n");
+        return true;
+      });
+
+  ArgParser args("load", std::vector<std::string>{"nonexistent.dll"});
+  cmd(*interface, args, capture);
 
   BOOST_CHECK(debugger_interface->Debugger());
 }
