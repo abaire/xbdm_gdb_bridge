@@ -148,6 +148,14 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
   REGISTER("dedicate", CommandDedicate);
   REGISTER("dmversion", CommandDebugMonitorVersion);
   REGISTER("rm", CommandDelete);
+  REGISTER("disableperfcounters", CommandDisablePerfCounters);
+  ALIAS("disableperfcounters", "disablepc");
+  ALIAS("disableperfcounters", "pcdisable");
+  ALIAS("disableperfcounters", "pcoff");
+  REGISTER("enableperfcounters", CommandEnablePerfCounters);
+  ALIAS("enableperfcounters", "enablepc");
+  ALIAS("enableperfcounters", "pcenable");
+  ALIAS("enableperfcounters", "pcon");
   REGISTER("ls", CommandDirList);
   REGISTER("df", CommandDriveFreeSpace);
   REGISTER("drivelist", CommandDriveList);
@@ -164,6 +172,9 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
   REGISTER("isbreak", CommandIsBreak);
   REGISTER("isdebugger", CommandIsDebugger);
   REGISTER("isstopped", CommandIsStopped);
+  REGISTER("listperfcounters", CommandListPerfCounters);
+  ALIAS("listperfcounters", "pclist");
+  ALIAS("listperfcounters", "listpc");
   REGISTER("run", CommandMagicBoot);
   auto mem_map = std::make_shared<CommandMemoryMap>();
   commands_["memorymap"] = mem_map;
@@ -177,6 +188,10 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
   REGISTER("notifyat", CommandNotifyAt);
   REGISTER("mv", CommandRename);
   REGISTER("putfile", CommandPutFile);
+  REGISTER("queryperfcounters", CommandQueryPerfCounters);
+  ALIAS("queryperfcounters", "pcquery");
+  ALIAS("queryperfcounters", "querypc");
+  ALIAS("queryperfcounters", "qpc");
   REGISTER("reboot", CommandReboot);
   REGISTER("resume", CommandResume);
   REGISTER("screenshot", CommandScreenshot);

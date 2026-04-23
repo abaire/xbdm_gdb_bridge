@@ -1916,6 +1916,21 @@ struct QueryPerformanceCounter : public RDCPProcessedRequest {
     AppendData("\" type=");
     AppendHexString(counter_type);
   }
+
+  [[nodiscard]] bool IsOK() const override {
+    return status == StatusCode::OK_MULTILINE_RESPONSE;
+  }
+
+  void ProcessResponse(const std::shared_ptr<RDCPResponse>& response) override {
+    if (!IsOK()) {
+      return;
+    }
+
+    auto parsed = RDCPMultiMapResponse(response->Data());
+    parsed_maps = std::move(parsed.maps);
+  }
+
+  std::vector<RDCPMapResponse> parsed_maps;
 };
 
 /**

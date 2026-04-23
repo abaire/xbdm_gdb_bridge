@@ -137,6 +137,18 @@ struct CommandDelete : Command {
                     std::ostream& out) override;
 };
 
+struct CommandEnablePerfCounters : Command {
+  CommandEnablePerfCounters() : Command("Enable performance counters.") {}
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
+                    std::ostream& out) override;
+};
+
+struct CommandDisablePerfCounters : Command {
+  CommandDisablePerfCounters() : Command("Disable performance counters.") {}
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
+                    std::ostream& out) override;
+};
+
 struct CommandDirList : Command {
   CommandDirList()
       : Command("List details of a file or directory.",
@@ -311,6 +323,13 @@ struct CommandIsStopped : Command {
                     std::ostream& out) override;
 };
 
+struct CommandListPerfCounters : Command {
+  CommandListPerfCounters()
+      : Command("List all available performance counters.") {}
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
+                    std::ostream& out) override;
+};
+
 struct CommandMagicBoot : Command {
   CommandMagicBoot()
       : Command("Reboot into an XBE.",
@@ -411,6 +430,16 @@ struct CommandPutFile : Command {
             "\n"
             "If `local_path` is a directory, sends the contents recursively.\n"
             "If the `-f` flag is given, overwrites remote files.") {}
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
+                    std::ostream& out) override;
+};
+
+struct CommandQueryPerfCounters : Command {
+  CommandQueryPerfCounters()
+      : Command("Query a performance counter.",
+                "<name> [type]\n"
+                "\n"
+                "Query the value of the specified performance counter.") {}
   Result operator()(XBOXInterface& interface, const ArgParser& args,
                     std::ostream& out) override;
 };

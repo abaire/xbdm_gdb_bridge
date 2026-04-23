@@ -243,6 +243,21 @@ Command::Result CommandDelete::operator()(XBOXInterface& interface,
   return HANDLED;
 }
 
+Command::Result CommandEnablePerfCounters::operator()(XBOXInterface& interface,
+                                                      const ArgParser& args,
+                                                      std::ostream& out) {
+  SendAndPrintMessage(interface, std::make_shared<EnableGPUCounter>(true), out);
+  return HANDLED;
+}
+
+Command::Result CommandDisablePerfCounters::operator()(XBOXInterface& interface,
+                                                       const ArgParser& args,
+                                                       std::ostream& out) {
+  SendAndPrintMessage(interface, std::make_shared<EnableGPUCounter>(false),
+                      out);
+  return HANDLED;
+}
+
 Command::Result CommandDirList::operator()(XBOXInterface& interface,
                                            const ArgParser& args,
                                            std::ostream& out) {
@@ -742,6 +757,22 @@ Command::Result CommandIsStopped::operator()(XBOXInterface& interface,
   return HANDLED;
 }
 
+Command::Result CommandListPerfCounters::operator()(XBOXInterface& interface,
+                                                    const ArgParser& args,
+                                                    std::ostream& out) {
+  auto request = std::make_shared<PerformanceCounterList>();
+  interface.SendCommandSync(request);
+  if (!request->IsOK()) {
+    out << *request << std::endl;
+  } else {
+    for (auto& counter : request->counters) {
+      out << std::left << std::setw(32) << counter.name << " 0x" << std::hex
+          << counter.type << std::dec << std::endl;
+    }
+  }
+  return HANDLED;
+}
+
 Command::Result CommandMagicBoot::operator()(XBOXInterface& interface,
                                              const ArgParser& args,
                                              std::ostream& out) {
@@ -952,6 +983,35 @@ Command::Result CommandPutFile::operator()(XBOXInterface& interface,
     UploadFile(interface, local_path, remote_path, overwrite_action, out);
   }
 
+  return HANDLED;
+}
+
+Command::Result CommandQueryPerfCounters::operator()(XBOXInterface& interface,
+                                                     const ArgParser& args,
+                                                     std::ostream& out) {
+  std::string name;
+  if (!args.Parse(0, name)) {
+    out << "Missing required name argument." << std::endl;
+    PrintUsage();
+    return HANDLED;
+  }
+
+  std::shared_ptr<QueryPerformanceCounter> request;
+  int type;
+  if (args.Parse(1, type, interface.GetExpressionParser())) {
+    request = std::make_shared<QueryPerformanceCounter>(name, type);
+  } else {
+    request = std::make_shared<QueryPerformanceCounter>(name);
+  }
+
+  interface.SendCommandSync(request);
+  if (!request->IsOK()) {
+    out << *request << std::endl;
+  } else {
+    for (const auto& map : request->parsed_maps) {
+      out << map << std::endl;
+    }
+  }
   return HANDLED;
 }
 
