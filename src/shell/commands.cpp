@@ -767,7 +767,7 @@ Command::Result CommandListPerfCounters::operator()(XBOXInterface& interface,
   } else {
     for (auto& counter : request->counters) {
       out << std::left << std::setw(32) << counter.name << " 0x" << std::hex
-          << counter.type << std::endl;
+          << counter.type << std::dec << std::endl;
     }
   }
   return HANDLED;

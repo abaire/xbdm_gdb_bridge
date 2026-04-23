@@ -1927,7 +1927,7 @@ struct QueryPerformanceCounter : public RDCPProcessedRequest {
     }
 
     auto parsed = RDCPMultiMapResponse(response->Data());
-    parsed_maps = parsed.maps;
+    parsed_maps = std::move(parsed.maps);
   }
 
   std::vector<RDCPMapResponse> parsed_maps;
