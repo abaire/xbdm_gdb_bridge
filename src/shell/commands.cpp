@@ -243,6 +243,21 @@ Command::Result CommandDelete::operator()(XBOXInterface& interface,
   return HANDLED;
 }
 
+Command::Result CommandEnablePerfCounters::operator()(XBOXInterface& interface,
+                                                      const ArgParser& args,
+                                                      std::ostream& out) {
+  SendAndPrintMessage(interface, std::make_shared<EnableGPUCounter>(true), out);
+  return HANDLED;
+}
+
+Command::Result CommandDisablePerfCounters::operator()(XBOXInterface& interface,
+                                                       const ArgParser& args,
+                                                       std::ostream& out) {
+  SendAndPrintMessage(interface, std::make_shared<EnableGPUCounter>(false),
+                      out);
+  return HANDLED;
+}
+
 Command::Result CommandDirList::operator()(XBOXInterface& interface,
                                            const ArgParser& args,
                                            std::ostream& out) {

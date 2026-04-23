@@ -148,6 +148,14 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
   REGISTER("dedicate", CommandDedicate);
   REGISTER("dmversion", CommandDebugMonitorVersion);
   REGISTER("rm", CommandDelete);
+  REGISTER("disableperfcounters", CommandDisablePerfCounters);
+  ALIAS("disableperfcounters", "disablepc");
+  ALIAS("disableperfcounters", "pcdisable");
+  ALIAS("disableperfcounters", "pcoff");
+  REGISTER("enableperfcounters", CommandEnablePerfCounters);
+  ALIAS("enableperfcounters", "enablepc");
+  ALIAS("enableperfcounters", "pcenable");
+  ALIAS("enableperfcounters", "pcon");
   REGISTER("ls", CommandDirList);
   REGISTER("df", CommandDriveFreeSpace);
   REGISTER("drivelist", CommandDriveList);

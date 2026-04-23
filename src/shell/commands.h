@@ -137,6 +137,18 @@ struct CommandDelete : Command {
                     std::ostream& out) override;
 };
 
+struct CommandEnablePerfCounters : Command {
+  CommandEnablePerfCounters() : Command("Enable performance counters.") {}
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
+                    std::ostream& out) override;
+};
+
+struct CommandDisablePerfCounters : Command {
+  CommandDisablePerfCounters() : Command("Disable performance counters.") {}
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
+                    std::ostream& out) override;
+};
+
 struct CommandDirList : Command {
   CommandDirList()
       : Command("List details of a file or directory.",
