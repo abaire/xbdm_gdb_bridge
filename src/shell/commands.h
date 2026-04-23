@@ -434,6 +434,16 @@ struct CommandPutFile : Command {
                     std::ostream& out) override;
 };
 
+struct CommandQueryPerfCounters : Command {
+  CommandQueryPerfCounters()
+      : Command("Query a performance counter.",
+                "<name> [type]\n"
+                "\n"
+                "Query the value of the specified performance counter.") {}
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
+                    std::ostream& out) override;
+};
+
 struct CommandRename : Command {
   CommandRename()
       : Command("Rename/move a path on the target.",

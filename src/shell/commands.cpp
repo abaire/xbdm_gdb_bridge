@@ -986,6 +986,35 @@ Command::Result CommandPutFile::operator()(XBOXInterface& interface,
   return HANDLED;
 }
 
+Command::Result CommandQueryPerfCounters::operator()(XBOXInterface& interface,
+                                                     const ArgParser& args,
+                                                     std::ostream& out) {
+  std::string name;
+  if (!args.Parse(0, name)) {
+    out << "Missing required name argument." << std::endl;
+    PrintUsage();
+    return HANDLED;
+  }
+
+  std::shared_ptr<QueryPerformanceCounter> request;
+  int type;
+  if (args.Parse(1, type, interface.GetExpressionParser())) {
+    request = std::make_shared<QueryPerformanceCounter>(name, type);
+  } else {
+    request = std::make_shared<QueryPerformanceCounter>(name);
+  }
+
+  interface.SendCommandSync(request);
+  if (!request->IsOK()) {
+    out << *request << std::endl;
+  } else {
+    for (const auto& map : request->parsed_maps) {
+      out << map << std::endl;
+    }
+  }
+  return HANDLED;
+}
+
 Command::Result CommandRename::operator()(XBOXInterface& interface,
                                           const ArgParser& args,
                                           std::ostream& out) {

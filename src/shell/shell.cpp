@@ -188,6 +188,10 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
   REGISTER("notifyat", CommandNotifyAt);
   REGISTER("mv", CommandRename);
   REGISTER("putfile", CommandPutFile);
+  REGISTER("queryperfcounters", CommandQueryPerfCounters);
+  ALIAS("queryperfcounters", "pcquery");
+  ALIAS("queryperfcounters", "querypc");
+  ALIAS("queryperfcounters", "qpc");
   REGISTER("reboot", CommandReboot);
   REGISTER("resume", CommandResume);
   REGISTER("screenshot", CommandScreenshot);
