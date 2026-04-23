@@ -757,6 +757,22 @@ Command::Result CommandIsStopped::operator()(XBOXInterface& interface,
   return HANDLED;
 }
 
+Command::Result CommandListPerfCounters::operator()(XBOXInterface& interface,
+                                                    const ArgParser& args,
+                                                    std::ostream& out) {
+  auto request = std::make_shared<PerformanceCounterList>();
+  interface.SendCommandSync(request);
+  if (!request->IsOK()) {
+    out << *request << std::endl;
+  } else {
+    for (auto& counter : request->counters) {
+      out << std::left << std::setw(32) << counter.name << " 0x" << std::hex
+          << counter.type << std::endl;
+    }
+  }
+  return HANDLED;
+}
+
 Command::Result CommandMagicBoot::operator()(XBOXInterface& interface,
                                              const ArgParser& args,
                                              std::ostream& out) {

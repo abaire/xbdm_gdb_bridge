@@ -323,6 +323,13 @@ struct CommandIsStopped : Command {
                     std::ostream& out) override;
 };
 
+struct CommandListPerfCounters : Command {
+  CommandListPerfCounters()
+      : Command("List all available performance counters.") {}
+  Result operator()(XBOXInterface& interface, const ArgParser& args,
+                    std::ostream& out) override;
+};
+
 struct CommandMagicBoot : Command {
   CommandMagicBoot()
       : Command("Reboot into an XBE.",

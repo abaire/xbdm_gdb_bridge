@@ -172,6 +172,9 @@ Shell::Shell(std::shared_ptr<XBOXInterface>& interface)
   REGISTER("isbreak", CommandIsBreak);
   REGISTER("isdebugger", CommandIsDebugger);
   REGISTER("isstopped", CommandIsStopped);
+  REGISTER("listperfcounters", CommandListPerfCounters);
+  ALIAS("listperfcounters", "pclist");
+  ALIAS("listperfcounters", "listpc");
   REGISTER("run", CommandMagicBoot);
   auto mem_map = std::make_shared<CommandMemoryMap>();
   commands_["memorymap"] = mem_map;
