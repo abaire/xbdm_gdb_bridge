@@ -977,8 +977,10 @@ Command::Result CommandPutFile::operator()(XBOXInterface& interface,
                           : UploadFileOverwriteAction::ABORT);
 
   if (is_directory) {
-    UploadDirectory(interface, local_path, remote_path, overwrite_action, true,
-                    out);
+    bool contents_only = args.ArgExists("contents-only");
+    bool flatten = args.ArgExists("flatten");
+    UploadDirectory(interface, local_path, remote_path, overwrite_action,
+                    contents_only, flatten, out);
   } else {
     UploadFile(interface, local_path, remote_path, overwrite_action, out);
   }

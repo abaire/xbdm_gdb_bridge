@@ -424,12 +424,15 @@ struct CommandPutFile : Command {
   CommandPutFile()
       : Command(
             "Upload a file to the target.",
-            "<local_path> <remote_path> [-f]\n"
+            "<local_path> <remote_path> [-f] [--contents-only] [--flatten]\n"
             "\n"
             "Upload the file at `local_path` to `remote_path`.\n"
             "\n"
             "If `local_path` is a directory, sends the contents recursively.\n"
-            "If the `-f` flag is given, overwrites remote files.") {}
+            "If the `-f` flag is given, overwrites remote files.\n"
+            "If `--contents-only` is given, uploads only the contents of the "
+            "directory.\n"
+            "If `--flatten` is given, flattens the directory structure.") {}
   Result operator()(XBOXInterface& interface, const ArgParser& args,
                     std::ostream& out) override;
 };

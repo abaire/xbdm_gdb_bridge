@@ -74,20 +74,21 @@ inline bool UploadFile(XBOXInterface& interface, const std::string& local_path,
 bool UploadDirectory(XBOXInterface& interface, const std::string& local_path,
                      const std::string& remote_path,
                      UploadFileOverwriteAction overwrite_action,
-                     bool contents_only, std::ostream& out);
+                     bool contents_only, bool flatten, std::ostream& out);
+
 inline bool UploadDirectory(XBOXInterface& interface,
                             const std::string& local_path,
                             const std::string& remote_path,
                             UploadFileOverwriteAction overwrite_action,
                             std::ostream& out) {
   return UploadDirectory(interface, local_path, remote_path, overwrite_action,
-                         false, out);
+                         false, false, out);
 }
 inline bool UploadDirectory(XBOXInterface& interface,
                             const std::string& local_path,
                             const std::string& remote_path, std::ostream& out) {
   return UploadDirectory(interface, local_path, remote_path,
-                         UploadFileOverwriteAction::SKIP, false, out);
+                         UploadFileOverwriteAction::SKIP, false, false, out);
 }
 
 //! Uploads the file at `local_path` to `remote_path` if it does not exist or
