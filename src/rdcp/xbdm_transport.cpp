@@ -87,8 +87,13 @@ void XBDMTransport::OnBytesRead() {
   char const* char_buffer = reinterpret_cast<char*>(read_buffer_.data());
 
   std::shared_ptr<RDCPRequest> request;
-  if (!request_queue_.empty()) {
-    request = request_queue_.front();
+  bool request_queue_empty;
+  {
+    const std::lock_guard lock(request_queue_lock_);
+    request_queue_empty = request_queue_.empty();
+    if (!request_queue_empty) {
+      request = request_queue_.front();
+    }
   }
   std::shared_ptr<RDCPResponse> response;
 
@@ -110,7 +115,7 @@ void XBDMTransport::OnBytesRead() {
 
   ShiftReadBuffer(bytes_consumed);
 
-  if (request_queue_.empty()) {
+  if (request_queue_empty) {
     // On initial connection, XBDM will send an unsolicited OK response.
     HandleInitialConnectResponse(response);
   } else {
@@ -129,7 +134,10 @@ void XBDMTransport::OnBytesRead() {
       return;
     }
 
-    request_queue_.pop_front();
+    {
+      const std::lock_guard lock(request_queue_lock_);
+      request_queue_.pop_front();
+    }
     WriteNextRequest();
 
 #ifdef ENABLE_HIGH_VERBOSITY_LOGGING
