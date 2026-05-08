@@ -406,6 +406,82 @@ bool UploadFile(XBOXInterface& interface, const std::string& local_path,
                                    out);
 }
 
+static bool MakeDirs(XBOXInterface& interface,
+                     const std::string& remote_directory, std::ostream& out) {
+  auto safe_remote_path = EnsureXFATStylePath(remote_directory);
+  bool remote_exists;
+  bool remote_is_dir;
+  if (!CheckRemotePath(interface, safe_remote_path, remote_exists,
+                       remote_is_dir, out)) {
+    return false;
+  }
+
+  if (remote_exists && !remote_is_dir) {
+    out << "Remote path '" << safe_remote_path << "' is a file." << std::endl;
+    return false;
+  }
+
+  if (remote_exists) {
+    return true;
+  }
+
+  size_t end = safe_remote_path.find('\\');
+  while (end != std::string::npos) {
+    auto subpath = safe_remote_path.substr(0, end);
+    if (!subpath.empty() && subpath.back() != ':' && subpath.back() != '\\') {
+      auto request = std::make_shared<Mkdir>(subpath);
+      interface.SendCommandSync(request);
+      if (!request->IsOK() && request->status != ERR_EXISTS) {
+        out << *request << std::endl;
+        return false;
+      }
+    }
+
+    end = safe_remote_path.find('\\', end + 1);
+  }
+
+  // Handle the final segment if it's not a drive root.
+  if (!safe_remote_path.empty() && safe_remote_path.back() != ':' &&
+      safe_remote_path.back() != '\\') {
+    auto request = std::make_shared<Mkdir>(safe_remote_path);
+    interface.SendCommandSync(request);
+    if (!request->IsOK() && request->status != ERR_EXISTS) {
+      out << *request << std::endl;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static bool CreateRemoteDirectoryHierarchy(
+    XBOXInterface& interface, const std::string& remote_directory,
+    const std::set<std::string>& hierarchy, std::ostream& out) {
+  std::string full_remote_dir =
+      EnsureTrailingBackslash(EnsureXFATStylePath(remote_directory));
+
+  if (!MakeDirs(interface, full_remote_dir, out)) {
+    return false;
+  }
+
+  for (auto& populated_dir : hierarchy) {
+    if (populated_dir.empty() || populated_dir == ".") {
+      continue;
+    }
+
+    std::string full_remote_subdir =
+        EnsureXFATStylePath(full_remote_dir + populated_dir);
+    auto request = std::make_shared<Mkdir>(full_remote_subdir);
+    interface.SendCommandSync(request);
+    if (!request->IsOK() && request->status != ERR_EXISTS) {
+      out << *request << std::endl;
+      return false;
+    }
+  }
+
+  return true;
+}
+
 template <typename ProcessFileCallback>
 static bool WalkDirectory(const std::string& root_path,
                           ProcessFileCallback&& cb) {
@@ -432,7 +508,7 @@ static bool WalkDirectory(const std::string& root_path,
 bool UploadDirectory(XBOXInterface& interface, const std::string& local_path,
                      const std::string& remote_path,
                      UploadFileOverwriteAction overwrite_action,
-                     bool contents_only, std::ostream& out) {
+                     bool contents_only, bool flatten, std::ostream& out) {
   auto safe_remote_path = EnsureXFATStylePath(remote_path);
 
   bool exists;
@@ -461,9 +537,33 @@ bool UploadDirectory(XBOXInterface& interface, const std::string& local_path,
     full_remote_path = EnsureTrailingBackslash(full_remote_path);
   }
 
-  auto process_file = [&interface, &full_remote_path, overwrite_action,
+  auto local_root = std::filesystem::path(local_path);
+
+  if (flatten) {
+    auto process_file = [&interface, &full_remote_path, overwrite_action,
+                         &out](const std::string& local_file) {
+      return UploadFile(interface, local_file, full_remote_path,
+                        overwrite_action, out);
+    };
+    return WalkDirectory(local_path, process_file);
+  }
+
+  std::set<std::string> verified_dirs;
+  auto process_file = [&interface, &local_root, &full_remote_path,
+                       &verified_dirs, overwrite_action,
                        &out](const std::string& local_file) {
-    return UploadFile(interface, local_file, full_remote_path, overwrite_action,
+    auto relative = std::filesystem::relative(local_file, local_root);
+    auto remote_subdir =
+        EnsureXFATStylePath(full_remote_path + relative.parent_path().string());
+
+    if (!verified_dirs.contains(remote_subdir) &&
+        !MakeDirs(interface, remote_subdir, out)) {
+      return false;
+    }
+    verified_dirs.insert(remote_subdir);
+
+    return UploadFile(interface, local_file,
+                      EnsureTrailingBackslash(remote_subdir), overwrite_action,
                       out);
   };
 
@@ -522,70 +622,6 @@ bool SyncFile(XBOXInterface& interface, const std::string& local_path,
   }
 
   return upload_file();
-}
-
-static bool MakeDirs(XBOXInterface& interface,
-                     const std::string& remote_directory, std::ostream& out) {
-  auto safe_remote_path = EnsureXFATStylePath(remote_directory);
-  bool remote_exists;
-  bool remote_is_dir;
-  if (!CheckRemotePath(interface, safe_remote_path, remote_exists,
-                       remote_is_dir, out)) {
-    return false;
-  }
-
-  if (remote_exists && !remote_is_dir) {
-    out << "Remote path '" << safe_remote_path << "' is a file." << std::endl;
-    return false;
-  }
-
-  if (remote_exists) {
-    return true;
-  }
-
-  size_t end = safe_remote_path.find('\\');
-  while (end != std::string::npos) {
-    auto subpath = safe_remote_path.substr(0, end);
-    if (subpath.back() != ':') {
-      auto request = std::make_shared<Mkdir>(subpath);
-      interface.SendCommandSync(request);
-      if (!request->IsOK() && request->status != ERR_EXISTS) {
-        out << *request << std::endl;
-        return false;
-      }
-    }
-
-    end = safe_remote_path.find('\\', end + 1);
-  }
-  return true;
-}
-
-static bool CreateRemoteDirectoryHierarchy(
-    XBOXInterface& interface, const std::string& remote_directory,
-    const std::set<std::string>& hierarchy, std::ostream& out) {
-  std::string full_remote_dir =
-      EnsureTrailingBackslash(EnsureXFATStylePath(remote_directory));
-
-  if (!MakeDirs(interface, full_remote_dir, out)) {
-    return false;
-  }
-
-  for (auto& populated_dir : hierarchy) {
-    if (populated_dir.empty() || populated_dir == ".") {
-      continue;
-    }
-
-    std::string full_remote_subdir =
-        EnsureXFATStylePath(full_remote_dir + populated_dir);
-    auto request = std::make_shared<Mkdir>(full_remote_subdir);
-    interface.SendCommandSync(request);
-    if (!request->IsOK() && request->status != ERR_EXISTS) {
-      out << *request << std::endl;
-      return false;
-    }
-  }
-
-  return true;
 }
 
 bool SyncDirectory(XBOXInterface& interface, const std::string& local_directory,
