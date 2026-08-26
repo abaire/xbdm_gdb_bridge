@@ -15,6 +15,8 @@ class IPAddress {
 
   [[nodiscard]] IPAddress WithPort(uint16_t port) const;
 
+  [[nodiscard]] static bool IsIPv4Address(const std::string& addr);
+
   [[nodiscard]] const std::string& Hostname() const { return hostname_; }
   [[nodiscard]] const struct sockaddr_in& Address() const { return addr_; }
   [[nodiscard]] struct in_addr IP() const { return addr_.sin_addr; }

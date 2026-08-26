@@ -681,6 +681,7 @@ add_test(NAME rdcp_tests COMMAND rdcp_tests)
 add_executable(
         util_tests
         test/util/test_command_line_command_tokenizer.cpp
+        test/util/test_ip_address.cpp
         test/util/test_main.cpp
         test/util/test_parsing.cpp
         test/util/test_path.cpp
@@ -697,6 +698,7 @@ target_link_libraries(
         Boost::unit_test_framework
         LINK_PRIVATE
         test_util
+        xbdm_gdb_bridge_net
         xbdm_gdb_bridge_util
 )
 add_test(NAME util_tests COMMAND util_tests)

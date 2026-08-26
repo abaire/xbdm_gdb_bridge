@@ -13,6 +13,13 @@ See https://xboxdevwiki.net/Xbox_Debug_Monitor for a description of the XBDM pro
 where `<xbox_ip>` alone will default to port `731` and port alone will default to
 IP `127.0.0.1`.
 
+Alternatively, the `XBDM_XBOX_ADDRESS` environment variable can be set to the default
+target address, allowing the address argument to be omitted from commands:
+
+`export XBDM_XBOX_ADDRESS=10.0.0.24`
+
+`xbdm_gdb_bridge -- reboot`
+
 _Note_: Connecting to a qemu-based emulator using NAT may require the use of
 `hostfwd_add` to forward a localhost port to the emulated machine.
 
