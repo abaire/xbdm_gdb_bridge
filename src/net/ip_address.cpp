@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
+#include <cctype>
 #include <cstring>
 #include <ostream>
 
@@ -53,6 +54,54 @@ IPAddress IPAddress::WithPort(uint16_t port) const {
   addr.sin_port = htons(port);
 
   return IPAddress(addr);
+}
+
+bool IPAddress::IsIPv4Address(const std::string& addr) {
+  if (addr.empty()) {
+    return false;
+  }
+
+  auto split = addr.find(':');
+  std::string ip_part;
+  std::string port_part;
+
+  if (split != std::string::npos) {
+    if (addr.find(':', split + 1) != std::string::npos) {
+      return false;
+    }
+    ip_part = addr.substr(0, split);
+    port_part = addr.substr(split + 1);
+
+    if (port_part.empty()) {
+      return false;
+    }
+    for (char c : port_part) {
+      if (!std::isdigit(static_cast<unsigned char>(c))) {
+        return false;
+      }
+    }
+    try {
+      unsigned long port = std::stoul(port_part);
+      if (port > 65535) {
+        return false;
+      }
+    } catch (...) {
+      return false;
+    }
+  } else {
+    ip_part = addr;
+  }
+
+  if (ip_part.empty()) {
+    return split != std::string::npos;
+  }
+
+  struct in_addr in{};
+  if (inet_pton(AF_INET, ip_part.c_str(), &in) == 1) {
+    return true;
+  }
+
+  return false;
 }
 
 std::ostream& operator<<(std::ostream& os, IPAddress const& addr) {

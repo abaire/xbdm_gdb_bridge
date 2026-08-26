@@ -1,4 +1,6 @@
+#include <boost/algorithm/string/join.hpp>
 #include <boost/program_options.hpp>
+#include <cstdlib>
 #include <iostream>
 #include <vector>
 
@@ -16,16 +18,27 @@
 
 namespace po = boost::program_options;
 
-void validate(boost::any& v, const std::vector<std::string>& values, IPAddress*,
-              int) {
-  po::validators::check_first_occurrence(v);
-  const std::string& value = po::validators::get_single_string(values);
-
-  IPAddress addr(value, DEFAULT_PORT);
-  v = boost::any(addr);
-}
-
 namespace {
+
+void PrintHelp(std::ostream& os, const po::options_description& visible_opts) {
+  os << "Usage: xbdm_gdb_bridge [options] [<IP[:Port]>] [command...]\n\n"
+     << "Positional arguments:\n"
+     << "  <IP[:Port]>                     IP (and optionally Port) of the "
+        "XBOX to\n"
+     << "                                  connect to. May be omitted if the\n"
+     << "                                  XBDM_XBOX_ADDRESS environment "
+        "variable is set.\n"
+     << "  [command...]                    Optional command to run instead of "
+        "running\n"
+     << "                                  the shell.\n\n"
+     << visible_opts << "\n"
+     << "Environment variables:\n"
+     << "  XBDM_XBOX_ADDRESS               IP (and optionally Port) of the "
+        "default XBOX\n"
+     << "                                  to connect to if not specified on "
+        "the\n"
+     << "                                  command line.\n";
+}
 
 int main_(const IPAddress& xbox_addr,
           const std::vector<std::vector<std::string>>& commands,
@@ -47,7 +60,6 @@ int main_(const IPAddress& xbox_addr,
 #endif
 
     std::string flat_command = boost::algorithm::join(command, " ");
-    ;
     ArgParser parser(flat_command);
     shell.ProcessCommand(parser);
   }
@@ -71,27 +83,31 @@ int main(int argc, char* argv[]) {
   bool disable_gdb_logging{false};
   bool disable_debugger_logging{false};
 
-  po::options_description opts("Options:");
+  po::options_description visible_opts("Options");
   // clang-format off
-  opts.add_options()
+  visible_opts.add_options()
       ("help,?", po::bool_switch(), "Print this help message.")
-      ("xbox", po::value<IPAddress>()->value_name("<IP[:Port]>"), "IP (and optionally Port) of the XBOX to connect to.")
       ("shell,s", po::bool_switch(&run_shell), "Run the shell even if an initial command is given.")
       ("verbosity,v", po::value<uint32_t>()->value_name("<level>")->default_value(0), "Sets logging verbosity.")
       ("no-debugger", po::bool_switch(&disable_debugger_logging), "Disable verbose logging for the debugger module.")
       ("no-gdb", po::bool_switch(&disable_gdb_logging), "Disable verbose logging for the GDB module.")
       ("no-xbdm", po::bool_switch(&disable_xbdm_logging), "Disable verbose logging for the XBDM module.")
-      ("command", po::value<std::vector<std::string>>()->multitoken(), "Optional command to run instead of running the shell.")
       ;
   // clang-format on
 
+  po::options_description hidden_opts;
+  hidden_opts.add_options()("positional-args",
+                            po::value<std::vector<std::string>>(),
+                            "Positional arguments");
+
   po::positional_options_description positional;
-  positional.add("xbox", 1);
-  positional.add("command", -1);
+  positional.add("positional-args", -1);
+
+  po::options_description all_opts;
+  all_opts.add(visible_opts).add(hidden_opts);
 
   auto parsed = po::command_line_parser(argc, argv)
-                    .allow_unregistered()
-                    .options(opts)
+                    .options(all_opts)
                     .positional(positional)
                     .run();
 
@@ -100,30 +116,68 @@ int main(int argc, char* argv[]) {
     po::store(parsed, vm);
 
     if (vm["help"].as<bool>()) {
-      std::cout << opts << std::endl;
-      return 1;
+      PrintHelp(std::cout, visible_opts);
+      return 0;
     }
 
     po::notify(vm);
   } catch (boost::program_options::error& e) {
     std::cout << "ERROR: " << e.what() << std::endl;
-    std::cout << opts << std::endl;
+    PrintHelp(std::cout, visible_opts);
     return 1;
   }
 
-  if (!vm.count("xbox")) {
-    std::cout << "Missing required 'xbox' parameter." << std::endl;
-    std::cout << opts << std::endl;
-    return 1;
+  std::vector<std::string> positional_args;
+  if (vm.count("positional-args")) {
+    positional_args = vm["positional-args"].as<std::vector<std::string>>();
   }
 
-  IPAddress xbox_addr = vm["xbox"].as<IPAddress>();
-  uint32_t verbosity = vm["verbosity"].as<uint32_t>();
+  std::string xbox_address_str;
   std::vector<std::string> additional_commands;
-  auto command_params = vm.find("command");
-  if (command_params != vm.end()) {
-    additional_commands = command_params->second.as<std::vector<std::string>>();
+
+  const char* env_xbox_address = std::getenv("XBDM_XBOX_ADDRESS");
+  bool has_env_address =
+      (env_xbox_address != nullptr && *env_xbox_address != '\0');
+
+  if (!positional_args.empty()) {
+    const std::string& first_arg = positional_args.front();
+    if (IPAddress::IsIPv4Address(first_arg)) {
+      xbox_address_str = first_arg;
+      additional_commands.assign(positional_args.begin() + 1,
+                                 positional_args.end());
+    } else if (has_env_address) {
+      xbox_address_str = env_xbox_address;
+      additional_commands = positional_args;
+    } else {
+      std::cout
+          << "ERROR: '" << first_arg
+          << "' does not appear to be an IP address and XBDM_XBOX_ADDRESS "
+             "is not set."
+          << std::endl;
+      PrintHelp(std::cout, visible_opts);
+      return 1;
+    }
+  } else {
+    if (has_env_address) {
+      xbox_address_str = env_xbox_address;
+    } else {
+      std::cout << "Missing required <IP[:Port]> parameter and "
+                   "XBDM_XBOX_ADDRESS is not set."
+                << std::endl;
+      PrintHelp(std::cout, visible_opts);
+      return 1;
+    }
   }
+
+  if (!IPAddress::IsIPv4Address(xbox_address_str)) {
+    std::cout << "ERROR: '" << xbox_address_str
+              << "' is not a valid XBOX IP address." << std::endl;
+    PrintHelp(std::cout, visible_opts);
+    return 1;
+  }
+
+  IPAddress xbox_addr(xbox_address_str, DEFAULT_PORT);
+  uint32_t verbosity = vm["verbosity"].as<uint32_t>();
 
   logging::InitializeLogging(verbosity);
   logging::SetGDBTraceEnabled(!disable_gdb_logging);
