@@ -1,6 +1,7 @@
 #include "ip_address.h"
 
 #include <arpa/inet.h>
+#include <strings.h>
 #include <sys/socket.h>
 
 #include <cctype>
@@ -21,6 +22,8 @@ IPAddress::IPAddress(const std::string& addr) {
   hostname_ = addr.substr(0, split);
   if (hostname_.empty()) {
     addr_.sin_addr.s_addr = INADDR_ANY;
+  } else if (strcasecmp(hostname_.c_str(), "localhost") == 0) {
+    addr_.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   } else {
     addr_.sin_addr.s_addr = htonl(inet_network(hostname_.c_str()));
     if (addr_.sin_addr.s_addr == INADDR_NONE) {
@@ -94,6 +97,10 @@ bool IPAddress::IsIPv4Address(const std::string& addr) {
 
   if (ip_part.empty()) {
     return split != std::string::npos;
+  }
+
+  if (strcasecmp(ip_part.c_str(), "localhost") == 0) {
+    return true;
   }
 
   struct in_addr in{};
