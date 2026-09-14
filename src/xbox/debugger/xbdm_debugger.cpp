@@ -1143,14 +1143,7 @@ bool XBDMDebugger::RestartAndReconnect(uint32_t reboot_flags) {
   }
 
   // Gracefully drop all connections except notification channels.
-  {
-    LOG_DEBUGGER(trace) << "Sending bye message.";
-    auto request = std::make_shared<::Bye>();
-    context_->SendCommandSync(request);
-    // No need to check for success or failure.
-
-    context_->CloseActiveConnections();
-  }
+  context_->CloseActiveConnections();
 
   // Then wait for the notification connection to be reestablished. A real
   // devkit interaction waits for a pending notification before reconnecting the

@@ -76,8 +76,8 @@ class XBDMContext {
   void ExecuteXBDMPromise(
       std::promise<std::shared_ptr<RDCPProcessedRequest>>& promise,
       const std::shared_ptr<RDCPProcessedRequest>& request,
-      const std::shared_ptr<XBDMTransport>& transport);
-  bool XBDMConnect(const std::shared_ptr<XBDMTransport>& transport,
+      std::shared_ptr<XBDMTransport> transport);
+  bool XBDMConnect(std::shared_ptr<XBDMTransport>& transport,
                    int max_wait_millis = 5000);
 
   void DispatchNotification(

@@ -84,6 +84,19 @@ DEBUGGER_TEST_CASE(ReconnectAfterDisconnectSucceeds) {
   BOOST_CHECK(debugger->IsAttached());
 }
 
+DEBUGGER_TEST_CASE(RestartAndReconnectSucceeds) {
+  Bootup();
+  BOOST_REQUIRE(debugger->Attach());
+  BOOST_CHECK(debugger->IsAttached());
+
+  uint32_t flags = Reboot::kWait | Reboot::kWarm;
+  BOOST_REQUIRE(debugger->RestartAndAttach(flags));
+  BOOST_CHECK(debugger->IsAttached());
+
+  BOOST_REQUIRE(debugger->WaitForState(S_STOPPED, 5000));
+  AwaitQuiescence();
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 // ============================================================================
