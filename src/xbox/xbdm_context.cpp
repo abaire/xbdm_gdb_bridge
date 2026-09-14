@@ -139,10 +139,6 @@ bool XBDMContext::Reconnect() {
 
 std::shared_ptr<RDCPProcessedRequest> XBDMContext::SendCommandSync(
     const std::shared_ptr<RDCPProcessedRequest>& command) {
-  if (!xbdm_transport_) {
-    return nullptr;
-  }
-
   auto future = SendCommand(command);
   future.get();
   return command;
@@ -150,7 +146,7 @@ std::shared_ptr<RDCPProcessedRequest> XBDMContext::SendCommandSync(
 
 std::future<std::shared_ptr<RDCPProcessedRequest>> XBDMContext::SendCommand(
     const std::shared_ptr<RDCPProcessedRequest>& command) {
-  return SendCommand(command, xbdm_transport_);
+  return SendCommand(command, std::shared_ptr<XBDMTransport>{});
 }
 
 std::shared_ptr<RDCPProcessedRequest> XBDMContext::SendCommandSync(
@@ -186,7 +182,6 @@ std::future<std::shared_ptr<RDCPProcessedRequest>> XBDMContext::SendCommand(
     const std::shared_ptr<RDCPProcessedRequest>& command,
     const std::shared_ptr<XBDMTransport>& transport) {
   assert(xbdm_control_executor_ && "SendCommand called before Start.");
-  assert(transport && "transport must not be null");
   std::promise<std::shared_ptr<RDCPProcessedRequest>> promise;
   auto future = promise.get_future();
 
@@ -231,7 +226,15 @@ void XBDMContext::DestroyDedicatedChannel(const std::string& command_handler) {
 void XBDMContext::ExecuteXBDMPromise(
     std::promise<std::shared_ptr<RDCPProcessedRequest>>& promise,
     const std::shared_ptr<RDCPProcessedRequest>& request,
-    const std::shared_ptr<XBDMTransport>& transport) {
+    std::shared_ptr<XBDMTransport> transport) {
+  if (!transport) {
+    if (!xbdm_transport_ || xbdm_transport_->IsShutdown() ||
+        !xbdm_transport_->IsConnected()) {
+      Reconnect();
+    }
+    transport = xbdm_transport_;
+  }
+
   assert(transport && "Invalid transport during ExecuteXBDMPromise");
   if (!XBDMConnect(transport)) {
     request->status = StatusCode::ERR_NOT_CONNECTED;
@@ -244,7 +247,7 @@ void XBDMContext::ExecuteXBDMPromise(
   promise.set_value(request);
 }
 
-bool XBDMContext::XBDMConnect(const std::shared_ptr<XBDMTransport>& transport,
+bool XBDMContext::XBDMConnect(std::shared_ptr<XBDMTransport>& transport,
                               int max_wait_millis) {
   assert(transport && "Invalid transport during XBDMConnect");
   if (transport->CanProcessCommands()) {
@@ -252,7 +255,19 @@ bool XBDMContext::XBDMConnect(const std::shared_ptr<XBDMTransport>& transport,
   }
 
   if (transport->IsShutdown()) {
-    Reconnect();
+    if (transport == xbdm_transport_) {
+      Reconnect();
+      transport = xbdm_transport_;
+    } else {
+      for (auto& it : dedicated_transports_) {
+        if (it.second == transport) {
+          DestroyDedicatedChannel(it.first);
+          CreateDedicatedChannel(it.first);
+          transport = dedicated_transports_[it.first];
+          break;
+        }
+      }
+    }
   }
 
   if (!transport->IsConnected() && !transport->Connect(xbox_address_)) {
@@ -270,9 +285,7 @@ bool XBDMContext::XBDMConnect(const std::shared_ptr<XBDMTransport>& transport,
   }
 
   LOG_XBDM(warning) << "Timeout waiting for command processing to become "
-                       "available. Attempting to reconnect...";
-
-  transport->Connect(xbox_address_);
+                       "available.";
 
   return false;
 }
