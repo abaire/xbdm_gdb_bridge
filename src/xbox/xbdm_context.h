@@ -76,7 +76,8 @@ class XBDMContext {
   void ExecuteXBDMPromise(
       std::promise<std::shared_ptr<RDCPProcessedRequest>>& promise,
       const std::shared_ptr<RDCPProcessedRequest>& request,
-      std::shared_ptr<XBDMTransport> transport);
+      std::shared_ptr<XBDMTransport> transport,
+      const std::string& dedicated_handler = "");
   bool XBDMConnect(std::shared_ptr<XBDMTransport>& transport,
                    int max_wait_millis = 5000);
 
@@ -90,6 +91,8 @@ class XBDMContext {
   std::shared_ptr<SelectThread> select_thread_;
   std::shared_ptr<XBDMTransport> xbdm_transport_;
   std::shared_ptr<DelegatingServer> notification_server_;
+
+  std::recursive_mutex transport_lock_;
 
   //! Set of XBDMNotificationTransport instances managing notification streams
   //! from XBDM to this bridge.

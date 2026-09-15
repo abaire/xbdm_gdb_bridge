@@ -31,14 +31,17 @@ XBDMContext::XBDMContext(std::string name, IPAddress xbox_address,
 }
 
 void XBDMContext::Shutdown() {
-  for (const auto& it : dedicated_transports_) {
-    it.second->Close();
-  }
-  dedicated_transports_.clear();
+  {
+    const std::lock_guard lock(transport_lock_);
+    for (const auto& it : dedicated_transports_) {
+      it.second->Close();
+    }
+    dedicated_transports_.clear();
 
-  if (xbdm_transport_) {
-    xbdm_transport_->Close();
-    xbdm_transport_.reset();
+    if (xbdm_transport_) {
+      xbdm_transport_->Close();
+      xbdm_transport_.reset();
+    }
   }
   if (xbdm_control_executor_) {
     xbdm_control_executor_->stop();
@@ -84,9 +87,12 @@ void XBDMContext::OnNotificationChannelConnected(int sock, IPAddress& address) {
   // reproduce this would require queueing the handling of `modload`
   // notifications, and it seems like an immediate reconnect here causes no
   // issues.
-  if (!xbdm_transport_ || !xbdm_transport_->CanProcessCommands()) {
-    LOG_XBDM(trace) << "Reconnecting XBDM transport due to notification.";
-    Reconnect();
+  {
+    const std::lock_guard lock(transport_lock_);
+    if (!xbdm_transport_ || !xbdm_transport_->CanProcessCommands()) {
+      LOG_XBDM(trace) << "Reconnecting XBDM transport due to notification.";
+      Reconnect();
+    }
   }
 
   auto transport = std::make_shared<XBDMNotificationTransport>(
@@ -95,7 +101,10 @@ void XBDMContext::OnNotificationChannelConnected(int sock, IPAddress& address) {
         this->OnNotificationReceived(std::move(notification));
       });
 
-  notification_transports_.insert(transport);
+  {
+    const std::lock_guard lock(notification_transports_lock_);
+    notification_transports_.insert(transport);
+  }
 
   select_thread_->AddConnection(transport, [this, transport]() {
     const std::lock_guard lock(notification_transports_lock_);
@@ -113,8 +122,11 @@ void XBDMContext::OnNotificationReceived(
 }
 
 void XBDMContext::CloseActiveConnections() {
-  if (xbdm_transport_) {
-    xbdm_transport_->Close();
+  {
+    const std::lock_guard lock(transport_lock_);
+    if (xbdm_transport_) {
+      xbdm_transport_->Close();
+    }
   }
 
   ResetNotificationConnections();
@@ -128,6 +140,7 @@ void XBDMContext::ResetNotificationConnections() {
 }
 
 bool XBDMContext::Reconnect() {
+  const std::lock_guard lock(transport_lock_);
   if (xbdm_transport_) {
     xbdm_transport_->Close();
   }
@@ -160,14 +173,16 @@ std::shared_ptr<RDCPProcessedRequest> XBDMContext::SendCommandSync(
 std::future<std::shared_ptr<RDCPProcessedRequest>> XBDMContext::SendCommand(
     const std::shared_ptr<RDCPProcessedRequest>& command,
     const std::string& dedicated_handler) {
-  auto it = dedicated_transports_.find(dedicated_handler);
-  if (it == dedicated_transports_.end()) {
-    assert(CreateDedicatedChannel(dedicated_handler));
-    it = dedicated_transports_.find(dedicated_handler);
-    assert(it != dedicated_transports_.end());
-  }
+  assert(xbdm_control_executor_ && "SendCommand called before Start.");
+  std::promise<std::shared_ptr<RDCPProcessedRequest>> promise;
+  auto future = promise.get_future();
 
-  return SendCommand(command, it->second);
+  boost::asio::dispatch(
+      *xbdm_control_executor_, [this, promise = std::move(promise), command,
+                                dedicated_handler]() mutable {
+        this->ExecuteXBDMPromise(promise, command, nullptr, dedicated_handler);
+      });
+  return future;
 }
 
 std::shared_ptr<RDCPProcessedRequest> XBDMContext::SendCommandSync(
@@ -194,6 +209,7 @@ std::future<std::shared_ptr<RDCPProcessedRequest>> XBDMContext::SendCommand(
 }
 
 bool XBDMContext::CreateDedicatedChannel(const std::string& command_handler) {
+  const std::lock_guard lock(transport_lock_);
   if (dedicated_transports_.find(command_handler) !=
       dedicated_transports_.end()) {
     return false;
@@ -214,6 +230,7 @@ bool XBDMContext::CreateDedicatedChannel(const std::string& command_handler) {
 }
 
 void XBDMContext::DestroyDedicatedChannel(const std::string& command_handler) {
+  const std::lock_guard lock(transport_lock_);
   auto it = dedicated_transports_.find(command_handler);
   if (it == dedicated_transports_.end()) {
     return;
@@ -226,13 +243,33 @@ void XBDMContext::DestroyDedicatedChannel(const std::string& command_handler) {
 void XBDMContext::ExecuteXBDMPromise(
     std::promise<std::shared_ptr<RDCPProcessedRequest>>& promise,
     const std::shared_ptr<RDCPProcessedRequest>& request,
-    std::shared_ptr<XBDMTransport> transport) {
+    std::shared_ptr<XBDMTransport> transport,
+    const std::string& dedicated_handler) {
   if (!transport) {
-    if (!xbdm_transport_ || xbdm_transport_->IsShutdown() ||
-        !xbdm_transport_->IsConnected()) {
-      Reconnect();
+    const std::lock_guard lock(transport_lock_);
+    if (!dedicated_handler.empty()) {
+      auto it = dedicated_transports_.find(dedicated_handler);
+      if (it == dedicated_transports_.end() || it->second->IsShutdown()) {
+        if (it != dedicated_transports_.end()) {
+          DestroyDedicatedChannel(dedicated_handler);
+        }
+        if (!CreateDedicatedChannel(dedicated_handler)) {
+          LOG_XBDM(error) << "Failed to create dedicated channel for "
+                          << dedicated_handler;
+          request->status = StatusCode::ERR_NOT_CONNECTED;
+          promise.set_value(request);
+          return;
+        }
+        it = dedicated_transports_.find(dedicated_handler);
+      }
+      transport = it->second;
+    } else {
+      if (!xbdm_transport_ || xbdm_transport_->IsShutdown() ||
+          !xbdm_transport_->IsConnected()) {
+        Reconnect();
+      }
+      transport = xbdm_transport_;
     }
-    transport = xbdm_transport_;
   }
 
   assert(transport && "Invalid transport during ExecuteXBDMPromise");
@@ -255,22 +292,35 @@ bool XBDMContext::XBDMConnect(std::shared_ptr<XBDMTransport>& transport,
   }
 
   if (transport->IsShutdown()) {
-    if (transport == xbdm_transport_) {
-      Reconnect();
-      transport = xbdm_transport_;
-    } else {
-      for (auto& it : dedicated_transports_) {
-        if (it.second == transport) {
-          DestroyDedicatedChannel(it.first);
-          CreateDedicatedChannel(it.first);
-          transport = dedicated_transports_[it.first];
-          break;
-        }
+    const std::lock_guard lock(transport_lock_);
+    std::string dedicated_name;
+    for (const auto& [name, dedicated_transport] : dedicated_transports_) {
+      if (dedicated_transport == transport) {
+        dedicated_name = name;
+        break;
       }
+    }
+
+    if (!dedicated_name.empty()) {
+      DestroyDedicatedChannel(dedicated_name);
+      if (CreateDedicatedChannel(dedicated_name)) {
+        transport = dedicated_transports_[dedicated_name];
+      } else {
+        LOG_XBDM(error) << "Failed to recreate dedicated channel for "
+                        << dedicated_name;
+        return false;
+      }
+    } else {
+      if (!xbdm_transport_ || xbdm_transport_->IsShutdown() ||
+          !xbdm_transport_->IsConnected()) {
+        Reconnect();
+      }
+      transport = xbdm_transport_;
     }
   }
 
-  if (!transport->IsConnected() && !transport->Connect(xbox_address_)) {
+  if (!transport ||
+      (!transport->IsConnected() && !transport->Connect(xbox_address_))) {
     return false;
   }
 
