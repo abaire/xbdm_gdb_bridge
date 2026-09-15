@@ -1142,7 +1142,8 @@ bool XBDMDebugger::RestartAndReconnect(uint32_t reboot_flags) {
     LOG_DEBUGGER(warning) << "Timed out waiting for rebooting message.";
   }
 
-  // Gracefully drop all connections except notification channels.
+  // Drop all active connections; the Xbox will re-establish the notification
+  // channel after it finishes rebooting.
   context_->CloseActiveConnections();
 
   // Then wait for the notification connection to be reestablished. A real
