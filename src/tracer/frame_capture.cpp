@@ -523,6 +523,10 @@ void FrameCapture::ProcessAuxBuffer() {
         LogTexture(packet, packet.len, packet_data_start);
         break;
 
+      case ADT_PALETTE:
+        LogPalette(packet, packet.len, packet_data_start);
+        break;
+
       default:
         LOG_CAP(error) << "Skipping unsupported auxiliary packet of type "
                        << packet.data_type << std::endl;
@@ -809,7 +813,8 @@ static void SaveTextureImage(const void* raw, uint32_t data_len,
     error = EncodeDDS(png_data, input, data_len, width, height, compression);
   } else if (texture_type == NV097_SET_TEXTURE_FORMAT_COLOR_SZ_Y8 ||
              texture_type == NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_Y16 ||
-             texture_type == NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A8) {
+             texture_type == NV097_SET_TEXTURE_FORMAT_COLOR_SZ_A8 ||
+             texture_type == NV097_SET_TEXTURE_FORMAT_COLOR_SZ_I8_A8R8G8B8) {
     error = lodepng::encode(png_data, input, width, height, LCT_GREY,
                             texture_format.bytes_per_pixel * 8);
   } else if (texture_format.has_alpha) {
@@ -926,7 +931,86 @@ void FrameCapture::LogTexture(const NTRCTracer::AuxDataHeader& packet,
                        header->depth, header->pitch);
     }
     os.close();
+
+    if (texture_type == NV097_SET_TEXTURE_FORMAT_COLOR_SZ_I8_A8R8G8B8) {
+      auto it = palette_cache_.find(header->stage);
+      if (it != palette_cache_.end()) {
+        const auto& palette_data = it->second;
+        uint32_t palette_len = palette_data.size();
+
+        snprintf(filename, sizeof(filename),
+                 "%010u_%u_%u_Texture_Resolved_%d_%d.png", packet.packet_index,
+                 packet.draw_index, header->save_context.surface_dump_index,
+                 header->stage, header->layer);
+
+        std::unique_ptr<uint8_t[]> unswizzled_indices(new uint8_t[header->len]);
+        unswizzle_rect(static_cast<const uint8_t*>(static_cast<const void*>(d)),
+                       header->width, header->height, unswizzled_indices.get(),
+                       header->pitch, 1);
+
+        uint32_t resolved_size = header->width * header->height * 4;
+        std::unique_ptr<uint32_t[]> resolved_data(
+            new uint32_t[header->width * header->height]);
+        const uint32_t* pal =
+            reinterpret_cast<const uint32_t*>(palette_data.data());
+        for (uint32_t i = 0; i < header->width * header->height; ++i) {
+          uint8_t index = unswizzled_indices[i];
+          if (index < palette_len / 4) {
+            resolved_data[i] = pal[index];
+          } else {
+            resolved_data[i] = 0;
+          }
+        }
+
+        os = std::ofstream(
+            artifact_path_ / filename,
+            std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
+        auto pal_format_entry = kTextureFormats.find(
+            NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8R8G8B8);
+        SaveTextureImage(resolved_data.get(), resolved_size, os,
+                         NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8R8G8B8,
+                         pal_format_entry->second, 0, header->width,
+                         header->height, 1, header->width * 4);
+        os.close();
+      }
+    }
   }
+}
+
+void FrameCapture::LogPalette(const AuxDataHeader& packet, uint32_t data_len,
+                              std::vector<uint8_t>::const_iterator data) const {
+  const char* d = reinterpret_cast<const char*>(&data[0]);
+  auto header = reinterpret_cast<const PaletteHeader*>(d);
+  d += sizeof(*header);
+  data_len -= sizeof(*header);
+
+  palette_cache_[header->stage] = std::vector<uint8_t>(d, d + data_len);
+
+  char filename[64];
+
+  snprintf(filename, sizeof(filename), "%010u_%u_%u_Texture_Palette_%d_%d.bin",
+           packet.packet_index, packet.draw_index,
+           header->save_context.surface_dump_index, header->stage,
+           header->layer);
+  auto os = std::ofstream(artifact_path_ / filename, std::ios_base::out |
+                                                         std::ios_base::trunc |
+                                                         std::ios_base::binary);
+  os.write(d, data_len);
+  os.close();
+
+  snprintf(filename, sizeof(filename), "%010u_%u_%u_Texture_Palette_%d_%d.png",
+           packet.packet_index, packet.draw_index,
+           header->save_context.surface_dump_index, header->stage,
+           header->layer);
+  os = std::ofstream(artifact_path_ / filename, std::ios_base::out |
+                                                    std::ios_base::trunc |
+                                                    std::ios_base::binary);
+  auto pal_format_entry =
+      kTextureFormats.find(NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8R8G8B8);
+  SaveTextureImage(d, data_len, os,
+                   NV097_SET_TEXTURE_FORMAT_COLOR_LU_IMAGE_A8R8G8B8,
+                   pal_format_entry->second, 0, data_len / 4, 1, 1, data_len);
+  os.close();
 }
 
 }  // namespace NTRCTracer

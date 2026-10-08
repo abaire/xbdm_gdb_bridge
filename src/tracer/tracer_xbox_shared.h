@@ -105,6 +105,8 @@ typedef enum AuxDataType {
   ADT_SURFACE,
   //! A texture.
   ADT_TEXTURE,
+  //! A palette for an indexed color texture.
+  ADT_PALETTE,
 } AuxDataType;
 
 //! Header describing an entry in the auxiliary data stream.
@@ -189,6 +191,14 @@ typedef struct SurfaceHeader {
 
   ImageSaveContext save_context;
 } __attribute((packed)) SurfaceHeader;
+
+//! Header describing palette data.
+typedef struct PaletteHeader {
+  uint32_t stage;
+  uint32_t layer;
+  uint32_t len;
+  ImageSaveContext save_context;
+} __attribute((packed)) PaletteHeader;
 
 //! Header describing texture data.
 //!

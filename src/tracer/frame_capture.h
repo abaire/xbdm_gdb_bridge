@@ -62,12 +62,18 @@ class FrameCapture {
   void LogTexture(const AuxDataHeader& packet, uint32_t data_len,
                   std::vector<uint8_t>::const_iterator data) const;
 
+  void LogPalette(const AuxDataHeader& packet, uint32_t data_len,
+                  std::vector<uint8_t>::const_iterator data) const;
+
  public:
   //! Map of arbitrary ID to a vector of parameters for some PGRAPH command.
   std::map<uint32_t, std::vector<uint32_t>> pgraph_parameter_map;
 
   //! List of captured PGRAPH commands.
   std::list<PushBufferCommandTraceInfo> pgraph_commands;
+
+  //! Cache of palettes per stage.
+  mutable std::map<uint32_t, std::vector<uint8_t>> palette_cache_;
 
  private:
   uint32_t next_free_id = 0;
